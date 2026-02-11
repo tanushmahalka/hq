@@ -13,10 +13,22 @@ import {
   type HelloOk,
 } from "@/lib/gateway-client";
 
+export type Agent = {
+  id: string;
+  name?: string;
+  identity?: { name?: string; emoji?: string; theme?: string; avatar?: string };
+};
+
 type GatewayState = {
   client: GatewayClient | null;
   connected: boolean;
   snapshot: unknown | null;
+  agents: Agent[];
+};
+
+type AgentsListResult = {
+  defaultId: string;
+  agents: Agent[];
 };
 
 type GatewayContextValue = GatewayState & {
@@ -36,6 +48,7 @@ export function GatewayProvider({
 }) {
   const [connected, setConnected] = useState(false);
   const [snapshot, setSnapshot] = useState<unknown | null>(null);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const clientRef = useRef<GatewayClient | null>(null);
 
   // Event subscribers — components register handlers for real-time events
@@ -55,6 +68,15 @@ export function GatewayProvider({
       onHello: (hello: HelloOk) => {
         setConnected(true);
         setSnapshot(hello.snapshot ?? null);
+        client
+          .request<AgentsListResult>("agents.list")
+          .then((res) => {
+            const list = (res.agents ?? []).filter(
+              (a) => a.id !== res.defaultId,
+            );
+            setAgents(list);
+          })
+          .catch(() => {});
       },
       onEvent: (evt: EventFrame) => {
         for (const handler of subscribersRef.current) {
@@ -77,7 +99,7 @@ export function GatewayProvider({
 
   return (
     <GatewayContext.Provider
-      value={{ client: clientRef.current, connected, snapshot, subscribe }}
+      value={{ client: clientRef.current, connected, snapshot, agents, subscribe }}
     >
       {children}
     </GatewayContext.Provider>

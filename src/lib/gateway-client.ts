@@ -50,8 +50,11 @@ export class GatewayClient {
   private connectSent = false;
   private connectTimer: ReturnType<typeof setTimeout> | null = null;
   private backoffMs = 800;
+  private opts: GatewayClientOptions;
 
-  constructor(private opts: GatewayClientOptions) {}
+  constructor(opts: GatewayClientOptions) {
+    this.opts = opts;
+  }
 
   start() {
     this.closed = false;
@@ -85,17 +88,17 @@ export class GatewayClient {
   // --- internals ---
 
   private connect() {
+    console.log("Connecting to gateway...");
     if (this.closed) return;
     this.ws = new WebSocket(this.opts.url);
+    console.log("WebSocket created:", this.ws);
     this.ws.addEventListener("open", () => this.queueConnect());
     this.ws.addEventListener("message", (ev) =>
-      this.handleMessage(String(ev.data ?? "")),
+      this.handleMessage(String(ev.data ?? ""))
     );
     this.ws.addEventListener("close", (ev) => {
       this.ws = null;
-      this.flushPending(
-        new Error(`gateway closed (${ev.code}): ${ev.reason}`),
-      );
+      this.flushPending(new Error(`gateway closed (${ev.code}): ${ev.reason}`));
       this.opts.onClose?.({ code: ev.code, reason: String(ev.reason ?? "") });
       this.scheduleReconnect();
     });
@@ -135,10 +138,10 @@ export class GatewayClient {
       minProtocol: 3,
       maxProtocol: 3,
       client: {
-        id: "control-ui",
+        id: "openclaw-control-ui",
         version: "1.0",
         platform: "web",
-        mode: "webchat",
+        mode: "ui",
       },
       role: "operator",
       scopes: ["operator.admin", "operator.approvals"],
@@ -181,7 +184,7 @@ export class GatewayClient {
       if (seq !== null) {
         if (this.lastSeq !== null && seq > this.lastSeq + 1) {
           console.warn(
-            `[gateway] seq gap: expected ${this.lastSeq + 1}, got ${seq}`,
+            `[gateway] seq gap: expected ${this.lastSeq + 1}, got ${seq}`
           );
         }
         this.lastSeq = seq;

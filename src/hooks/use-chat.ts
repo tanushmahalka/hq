@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useGateway } from "./use-gateway";
 import type { EventFrame } from "@/lib/gateway-client";
 
@@ -33,7 +33,7 @@ function extractText(message: unknown): string {
 
 export function useChat(agentId: string) {
   const { client, connected, subscribe } = useGateway();
-  const sessionKey = `${agentId}:webchat:main`;
+  const sessionKey = `agent:${agentId}:main`;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [stream, setStream] = useState<string | null>(null);
@@ -41,9 +41,32 @@ export function useChat(agentId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load history on mount
+  // Refs so event handlers always see latest values without re-subscribing
+  const runIdRef = useRef(runId);
+  runIdRef.current = runId;
+
+  // Monotonically increasing fetch ID — only the latest fetch can write to state
+  const fetchIdRef = useRef(0);
+
+  function parseMessages(raw: Array<unknown>): ChatMessage[] {
+    return raw.map((m: unknown) => {
+      const msg = m as {
+        role?: string;
+        content?: unknown;
+        timestamp?: number;
+      };
+      return {
+        role: (msg.role as "user" | "assistant") ?? "assistant",
+        content: extractText(m),
+        timestamp: msg.timestamp ?? 0,
+      };
+    });
+  }
+
+  // Load history once when connected — uses cleanup flag to ignore stale responses
   useEffect(() => {
     if (!client || !connected) return;
+    let stale = false;
     setLoading(true);
     client
       .request<{ messages?: Array<unknown> }>("chat.history", {
@@ -51,54 +74,79 @@ export function useChat(agentId: string) {
         limit: 200,
       })
       .then((res) => {
-        const msgs: ChatMessage[] = (res.messages ?? []).map((m: unknown) => {
-          const msg = m as {
-            role?: string;
-            content?: unknown;
-            timestamp?: number;
-          };
-          return {
-            role: (msg.role as "user" | "assistant") ?? "assistant",
-            content: extractText(m),
-            timestamp: msg.timestamp ?? 0,
-          };
-        });
-        setMessages(msgs);
+        if (stale) return;
+        setMessages(parseMessages(res.messages ?? []));
       })
-      .catch((err) => setError(String(err)))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (stale) return;
+        setError(String(err));
+      })
+      .finally(() => {
+        if (!stale) setLoading(false);
+      });
+    return () => {
+      stale = true;
+    };
   }, [client, connected, sessionKey]);
 
-  // TODO(human): Implement handleChatEvent
-  // This function receives a real-time event payload from the gateway
-  // and should update the chat state accordingly.
-  //
-  // Available state setters: setStream(text), setRunId(id), setError(msg)
-  // Available helper: extractText(payload.message) → string
-  //
-  // The payload.state will be one of:
-  //   "delta"   → partial streaming text (agent is still typing)
-  //   "final"   → agent finished responding
-  //   "aborted" → run was cancelled
-  //   "error"   → something went wrong
-  function handleChatEvent(payload: ChatEventPayload) {
-    if (payload.sessionKey !== sessionKey) return;
-    if (payload.runId && runId && payload.runId !== runId) return;
-
-    // TODO(human): Handle each payload.state case
-    // For "delta": update the stream with the latest text
-    // For "final": clear the stream, reload history to get the full message
-    // For "aborted"/"error": clear the stream, optionally show error
-    void payload;
-  }
-
-  // Subscribe to gateway events
+  // Subscribe to gateway chat events
   useEffect(() => {
     return subscribe((evt: EventFrame) => {
       if (evt.event !== "chat") return;
-      handleChatEvent(evt.payload as ChatEventPayload);
+      const payload = evt.payload as ChatEventPayload;
+      if (!payload || payload.sessionKey !== sessionKey) return;
+
+      const currentRunId = runIdRef.current;
+      if (payload.runId && currentRunId && payload.runId !== currentRunId) {
+        if (payload.state === "final") {
+          reloadHistory();
+        }
+        return;
+      }
+
+      switch (payload.state) {
+        case "delta": {
+          const next = extractText(payload.message);
+          if (typeof next === "string") {
+            setStream((prev) =>
+              !prev || next.length >= prev.length ? next : prev,
+            );
+          }
+          break;
+        }
+        case "final":
+          setStream(null);
+          setRunId(null);
+          reloadHistory();
+          break;
+        case "aborted":
+          setStream(null);
+          setRunId(null);
+          break;
+        case "error":
+          setStream(null);
+          setRunId(null);
+          setError(payload.errorMessage ?? "chat error");
+          break;
+      }
     });
-  });
+  }, [subscribe, sessionKey]);
+
+  // Reload history after a run completes — only latest fetch wins
+  function reloadHistory() {
+    if (!client || !connected) return;
+    const id = ++fetchIdRef.current;
+    client
+      .request<{ messages?: Array<unknown> }>("chat.history", {
+        sessionKey,
+        limit: 200,
+      })
+      .then((res) => {
+        if (fetchIdRef.current !== id) return;
+        setMessages(parseMessages(res.messages ?? []));
+      })
+      .catch(() => {});
+  }
 
   // Send a message
   const sendMessage = useCallback(

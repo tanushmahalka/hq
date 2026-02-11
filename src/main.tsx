@@ -28,5 +28,5 @@ createRoot(document.getElementById("root")!).render(
         </GatewayProvider>
       </TooltipProvider>
     </ThemeProvider>
-  </StrictMode>,
+  </StrictMode>
 );

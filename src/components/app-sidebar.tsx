@@ -21,11 +21,11 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-const agents = [{ id: "kaira", name: "Kaira" }];
+import { useGateway } from "@/hooks/use-gateway";
 
 export function AppSidebar() {
   const location = useLocation();
+  const { agents } = useGateway();
 
   return (
     <Sidebar>
@@ -92,7 +92,12 @@ export function AppSidebar() {
                             }
                           >
                             <Link to={`/agent/${agent.id}`}>
-                              <span>{agent.name}</span>
+                              {agent.identity?.emoji && (
+                                <span>{agent.identity.emoji}</span>
+                              )}
+                              <span>
+                                {agent.identity?.name ?? agent.name ?? agent.id}
+                              </span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
