@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
 import { trpc } from "@/lib/trpc";
+import { useTaskNotify } from "@/hooks/use-task-notify";
 
 const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
   todo: "bg-gray-400",
@@ -53,6 +54,7 @@ interface TaskDetailSheetProps {
 
 export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
   const utils = trpc.useUtils();
+  const { notify } = useTaskNotify();
   const [activeTab, setActiveTab] = useState<TabId>("comments");
 
   const { data: task } = trpc.task.get.useQuery(
@@ -83,14 +85,16 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
   }, [task]);
 
   const updateTask = trpc.task.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       utils.task.list.invalidate();
       utils.task.get.invalidate({ id: taskId! });
+      notify("updated", data);
     },
   });
 
   const deleteTask = trpc.task.delete.useMutation({
     onSuccess: () => {
+      if (task) notify("deleted", task);
       utils.task.list.invalidate();
       onClose();
     },
@@ -329,7 +333,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto">
             {activeTab === "comments" && task && (
-              <CommentsPanel taskId={task.id} comments={task.comments ?? []} />
+              <CommentsPanel taskId={task.id} comments={task.comments ?? []} onComment={(text) => notify("commented", task, text)} />
             )}
           </div>
         </div>
@@ -372,17 +376,20 @@ interface Comment {
 function CommentsPanel({
   taskId,
   comments,
+  onComment,
 }: {
   taskId: string;
   comments: Comment[];
+  onComment: (text: string) => void;
 }) {
   const [content, setContent] = useState("");
   const utils = trpc.useUtils();
 
   const addComment = trpc.task.comment.add.useMutation({
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       utils.task.list.invalidate();
       utils.task.get.invalidate({ id: taskId });
+      onComment(variables.content);
       setContent("");
     },
   });

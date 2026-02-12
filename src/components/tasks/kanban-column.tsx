@@ -42,7 +42,7 @@ interface KanbanColumnProps {
 export function KanbanColumn({ status, tasks, onTaskClick, onAdd }: KanbanColumnProps) {
   return (
     <div
-      className={`flex flex-col min-w-[280px] w-[280px] rounded-lg border border-t-4 ${STATUS_COLORS[status]} bg-muted/30`}
+      className={`flex flex-col min-w-[280px] flex-1 rounded-lg border border-t-4 ${STATUS_COLORS[status]} bg-muted/30`}
     >
       <div className="flex items-center gap-2 p-3 pb-2">
         <h2 className="text-sm font-semibold">{STATUS_LABELS[status]}</h2>

@@ -20,6 +20,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
 import { trpc } from "@/lib/trpc";
+import { useTaskNotify } from "@/hooks/use-task-notify";
 
 interface TaskCreateDialogProps {
   open: boolean;
@@ -43,10 +44,12 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo" }:
   const [important, setImportant] = useState(false);
 
   const utils = trpc.useUtils();
+  const { notify } = useTaskNotify();
 
   const createTask = trpc.task.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       utils.task.list.invalidate();
+      notify("created", data);
       resetForm();
       onOpenChange(false);
       toast.success("Task created");

@@ -193,9 +193,9 @@ function JsonButton({ content }: { content: string }) {
   return (
     <>
       <Button
-        variant="outline"
+        variant="ghost"
         size="xs"
-        className="mx-1 my-0.5 h-6 gap-1.5 text-[11px] font-medium bg-muted/30 border-border/50 text-foreground hover:bg-muted/60 hover:text-foreground transition-colors inline-flex"
+        className="mx-1 my-0.5 h-6 gap-1.5 text-[11px] font-medium border border-current/20 bg-current/5 hover:bg-current/10 hover:text-current transition-colors inline-flex"
         onClick={() => setOpen(true)}
       >
         <Code className="size-3" />
@@ -227,9 +227,9 @@ function ContextButton({ content }: { content: string }) {
   return (
     <>
       <Button
-        variant="outline"
+        variant="ghost"
         size="xs"
-        className="mx-1 my-0.5 h-6 gap-1.5 text-[11px] font-medium bg-muted/30 border-border/50 text-foreground hover:bg-muted/60 hover:text-foreground transition-colors inline-flex"
+        className="mx-1 my-0.5 h-6 gap-1.5 text-[11px] font-medium border border-current/20 bg-current/5 hover:bg-current/10 hover:text-current transition-colors inline-flex"
         onClick={() => setOpen(true)}
       >
         <BrainCircuit className="size-3" />

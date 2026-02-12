@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { tasks } from "../../../shared/schema";
 import { TASK_STATUSES } from "../../../shared/types";
 import { router, publicProcedure } from "../init";
-import { notifyAgent } from "../../lib/notify-agent";
 import { generateTaskSlug } from "../../../shared/slug";
 
 export const taskRouter = router({
@@ -64,7 +63,6 @@ export const taskRouter = router({
           important: input.important ?? false,
         })
         .returning();
-      ctx.waitUntil(notifyAgent(ctx, { action: "created", task }));
       return task;
     }),
 
@@ -89,20 +87,13 @@ export const taskRouter = router({
         .set({ ...data, updatedAt: new Date() })
         .where(eq(tasks.id, id))
         .returning();
-      ctx.waitUntil(notifyAgent(ctx, { action: "updated", task }));
       return task;
     }),
 
   delete: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.query.tasks.findFirst({
-        where: eq(tasks.id, input.id),
-      });
       await ctx.db.delete(tasks).where(eq(tasks.id, input.id));
-      if (existing) {
-        ctx.waitUntil(notifyAgent(ctx, { action: "deleted", task: existing }));
-      }
       return { success: true };
     }),
 });

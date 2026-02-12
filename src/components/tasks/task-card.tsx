@@ -1,5 +1,7 @@
 import { Calendar, CircleAlert, Star, User } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useTaskNotify } from "@/hooks/use-task-notify";
+import { useTaskActive } from "@/hooks/use-task-active";
 import { TaskStatusDropdown } from "./task-status-dropdown";
 import type { TaskStatus } from "@shared/types";
 
@@ -19,9 +21,14 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
   const utils = trpc.useUtils();
+  const { notify } = useTaskNotify();
+  const active = useTaskActive(task.id);
 
   const updateTask = trpc.task.update.useMutation({
-    onSuccess: () => utils.task.list.invalidate(),
+    onSuccess: (data) => {
+      utils.task.list.invalidate();
+      notify("updated", data);
+    },
   });
 
   const handleStatusChange = (status: TaskStatus) => {
@@ -30,13 +37,39 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
   const hasPriority = task.urgent || task.important;
 
+  const isDoing = task.status === "doing";
+
   return (
     <div
-      className="group cursor-pointer rounded-lg border bg-background p-3 transition-all hover:border-foreground/20 hover:shadow-sm"
+      className={`group relative cursor-pointer overflow-hidden rounded-lg border bg-background p-3 transition-all hover:border-foreground/20 hover:shadow-sm ${isDoing ? "border-blue-500/20 bg-blue-500/[0.02]" : ""}`}
       onClick={onClick}
     >
+      {(active || isDoing) && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
+          <div
+            className="h-full w-full"
+            style={{
+              background: active 
+                ? "linear-gradient(90deg, transparent 0%, var(--foreground) 50%, transparent 100%)"
+                : "linear-gradient(90deg, transparent 0%, oklch(0.585 0.233 277.117 / 0.3) 50%, transparent 100%)",
+              opacity: active ? 0.35 : 1,
+              animation: active 
+                ? "shimmer-edge 2s ease-in-out infinite"
+                : "shimmer-edge 4s linear infinite",
+            }}
+          />
+        </div>
+      )}
       {/* Title + priority indicators */}
       <div className="flex items-start gap-2">
+        {task.status === "doing" && (
+          <div className="mt-1.5 shrink-0">
+            <div className="relative flex size-2">
+              <div className="animate-pulse-soft absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></div>
+              <div className="relative inline-flex size-2 rounded-full bg-blue-500"></div>
+            </div>
+          </div>
+        )}
         <h3 className="flex-1 text-sm font-medium leading-snug">{task.title}</h3>
         {hasPriority && (
           <div className="flex items-center gap-1 shrink-0 pt-0.5">

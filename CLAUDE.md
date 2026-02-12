@@ -8,10 +8,14 @@ The ultimate goal is to be a centralized headquarters for businesses where they 
 
 ## Architecture
 
-HQ is a React SPA that connects to an [OpenClaw](../openclaw/) gateway server over WebSocket. It acts as a `control-ui` client — authenticating as an operator with admin and approval scopes.
+HQ has two halves that run independently:
+
+1. **Frontend** — React SPA served by Vite, connects to the OpenClaw gateway over WebSocket for real-time agent communication.
+2. **Worker** — Cloudflare Worker (Hono + tRPC) that owns the database (Drizzle ORM) and exposes task/comment CRUD over HTTP (`/api/trpc/*`).
 
 ```
-Browser (HQ)  ──wss──▶  Tailscale proxy (port 443)  ──▶  OpenClaw Gateway (port 18789)
+Browser (HQ)  ──wss──▶  Tailscale proxy (443)  ──▶  OpenClaw Gateway (18789)
+              ──http──▶  Cloudflare Worker (/api/trpc/*)  ──▶  Database
 ```
 
 ### Gateway Connection
@@ -52,6 +56,9 @@ Without `allowInsecureAuth`, the gateway rejects control-ui connections from non
 - **Icons**: Lucide React
 - **Font**: Geist
 - **Package manager**: Bun
+- **Backend**: Hono + tRPC on Cloudflare Workers
+- **ORM**: Drizzle
+- **Toasts**: Sonner
 
 ## Project Structure
 
@@ -59,62 +66,143 @@ Without `allowInsecureAuth`, the gateway rejects control-ui connections from non
 hq/
 ├── src/
 │   ├── main.tsx                    # App entry — providers, router, gateway config
-│   ├── layout.tsx                  # Shell layout with sidebar + outlet
-│   ├── index.css                   # Tailwind base styles
+│   ├── layout.tsx                  # Shell layout: TopNav + main content + messenger panel
+│   ├── index.css                   # Tailwind base styles + custom keyframes
 │   ├── pages/
 │   │   ├── dashboard.tsx           # Overview page (placeholder)
-│   │   └── agent-chat.tsx          # Per-agent chat interface
+│   │   └── tasks.tsx               # Kanban board page
 │   ├── hooks/
-│   │   ├── use-gateway.tsx         # GatewayProvider context + subscribe API
-│   │   ├── use-chat.ts             # Chat state: history, streaming, send
+│   │   ├── use-gateway.tsx         # GatewayProvider context + subscribe API + agents list
+│   │   ├── use-chat.ts             # Chat state: history, streaming, send (per session)
+│   │   ├── use-messenger-panel.tsx # Messenger slide-panel state (open/close, agent selection)
+│   │   ├── use-task-notify.ts      # Send task notifications to agents via chat.send
+│   │   ├── use-task-active.ts      # Track live agent activity per task via gateway events
+│   │   ├── use-trpc.tsx            # tRPC + React Query provider
 │   │   └── use-mobile.ts           # Responsive breakpoint hook
 │   ├── lib/
 │   │   ├── gateway-client.ts       # WebSocket client (connect, RPC, reconnect)
+│   │   ├── trpc.ts                 # tRPC client setup
 │   │   └── utils.ts                # cn() helper (clsx + tailwind-merge)
 │   └── components/
-│       ├── app-sidebar.tsx         # Navigation sidebar (dashboard + agents list)
+│       ├── top-nav.tsx             # Top navigation bar (logo, nav links, messenger toggle, theme)
+│       ├── messenger/
+│       │   ├── messenger-panel.tsx # Slide-out chat panel (agent list → chat view)
+│       │   └── message-content.tsx # Rendered message content (markdown, etc.)
+│       ├── tasks/
+│       │   ├── kanban-board.tsx    # Full kanban board (columns + create/detail dialogs)
+│       │   ├── kanban-column.tsx   # Single status column with task cards
+│       │   ├── task-card.tsx       # Individual task card (with live shimmer when agent active)
+│       │   ├── task-create-dialog.tsx  # Create task modal
+│       │   ├── task-detail-sheet.tsx   # Task detail side sheet (properties + comments)
+│       │   └── task-status-dropdown.tsx # Status selector dropdown
 │       ├── theme-provider.tsx      # Dark/light/system theme context
 │       ├── theme-toggle.tsx        # Theme switcher button
-│       └── ui/                     # shadcn/ui primitives (button, input, sidebar, etc.)
-├── .env                            # VITE_GATEWAY_URL, VITE_GATEWAY_TOKEN
+│       └── ui/                     # shadcn/ui primitives (button, input, sheet, etc.)
+├── worker/
+│   ├── index.ts                    # Hono app entry — cors, health, tRPC adapter
+│   ├── db/
+│   │   └── client.ts              # Drizzle database client factory
+│   └── trpc/
+│       ├── context.ts             # Request context (db, waitUntil)
+│       ├── init.ts                # tRPC router + procedure setup
+│       ├── router.ts              # Root router (merges task + comment)
+│       └── procedures/
+│           ├── task.ts            # Task CRUD (list, get, create, update, delete)
+│           └── comment.ts         # Comment add/delete on tasks
+├── shared/
+│   ├── schema.ts                  # Drizzle schema (tasks, comments tables)
+│   ├── types.ts                   # TASK_STATUSES, STATUS_LABELS, TaskStatus
+│   └── slug.ts                    # Task ID generation from title
+├── .env                           # VITE_GATEWAY_URL, VITE_GATEWAY_TOKEN
 ├── vite.config.ts
 ├── package.json
-└── tsconfig.json                   # Path alias: @/* → ./src/*
+└── tsconfig.json                  # Path aliases: @/* → ./src/*, @shared/* → ./shared/*
 ```
 
-## Key Files
+## Layout
 
-### `src/lib/gateway-client.ts`
-The core WebSocket client. Adapted from OpenClaw's own `ui/src/ui/gateway.ts`. Handles:
-- Connection lifecycle with auto-reconnect and exponential backoff
-- Challenge-based handshake (server sends nonce, client responds with connect)
-- RPC request/response correlation via `crypto.randomUUID()` IDs
-- Sequence number tracking for gap detection on event streams
+The app uses a top-nav layout (no sidebar):
 
-### `src/hooks/use-gateway.tsx`
-React context that wraps `GatewayClient`. Exposes:
-- `client` — the GatewayClient instance for RPC calls
-- `connected` — boolean connection state
-- `snapshot` — initial state snapshot from hello-ok
-- `subscribe(handler)` — register for real-time gateway events
+```
+┌────────────────────────────────────────────────────┐
+│  TopNav  [HQ logo] [Tasks]           [⌘K] [theme]  │
+├───────────────────────────────────┬────────────────┤
+│                                   │  Messenger     │
+│           Main Content            │  Panel (420px) │
+│           (flex-1)                │  (toggle ⌘K)   │
+│                                   │                │
+└───────────────────────────────────┴────────────────┘
+```
 
-### `src/hooks/use-chat.ts`
-Per-agent chat hook. Uses the gateway to:
-- Load message history via `chat.history` RPC (limit 200)
-- Send messages via `chat.send` RPC
-- Subscribe to `chat` events for streaming responses
-
-**Note**: The `handleChatEvent` function has a `TODO(human)` — the streaming event handler (delta/final/aborted/error states) is not yet implemented. This means agent responses won't appear in real-time until that is wired up.
-
-### `src/components/app-sidebar.tsx`
-Navigation sidebar. Currently has a hardcoded agent list (`[{ id: "kaira", name: "Kaira" }]`). This should eventually be dynamic, populated from the gateway's `agents.list` RPC.
+- `layout.tsx` renders `TopNav` + flex row of `<main>` (Outlet) + messenger panel
+- Messenger panel slides in/out via `w-0`/`w-[420px]` transition
+- Panel state managed by `useMessengerPanel` context (toggle, open, close, agent selection)
+- Last selected agent persisted in localStorage (`hq:messenger:agentId`)
 
 ## Routes
 
 | Path | Component | Description |
 |---|---|---|
 | `/` | `Dashboard` | Overview page (placeholder) |
-| `/agent/:agentId` | `AgentChat` | Chat interface for a specific agent |
+| `/tasks` | `Tasks` → `KanbanBoard` | Kanban task management board |
+
+## Key Hooks
+
+### `use-gateway.tsx`
+React context wrapping `GatewayClient`. On `hello-ok`, fetches the agent list via `agents.list` RPC. Exposes:
+- `client` — GatewayClient instance for RPC
+- `connected` — boolean
+- `agents` — list of agents (filtered, excludes "main")
+- `subscribe(handler)` — register for real-time gateway events
+
+### `use-chat.ts`
+Per-session chat hook. Session key defaults to `agent:{agentId}:main`. Handles:
+- Load history via `chat.history` RPC
+- Send via `chat.send` RPC
+- Subscribe to `chat` events for streaming (delta/final/aborted/error)
+- Monotonic fetch ID to prevent stale history overwrites
+
+### `use-task-notify.ts`
+Sends task lifecycle notifications to agents via `chat.send` over the gateway WebSocket. Each task gets its own session: `agent:{agentId}:{taskId}`. Supports actions: `created`, `updated`, `deleted`, `commented`. Fire-and-forget (catches errors with console.warn). Falls back to `agents[0]` if no assignee.
+
+### `use-task-active.ts`
+Subscribes to gateway `chat` events and returns `true` while a task's session has active streaming (`delta` state). Used by `TaskCard` to show a shimmer animation on the top edge.
+
+### `use-messenger-panel.tsx`
+Manages the slide-out messenger panel state. Toggle hotkey: `⌘K`. Persists selected agent in localStorage.
+
+## Task Notification Flow
+
+Task mutations notify agents via `chat.send` over the existing gateway WebSocket (not HTTP hooks):
+
+1. **Create/Update/Delete** — `useTaskNotify` called in `onSuccess` of tRPC mutations in `task-create-dialog.tsx`, `task-detail-sheet.tsx`, and `task-card.tsx`
+2. **Comment added** — `onComment` callback passed to `CommentsPanel`, fires `notify("commented", task, commentText)`
+3. **Session key**: `agent:{assignee}:{taskId}` — each task gets its own chat thread
+4. **Agent resolution**: uses `task.assignee` if set, otherwise `agents[0]`
+5. All sends use `deliver: false` (queued, not pushed)
+
+## Task Card Active Shimmer
+
+When the gateway streams `chat` events for a task's session, the task card shows a 1px animated gradient sweep across its top edge (`shimmer-edge` keyframe in `index.css`). This indicates the agent is actively working on the task. Managed by `useTaskActive(taskId)`.
+
+## Worker (Cloudflare)
+
+The worker is a standalone Hono app at `worker/index.ts`:
+- CORS enabled on `/api/*`
+- Health check at `/api/health`
+- tRPC router mounted at `/api/trpc/*`
+- Context provides `db` (Drizzle) and `waitUntil`
+- Env requires `DATABASE_URL`
+
+### tRPC Procedures
+
+- `task.list` — query all tasks (optional status filter), includes comments
+- `task.get` — query single task by ID with ordered comments
+- `task.create` — create task with slug-based ID from title
+- `task.update` — partial update by ID
+- `task.delete` — delete by ID
+- `task.comment.add` — add comment to task
+- `task.comment.delete` — delete comment by ID
 
 ## Environment Variables
 
@@ -122,6 +210,7 @@ Navigation sidebar. Currently has a hardcoded agent list (`[{ id: "kaira", name:
 |---|---|---|
 | `VITE_GATEWAY_URL` | WebSocket URL for the OpenClaw gateway | `ws://localhost:18789` |
 | `VITE_GATEWAY_TOKEN` | Auth token for gateway connection | `""` |
+| `DATABASE_URL` | Database connection string (worker) | — |
 
 **Important**: When connecting through Tailscale, use port 443 (omit port from URL) since Tailscale proxies HTTPS on 443 to the gateway's actual port 18789.
 
@@ -144,7 +233,7 @@ The gateway exposes these methods (from the hello-ok handshake):
 ## Gateway Events
 
 Real-time events streamed from the gateway:
-- `chat` — chat message deltas and finals
+- `chat` — chat message deltas and finals (payload: `{ runId, sessionKey, state, message }`)
 - `presence` — node connect/disconnect
 - `tick` — periodic heartbeat
 - `health` — system health updates
@@ -164,7 +253,5 @@ Make sure the OpenClaw gateway is running and accessible. Set `VITE_GATEWAY_URL`
 
 ## Known TODOs
 
-- `use-chat.ts`: `handleChatEvent` is stubbed — streaming responses (delta/final/aborted/error) need to be implemented
-- `app-sidebar.tsx`: Agent list is hardcoded — should use `agents.list` RPC
 - `dashboard.tsx`: Placeholder — needs agent overview, health status, presence, etc.
 - No device-level auth — currently relies on `allowInsecureAuth` flag
