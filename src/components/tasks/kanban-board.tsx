@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus } from "lucide-react";
 import { KanbanColumn } from "./kanban-column";
 import { TaskCreateDialog } from "./task-create-dialog";
 import { TaskDetailDialog } from "./task-detail-dialog";
@@ -9,7 +7,7 @@ import { TASK_STATUSES, type TaskStatus } from "@shared/types";
 import { trpc } from "@/lib/trpc";
 
 export function KanbanBoard() {
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createStatus, setCreateStatus] = useState<TaskStatus | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const { data: tasks, isLoading } = trpc.task.list.useQuery();
@@ -24,14 +22,6 @@ export function KanbanBoard() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-6 py-4 border-b">
-        <h1 className="text-lg font-semibold">Tasks</h1>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus className="size-4" />
-          New Task
-        </Button>
-      </div>
-
       <div className="flex-1 overflow-x-auto p-4">
         {isLoading ? (
           <div className="flex gap-4">
@@ -51,13 +41,18 @@ export function KanbanBoard() {
                 status={status}
                 tasks={tasksByStatus[status]}
                 onTaskClick={setSelectedTaskId}
+                onAdd={() => setCreateStatus(status)}
               />
             ))}
           </div>
         )}
       </div>
 
-      <TaskCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <TaskCreateDialog
+        open={createStatus !== null}
+        onOpenChange={(open) => { if (!open) setCreateStatus(null); }}
+        initialStatus={createStatus ?? "todo"}
+      />
       <TaskDetailDialog
         taskId={selectedTaskId}
         onClose={() => setSelectedTaskId(null)}

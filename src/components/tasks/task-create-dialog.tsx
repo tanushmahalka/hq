@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,12 +24,18 @@ import { trpc } from "@/lib/trpc";
 interface TaskCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialStatus?: TaskStatus;
 }
 
-export function TaskCreateDialog({ open, onOpenChange }: TaskCreateDialogProps) {
+export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo" }: TaskCreateDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState<TaskStatus>("todo");
+  const [status, setStatus] = useState<TaskStatus>(initialStatus);
+
+  useEffect(() => {
+    if (open) setStatus(initialStatus);
+  }, [open, initialStatus]);
+
   const [assignor, setAssignor] = useState("");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");

@@ -1,4 +1,6 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 import { TaskCard } from "./task-card";
 import { STATUS_LABELS, type TaskStatus } from "@shared/types";
 
@@ -34,9 +36,10 @@ interface KanbanColumnProps {
   status: TaskStatus;
   tasks: Task[];
   onTaskClick: (taskId: string) => void;
+  onAdd: () => void;
 }
 
-export function KanbanColumn({ status, tasks, onTaskClick }: KanbanColumnProps) {
+export function KanbanColumn({ status, tasks, onTaskClick, onAdd }: KanbanColumnProps) {
   return (
     <div
       className={`flex flex-col min-w-[280px] w-[280px] rounded-lg border border-t-4 ${STATUS_COLORS[status]} bg-muted/30`}
@@ -49,6 +52,14 @@ export function KanbanColumn({ status, tasks, onTaskClick }: KanbanColumnProps) 
         >
           {tasks.length}
         </Badge>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-auto size-6"
+          onClick={onAdd}
+        >
+          <Plus className="size-3.5" />
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 pt-0 space-y-2">
