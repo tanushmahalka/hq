@@ -15,7 +15,7 @@ app.all("/api/trpc/*", async (c) => {
     endpoint: "/api/trpc",
     req: c.req.raw,
     router: appRouter,
-    createContext: () => createContext(c.env),
+    createContext: () => createContext(c.env, c.executionCtx),
     onError: ({ error, path }) => {
       console.error(`tRPC error on '${path}':`, error);
     },

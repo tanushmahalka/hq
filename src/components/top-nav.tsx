@@ -1,12 +1,16 @@
-import { Bot, ListTodo } from "lucide-react";
+import { Bot, ListTodo, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router";
+import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useMessengerPanel } from "@/hooks/use-messenger-panel";
 import { cn } from "@/lib/utils";
 
 const navLinks = [{ to: "/tasks", label: "Tasks", icon: ListTodo }] as const;
 
 export function TopNav() {
   const location = useLocation();
+  const { isOpen, toggle } = useMessengerPanel();
 
   return (
     <header className="h-12 border-b px-4 flex items-center gap-6 shrink-0">
@@ -35,7 +39,15 @@ export function TopNav() {
         ))}
       </nav>
 
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-1">
+        <Button
+          variant="ghost"
+          onClick={toggle}
+          className={cn("h-8 gap-2 px-2.5", isOpen && "bg-muted")}
+        >
+          <MessageCircle className="size-4" />
+          <Kbd className="hidden sm:inline-flex">&#8984;K</Kbd>
+        </Button>
         <ThemeToggle />
       </div>
     </header>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KanbanColumn } from "./kanban-column";
 import { TaskCreateDialog } from "./task-create-dialog";
-import { TaskDetailDialog } from "./task-detail-dialog";
+import { TaskDetailSheet } from "./task-detail-sheet";
 import { TASK_STATUSES, type TaskStatus } from "@shared/types";
 import { trpc } from "@/lib/trpc";
 
@@ -53,7 +53,7 @@ export function KanbanBoard() {
         onOpenChange={(open) => { if (!open) setCreateStatus(null); }}
         initialStatus={createStatus ?? "todo"}
       />
-      <TaskDetailDialog
+      <TaskDetailSheet
         taskId={selectedTaskId}
         onClose={() => setSelectedTaskId(null)}
       />

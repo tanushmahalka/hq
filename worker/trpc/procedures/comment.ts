@@ -7,7 +7,7 @@ export const commentRouter = router({
   add: publicProcedure
     .input(
       z.object({
-        taskId: z.string().uuid(),
+        taskId: z.string().min(1),
         author: z.string().min(1),
         content: z.string().min(1),
       })

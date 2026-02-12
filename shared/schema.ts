@@ -12,7 +12,7 @@ import { TASK_STATUSES } from "./types";
 export const taskStatusEnum = pgEnum("task_status", TASK_STATUSES);
 
 export const tasks = pgTable("tasks", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: text("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
   status: taskStatusEnum("status").notNull().default("todo"),
@@ -32,7 +32,7 @@ export const tasks = pgTable("tasks", {
 
 export const taskComments = pgTable("task_comments", {
   id: uuid("id").primaryKey().defaultRandom(),
-  taskId: uuid("task_id")
+  taskId: text("task_id")
     .notNull()
     .references(() => tasks.id, { onDelete: "cascade" }),
   author: text("author").notNull(),

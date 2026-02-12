@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { tasks } from "../../../shared/schema";
 import { TASK_STATUSES } from "../../../shared/types";
 import { router, publicProcedure } from "../init";
+import { notifyAgent } from "../../lib/notify-agent";
+import { generateTaskSlug } from "../../../shared/slug";
 
 export const taskRouter = router({
   list: publicProcedure
@@ -24,7 +26,7 @@ export const taskRouter = router({
     }),
 
   get: publicProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const task = await ctx.db.query.tasks.findFirst({
         where: eq(tasks.id, input.id),
@@ -47,9 +49,11 @@ export const taskRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const id = generateTaskSlug(input.title);
       const [task] = await ctx.db
         .insert(tasks)
         .values({
+          id,
           title: input.title,
           description: input.description,
           status: input.status ?? "todo",
@@ -60,13 +64,14 @@ export const taskRouter = router({
           important: input.important ?? false,
         })
         .returning();
+      ctx.waitUntil(notifyAgent(ctx, { action: "created", task }));
       return task;
     }),
 
   update: publicProcedure
     .input(
       z.object({
-        id: z.string().uuid(),
+        id: z.string().min(1),
         title: z.string().min(1).optional(),
         description: z.string().nullable().optional(),
         status: z.enum(TASK_STATUSES).optional(),
@@ -84,13 +89,20 @@ export const taskRouter = router({
         .set({ ...data, updatedAt: new Date() })
         .where(eq(tasks.id, id))
         .returning();
+      ctx.waitUntil(notifyAgent(ctx, { action: "updated", task }));
       return task;
     }),
 
   delete: publicProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.query.tasks.findFirst({
+        where: eq(tasks.id, input.id),
+      });
       await ctx.db.delete(tasks).where(eq(tasks.id, input.id));
+      if (existing) {
+        ctx.waitUntil(notifyAgent(ctx, { action: "deleted", task: existing }));
+      }
       return { success: true };
     }),
 });
