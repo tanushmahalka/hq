@@ -75,7 +75,6 @@ hq/
 │   │   ├── use-gateway.tsx         # GatewayProvider context + subscribe API + agents list
 │   │   ├── use-chat.ts             # Chat state: history, streaming, send (per session)
 │   │   ├── use-messenger-panel.tsx # Messenger slide-panel state (open/close, agent selection)
-│   │   ├── use-task-notify.ts      # Send task notifications to agents via chat.send
 │   │   ├── use-task-active.ts      # Track live agent activity per task via gateway events
 │   │   ├── use-trpc.tsx            # tRPC + React Query provider
 │   │   └── use-mobile.ts           # Responsive breakpoint hook
@@ -100,10 +99,12 @@ hq/
 │       └── ui/                     # shadcn/ui primitives (button, input, sheet, etc.)
 ├── worker/
 │   ├── index.ts                    # Hono app entry — cors, health, tRPC adapter
+│   ├── lib/
+│   │   └── notify-hook.ts         # POST to OpenClaw /hooks/tasks endpoint
 │   ├── db/
 │   │   └── client.ts              # Drizzle database client factory
 │   └── trpc/
-│       ├── context.ts             # Request context (db, waitUntil)
+│       ├── context.ts             # Request context (db, hooksUrl, hooksToken, waitUntil)
 │       ├── init.ts                # tRPC router + procedure setup
 │       ├── router.ts              # Root router (merges task + comment)
 │       └── procedures/
@@ -162,9 +163,6 @@ Per-session chat hook. Session key defaults to `agent:{agentId}:main`. Handles:
 - Subscribe to `chat` events for streaming (delta/final/aborted/error)
 - Monotonic fetch ID to prevent stale history overwrites
 
-### `use-task-notify.ts`
-Sends task lifecycle notifications to agents via `chat.send` over the gateway WebSocket. Each task gets its own session: `agent:{agentId}:{taskId}`. Supports actions: `created`, `updated`, `deleted`, `commented`. Fire-and-forget (catches errors with console.warn). Falls back to `agents[0]` if no assignee.
-
 ### `use-task-active.ts`
 Subscribes to gateway `chat` events and returns `true` while a task's session has active streaming (`delta` state). Used by `TaskCard` to show a shimmer animation on the top edge.
 
@@ -173,13 +171,13 @@ Manages the slide-out messenger panel state. Toggle hotkey: `⌘K`. Persists sel
 
 ## Task Notification Flow
 
-Task mutations notify agents via `chat.send` over the existing gateway WebSocket (not HTTP hooks):
+Task and comment mutations notify agents via HTTP POST from the Cloudflare Worker to OpenClaw's hook mapping system:
 
-1. **Create/Update/Delete** — `useTaskNotify` called in `onSuccess` of tRPC mutations in `task-create-dialog.tsx`, `task-detail-sheet.tsx`, and `task-card.tsx`
-2. **Comment added** — `onComment` callback passed to `CommentsPanel`, fires `notify("commented", task, commentText)`
-3. **Session key**: `agent:{assignee}:{taskId}` — each task gets its own chat thread
-4. **Agent resolution**: uses `task.assignee` if set, otherwise `agents[0]`
-5. All sends use `deliver: false` (queued, not pushed)
+1. **Worker** — `worker/lib/notify-hook.ts` POSTs to `{OPENCLAW_HOOKS_URL}/hooks/tasks` with task fields as body
+2. **Hook mapping** — OpenClaw config maps the POST body fields to session key and message templates (e.g. `sessionKey: "task:{{taskId}}"`, `messageTemplate: "Task #{{taskId}} created: {{title}}"`)
+3. **Actions**: `created`, `updated`, `deleted` (from `task.ts`), `commented`, `comment_deleted` (from `comment.ts`)
+4. All calls are fire-and-forget via `ctx.waitUntil()` — mutations return immediately
+5. For delete operations, the existing record is fetched before deletion so the hook has full context
 
 ## Task Card Active Shimmer
 
@@ -191,8 +189,8 @@ The worker is a standalone Hono app at `worker/index.ts`:
 - CORS enabled on `/api/*`
 - Health check at `/api/health`
 - tRPC router mounted at `/api/trpc/*`
-- Context provides `db` (Drizzle) and `waitUntil`
-- Env requires `DATABASE_URL`
+- Context provides `db` (Drizzle), `hooksUrl`, `hooksToken`, and `waitUntil`
+- Env requires `DATABASE_URL`, `OPENCLAW_HOOKS_URL`, `OPENCLAW_HOOKS_TOKEN`
 
 ### tRPC Procedures
 
@@ -211,6 +209,8 @@ The worker is a standalone Hono app at `worker/index.ts`:
 | `VITE_GATEWAY_URL` | WebSocket URL for the OpenClaw gateway | `ws://localhost:18789` |
 | `VITE_GATEWAY_TOKEN` | Auth token for gateway connection | `""` |
 | `DATABASE_URL` | Database connection string (worker) | — |
+| `OPENCLAW_HOOKS_URL` | OpenClaw gateway base URL for hooks (worker) | — |
+| `OPENCLAW_HOOKS_TOKEN` | Bearer token for hook endpoint auth (worker) | — |
 
 **Important**: When connecting through Tailscale, use port 443 (omit port from URL) since Tailscale proxies HTTPS on 443 to the gateway's actual port 18789.
 

@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swarm Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Layered dark backgrounds — kept from original */
+            --bg-deep: #08090c;
+            --bg-panel: #0e1015;
+            --bg-surface: #14161c;
+            --bg-elevated: #1a1d26;
+            --bg-glass: rgba(20, 22, 28, 0.7);
+
+            /* Text hierarchy — high contrast, readable */
+            --text-primary: #e8ecf1;
+            --text-secondary: #8b95a5;
+            --text-tertiary: #505868;
+
+            /* Premium muted accents — no neon */
+            --accent-primary: #7c6aef;       /* deep violet */
+            --accent-primary-dim: rgba(124, 106, 239, 0.12);
+            --accent-primary-glow: rgba(124, 106, 239, 0.25);
+            --accent-active: #60d4a0;         /* soft mint green for active/success */
+            --accent-active-dim: rgba(96, 212, 160, 0.10);
+            --accent-active-glow: rgba(96, 212, 160, 0.20);
+            --accent-info: #6aadef;           /* soft electric blue */
+            --accent-info-dim: rgba(106, 173, 239, 0.10);
+            --accent-warn: #e8b560;           /* warm amber */
+
+            /* Borders — subtle, not harsh */
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-default: rgba(255, 255, 255, 0.09);
+            --border-hover: rgba(255, 255, 255, 0.14);
+
+            /* Glass / frosted panels */
+            --glass-bg: rgba(14, 16, 21, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-blur: 20px;
+
+            /* Typography */
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+            /* Motion */
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ── Typography ── */
+        h1, h2, h3 {
+            font-family: var(--font-sans);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .label {
+            font-family: var(--font-sans);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--text-tertiary);
+        }
+
+        .value {
+            font-family: var(--font-sans);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .mono {
+            font-family: var(--font-mono);
+        }
+
+        /* ── Grid Layout ── */
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 340px;
+            grid-template-rows: 52px 1fr 180px;
+            height: 100vh;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        /* ── Glassmorphism Panels ── */
+        .panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .panel-header span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--text-tertiary);
+            border-radius: 50%;
+            transition: all 0.4s var(--ease-smooth);
+        }
+
+        .status-dot.active {
+            background: var(--accent-active);
+            box-shadow: 0 0 8px var(--accent-active-glow);
+        }
+
+        /* ── Top Bar ── */
+        .top-bar {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+        }
+
+        .logo {
+            font-family: var(--font-sans);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            letter-spacing: 3px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-mark {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-info));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-mark svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        .system-stats {
+            display: flex;
+            gap: 28px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-item b {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .stat-item .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 100px;
+            background: var(--accent-active-dim);
+            color: var(--accent-active);
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-active);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        /* ── Agent Sidebar ── */
+        .agent-sidebar {
+            grid-row: 2 / -1;
+        }
+
+        .agent-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .agent-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            background: transparent;
+            border: 1px solid transparent;
+            font-size: 0.8rem;
+            transition: all 0.25s var(--ease-smooth);
+            cursor: pointer;
+        }
+
+        .agent-card:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: var(--border-hover);
+        }
+
+        .agent-card.processing {
+            background: var(--accent-active-dim);
+            border-color: rgba(96, 212, 160, 0.15);
+        }
+
+        .agent-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--bg-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            transition: all 0.25s var(--ease-smooth);
+        }
+
+        .agent-card.processing .agent-avatar {
+            background: var(--accent-active-dim);
+            color: var(--accent-active);
+        }
+
+        .agent-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .agent-name {
+            font-weight: 500;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .agent-task {
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color 0.25s;
+        }
+
+        .agent-card.processing .agent-task {
+            color: var(--accent-active);
+        }
+
+        .agent-metric {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            flex-shrink: 0;
+        }
+
+        /* ── Main Visualization ── */
+        .main-viz {
+            grid-column: 2;
+            grid-row: 2;
+            position: relative;
+            background: radial-gradient(ellipse at center, rgba(124, 106, 239, 0.03) 0%, transparent 70%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .orbit-system {
+            position: relative;
+            width: 420px;
+            height: 420px;
+        }
+
+        .orbit-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 50%;
+            transition: opacity 0.5s;
+        }
+
+        .orbit-ring.dashed {
+            border: 1px dashed rgba(255, 255, 255, 0.05);
+            animation: spin 90s linear infinite;
+        }
+
+        .orbit-ring.active {
+            border-color: var(--accent-primary-dim);
+            box-shadow: 0 0 60px var(--accent-primary-dim);
+        }
+
+        /* Core node — premium, not cyberpunk */
+        .core-node {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 72px;
+            height: 72px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-default);
+            border-radius: 16px;
+            box-shadow:
+                0 0 40px var(--accent-primary-dim),
+                0 4px 20px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .core-label {
+            font-family: var(--font-sans);
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent-primary);
+        }
+
+        .core-sublabel {
+            font-size: 0.55rem;
+            color: var(--text-tertiary);
+        }
+
+        /* Agent nodes — subtle dots with smooth glow */
+        .node-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--text-tertiary);
+            border-radius: 50%;
+            transform-origin: center;
+            transition: all 0.4s var(--ease-smooth);
+            top: 50%;
+            left: 50%;
+        }
+
+        .node-dot.active {
+            background: var(--accent-active);
+            box-shadow: 0 0 12px var(--accent-active-glow);
+            width: 10px;
+            height: 10px;
+        }
+
+        /* Ripple — softer, more elegant */
+        .ripple {
+            position: absolute;
+            border: 1px solid var(--accent-primary);
+            border-radius: 50%;
+            animation: ripple 2s cubic-bezier(0, 0.2, 0.8, 1) forwards;
+            opacity: 0;
+            pointer-events: none;
+            top: 50%;
+            left: 50%;
+        }
+
+        /* Connection lines — subtle trails between active nodes and core */
+        .connection-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            height: 1px;
+            background: linear-gradient(90deg, var(--accent-primary-dim), transparent);
+            transform-origin: left center;
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+
+        .connection-line.active {
+            opacity: 0.4;
+        }
+
+        /* ── Metrics Panel ── */
+        .metrics-panel {
+            grid-column: 2;
+            grid-row: 3;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .metric-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-top: 4px;
+        }
+
+        .metric-unit {
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            font-weight: 400;
+            margin-left: 4px;
+        }
+
+        .graph-line {
+            height: 36px;
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            margin-top: 8px;
+        }
+
+        .bar {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 2px;
+            transition: height 0.3s var(--ease-smooth);
+        }
+
+        .bar.active {
+            background: var(--accent-primary);
+            opacity: 0.7;
+        }
+
+        /* ── Activity Feed ── */
+        .feed-panel {
+            grid-row: 2 / -1;
+        }
+
+        .console-output {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 0.78rem;
+            line-height: 1.7;
+            overflow-y: auto;
+            color: var(--text-secondary);
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 6px 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .log-time {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-tertiary);
+            flex-shrink: 0;
+            min-width: 48px;
+        }
+
+        .log-msg {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .log-msg.success { color: var(--accent-active); }
+        .log-msg.warn { color: var(--accent-warn); }
+        .log-msg.sys { color: var(--accent-info); }
+
+        .log-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            margin-top: 7px;
+            flex-shrink: 0;
+        }
+
+        .log-dot.success { background: var(--accent-active); }
+        .log-dot.warn { background: var(--accent-warn); }
+        .log-dot.sys { background: var(--accent-info); }
+        .log-dot.default { background: var(--text-tertiary); }
+
+        .cmd-input {
+            padding: 14px 16px;
+            border-top: 1px solid var(--border-subtle);
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .prompt-char {
+            color: var(--accent-primary);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+
+        input[type="text"] {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            width: 100%;
+            outline: none;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-default);
+            border-radius: 4px;
+        }
+
+        /* ── Animations ── */
+        @keyframes spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.4;
+                border-width: 1px;
+                transform: translate(-50%, -50%);
+            }
+            100% {
+                width: 140px;
+                height: 140px;
+                opacity: 0;
+                border-width: 0px;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .log-entry {
+            animation: fade-in 0.3s var(--ease-out);
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            .agent-sidebar, .metrics-panel, .feed-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="logo">
+                <div class="logo-mark">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="3" fill="white"/>
+                        <circle cx="12" cy="4" r="2" fill="white" opacity="0.6"/>
+                        <circle cx="12" cy="20" r="2" fill="white" opacity="0.6"/>
+                        <circle cx="4" cy="12" r="2" fill="white" opacity="0.6"/>
+                        <circle cx="20" cy="12" r="2" fill="white" opacity="0.6"/>
+                        <circle cx="6.3" cy="6.3" r="1.5" fill="white" opacity="0.3"/>
+                        <circle cx="17.7" cy="6.3" r="1.5" fill="white" opacity="0.3"/>
+                        <circle cx="6.3" cy="17.7" r="1.5" fill="white" opacity="0.3"/>
+                        <circle cx="17.7" cy="17.7" r="1.5" fill="white" opacity="0.3"/>
+                    </svg>
+                </div>
+                SWARM
+            </div>
+            <div class="system-stats">
+                <span class="stat-item">
+                    <span class="stat-label">Agents</span>
+                    <b>14</b>
+                </span>
+                <span class="stat-item">
+                    <span class="stat-label">Tasks</span>
+                    <b>38</b>
+                </span>
+                <span class="stat-item">
+                    <span class="stat-label">Uptime</span>
+                    <b>99.8%</b>
+                </span>
+                <span class="status-badge">Operational</span>
+            </div>
+        </header>
+
+        <!-- Agent Sidebar -->
+        <aside class="panel agent-sidebar">
+            <div class="panel-header">
+                <span class="label">Active Agents</span>
+                <div class="status-dot active"></div>
+            </div>
+            <div class="agent-list" id="agentList"></div>
+        </aside>
+
+        <!-- Main Visualization -->
+        <main class="panel main-viz">
+            <div class="orbit-system">
+                <div class="orbit-ring" style="width: 100%; height: 100%;"></div>
+                <div class="orbit-ring dashed" style="width: 72%; height: 72%;"></div>
+                <div class="orbit-ring" style="width: 42%; height: 42%; border-color: var(--border-default);"></div>
+
+                <div class="core-node">
+                    <span class="core-label">Core</span>
+                    <span class="core-sublabel">14 active</span>
+                </div>
+
+                <div id="swarmContainer"></div>
+            </div>
+        </main>
+
+        <!-- Activity Feed -->
+        <aside class="panel feed-panel">
+            <div class="panel-header">
+                <span class="label">Activity</span>
+            </div>
+            <div class="console-output" id="console">
+                <div class="log-entry">
+                    <span class="log-time">10:00</span>
+                    <span class="log-dot sys"></span>
+                    <span class="log-msg sys">System initialized</span>
+                </div>
+            </div>
+            <div class="cmd-input">
+                <span class="prompt-char">&rsaquo;</span>
+                <input type="text" placeholder="Send a command..." spellcheck="false">
+            </div>
+        </aside>
+
+        <!-- Metrics -->
+        <section class="metrics-panel">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="label">Throughput</span>
+                </div>
+                <div class="metric-value">4,291<span class="metric-unit">req/s</span></div>
+                <div class="graph-line" id="graph1"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="label">Latency</span>
+                </div>
+                <div class="metric-value">12<span class="metric-unit">ms avg</span></div>
+                <div class="graph-line" id="graph2"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="label">Success Rate</span>
+                </div>
+                <div class="metric-value" style="color: var(--accent-active);">99.99<span class="metric-unit">%</span></div>
+                <div class="graph-line" id="graph3"></div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const agentCount = 14;
+        const agents = [];
+        const agentNames = [
+            'PR Outreach', 'SEO Writer', 'Social Media', 'Analytics',
+            'Email Campaigns', 'Content Review', 'Media Monitor', 'Brand Voice',
+            'Link Builder', 'Ad Optimizer', 'CRM Sync', 'Report Builder',
+            'Scheduler', 'Trend Scout'
+        ];
+        const statuses = ['Monitoring', 'Processing', 'Queued', 'Idle', 'Executing', 'Analyzing'];
+
+        const agentList = document.getElementById('agentList');
+        const swarmContainer = document.getElementById('swarmContainer');
+        const consoleEl = document.getElementById('console');
+
+        function init() {
+            for (let i = 0; i < agentCount; i++) {
+                // Agent card
+                const div = document.createElement('div');
+                div.className = 'agent-card';
+                div.id = `agent-card-${i}`;
+                div.innerHTML = `
+                    <div class="agent-avatar">${agentNames[i].substring(0, 2).toUpperCase()}</div>
+                    <div class="agent-info">
+                        <div class="agent-name">${agentNames[i]}</div>
+                        <div class="agent-task">${statuses[Math.floor(Math.random() * statuses.length)]}</div>
+                    </div>
+                    <span class="agent-metric mono">${Math.floor(Math.random() * 100)}%</span>
+                `;
+                agentList.appendChild(div);
+
+                // Orbit node
+                const node = document.createElement('div');
+                node.className = 'node-dot';
+                node.id = `node-${i}`;
+                swarmContainer.appendChild(node);
+
+                agents.push({
+                    id: i,
+                    angle: (Math.PI * 2 / agentCount) * i + (Math.random() * 0.3),
+                    distance: 110 + Math.random() * 80,
+                    speed: 0.003 + Math.random() * 0.006,
+                    active: false
+                });
+            }
+
+            createGraph('graph1', 24);
+            createGraph('graph2', 24);
+            createGraph('graph3', 24);
+
+            requestAnimationFrame(loop);
+            setInterval(simulateActivity, 1200);
+            setInterval(updateGraphs, 250);
+        }
+
+        function createGraph(id, bars) {
+            const el = document.getElementById(id);
+            for (let i = 0; i < bars; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = Math.random() * 100 + '%';
+                el.appendChild(bar);
+            }
+        }
+
+        function updateGraphs() {
+            ['graph1', 'graph2', 'graph3'].forEach(id => {
+                const el = document.getElementById(id);
+                const first = el.firstElementChild;
+                el.removeChild(first);
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                if (Math.random() > 0.65) bar.classList.add('active');
+                bar.style.height = Math.random() * 100 + '%';
+                el.appendChild(bar);
+            });
+        }
+
+        const logMessages = [
+            { msg: 'completed LinkedIn post distribution', type: 'success' },
+            { msg: 'analyzing sentiment for brand mention', type: '' },
+            { msg: 'SEO article draft ready for review', type: 'success' },
+            { msg: 'rate limit approaching on API tier', type: 'warn' },
+            { msg: 'CRM contact sync completed', type: 'success' },
+            { msg: 'media monitoring scan finished', type: '' },
+            { msg: 'scheduled 3 posts for tomorrow', type: 'success' },
+            { msg: 'campaign performance report generated', type: 'sys' },
+            { msg: 'new trend detected: sustainable packaging', type: 'sys' },
+            { msg: 'email sequence A/B test results ready', type: 'success' },
+        ];
+
+        function log(agentId, msgObj) {
+            const row = document.createElement('div');
+            row.className = 'log-entry';
+            const now = new Date();
+            const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const type = msgObj.type || 'default';
+            row.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span class="log-dot ${type}"></span>
+                <span class="log-msg ${type}">${agentNames[agentId]} — ${msgObj.msg}</span>
+            `;
+            consoleEl.appendChild(row);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+
+            // Keep log manageable
+            if (consoleEl.children.length > 50) {
+                consoleEl.removeChild(consoleEl.firstElementChild);
+            }
+        }
+
+        function simulateActivity() {
+            const targetId = Math.floor(Math.random() * agentCount);
+            const agent = agents[targetId];
+            agent.active = true;
+
+            const card = document.getElementById(`agent-card-${targetId}`);
+            card.classList.add('processing');
+            card.querySelector('.agent-task').innerText = 'Processing...';
+
+            const node = document.getElementById(`node-${targetId}`);
+            node.classList.add('active');
+
+            // Log
+            const msgObj = logMessages[Math.floor(Math.random() * logMessages.length)];
+            log(targetId, msgObj);
+
+            // Reset after delay
+            setTimeout(() => {
+                agent.active = false;
+                card.classList.remove('processing');
+                card.querySelector('.agent-task').innerText = statuses[Math.floor(Math.random() * statuses.length)];
+                node.classList.remove('active');
+            }, 2000);
+
+            // Ripple — elegant pulse from core
+            if (Math.random() > 0.4) {
+                const ripple = document.createElement('div');
+                ripple.className = 'ripple';
+                swarmContainer.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 2000);
+            }
+        }
+
+        function loop() {
+            agents.forEach(agent => {
+                agent.angle += agent.speed;
+                const x = Math.cos(agent.angle) * agent.distance;
+                const y = Math.sin(agent.angle) * agent.distance;
+                const node = document.getElementById(`node-${agent.id}`);
+                node.style.transform = `translate(${x}px, ${y}px)`;
+            });
+            requestAnimationFrame(loop);
+        }
+
+        init();
+    </script>
+
+</body>
+</html>

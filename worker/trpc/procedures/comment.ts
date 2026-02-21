@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { taskComments } from "../../../shared/schema";
-import { router, publicProcedure } from "../init";
+import { taskComments, tasks } from "../../../shared/schema";
+import { router, authedProcedure } from "../init";
+import { extractMentions, notifyMentionedAgents } from "../../lib/mentions";
 
 export const commentRouter = router({
-  add: publicProcedure
+  add: authedProcedure
     .input(
       z.object({
         taskId: z.string().min(1),
@@ -21,15 +22,41 @@ export const commentRouter = router({
           content: input.content,
         })
         .returning();
+
+      // Extract @[agentId] mentions and notify via hooks
+      const mentionedAgents = extractMentions(input.content);
+      if (mentionedAgents.length > 0) {
+        const task = await ctx.db.query.tasks.findFirst({
+          where: eq(tasks.id, input.taskId),
+        });
+        if (task) {
+          ctx.waitUntil(
+            notifyMentionedAgents(
+              ctx,
+              mentionedAgents,
+              task.id,
+              task.title,
+              input.author,
+              input.content,
+            )
+          );
+        }
+      }
+
       return comment;
     }),
 
-  delete: publicProcedure
+  delete: authedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db
-        .delete(taskComments)
+      const [comment] = await ctx.db
+        .select()
+        .from(taskComments)
         .where(eq(taskComments.id, input.id));
+
+      if (comment) {
+        await ctx.db.delete(taskComments).where(eq(taskComments.id, input.id));
+      }
       return { success: true };
     }),
 });

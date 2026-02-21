@@ -21,6 +21,7 @@ export const tasks = pgTable("tasks", {
   dueDate: timestamp("due_date", { withTimezone: true }),
   urgent: boolean("urgent").notNull().default(false),
   important: boolean("important").notNull().default(false),
+  organizationId: text("organization_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

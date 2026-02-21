@@ -1,7 +1,7 @@
 import { Calendar, CircleAlert, Star, User } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { useTaskNotify } from "@/hooks/use-task-notify";
 import { useTaskActive } from "@/hooks/use-task-active";
+import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { TaskStatusDropdown } from "./task-status-dropdown";
 import type { TaskStatus } from "@shared/types";
 
@@ -21,13 +21,15 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
   const utils = trpc.useUtils();
-  const { notify } = useTaskNotify();
   const active = useTaskActive(task.id);
+  const notifyTask = useTaskNotify();
 
   const updateTask = trpc.task.update.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (updated) => {
       utils.task.list.invalidate();
-      notify("updated", data);
+      if (updated?.assignee) {
+        notifyTask(updated.assignee, updated.id, formatTaskNotification("updated", updated));
+      }
     },
   });
 
@@ -36,37 +38,42 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   };
 
   const hasPriority = task.urgent || task.important;
-
   const isDoing = task.status === "doing";
 
   return (
     <div
-      className={`group relative cursor-pointer overflow-hidden rounded-lg border bg-background p-3 transition-all hover:border-foreground/20 hover:shadow-sm ${isDoing ? "border-blue-500/20 bg-blue-500/[0.02]" : ""}`}
+      className={`group relative cursor-pointer overflow-hidden rounded-lg border bg-card p-3.5 swarm-card ${
+        isDoing
+          ? "border-[var(--swarm-violet)]/15 dark:bg-[var(--swarm-violet-dim)]"
+          : "border-border/40 hover:border-border"
+      }`}
       onClick={onClick}
     >
+      {/* Shimmer — violet for active, subtle for doing */}
       {(active || isDoing) && (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
           <div
             className="h-full w-full"
             style={{
-              background: active 
-                ? "linear-gradient(90deg, transparent 0%, var(--foreground) 50%, transparent 100%)"
-                : "linear-gradient(90deg, transparent 0%, oklch(0.585 0.233 277.117 / 0.3) 50%, transparent 100%)",
-              opacity: active ? 0.35 : 1,
-              animation: active 
-                ? "shimmer-edge 2s ease-in-out infinite"
-                : "shimmer-edge 4s linear infinite",
+              background: active
+                ? "linear-gradient(90deg, transparent 0%, var(--swarm-violet, oklch(0.65 0.18 280)) 50%, transparent 100%)"
+                : "linear-gradient(90deg, transparent 0%, var(--swarm-violet, oklch(0.65 0.18 280)) 50%, transparent 100%)",
+              opacity: active ? 0.6 : 0.25,
+              animation: active
+                ? "swarm-shimmer 2s ease-in-out infinite"
+                : "swarm-shimmer 4s linear infinite",
             }}
           />
         </div>
       )}
-      {/* Title + priority indicators */}
+
+      {/* Title + priority */}
       <div className="flex items-start gap-2">
-        {task.status === "doing" && (
+        {isDoing && (
           <div className="mt-1.5 shrink-0">
             <div className="relative flex size-2">
-              <div className="animate-pulse-soft absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></div>
-              <div className="relative inline-flex size-2 rounded-full bg-blue-500"></div>
+              <div className="animate-pulse-soft absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: "var(--swarm-violet)" }} />
+              <div className="relative inline-flex size-2 rounded-full" style={{ backgroundColor: "var(--swarm-violet)" }} />
             </div>
           </div>
         )}
@@ -74,10 +81,10 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         {hasPriority && (
           <div className="flex items-center gap-1 shrink-0 pt-0.5">
             {task.urgent && (
-              <CircleAlert className="size-3.5 text-red-500" />
+              <CircleAlert className="size-3.5 text-red-400" />
             )}
             {task.important && (
-              <Star className="size-3.5 text-amber-500 fill-amber-500" />
+              <Star className="size-3.5 text-amber-400 fill-amber-400" />
             )}
           </div>
         )}
@@ -85,22 +92,22 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
       {/* Description */}
       {task.description && (
-        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
           {task.description}
         </p>
       )}
 
       {/* Footer */}
       <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground min-w-0">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70 min-w-0">
           {task.assignee && (
             <span className="flex items-center gap-1 truncate">
               <User className="size-3 shrink-0" />
-              <span className="truncate">{task.assignee}</span>
+              <span className="font-mono truncate">{task.assignee}</span>
             </span>
           )}
           {task.dueDate && (
-            <span className="flex items-center gap-1 shrink-0">
+            <span className="flex items-center gap-1 shrink-0 font-mono">
               <Calendar className="size-3" />
               {new Date(task.dueDate).toLocaleDateString("en-US", {
                 month: "short",

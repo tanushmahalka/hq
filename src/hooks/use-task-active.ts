@@ -16,7 +16,7 @@ export function useTaskActive(taskId: string): boolean {
   const [active, setActive] = useState(false);
 
   useEffect(() => {
-    const suffix = `:${taskId}`;
+    const suffix = `:task:${taskId}`;
 
     return subscribe((evt: EventFrame) => {
       if (evt.event !== "chat") return;

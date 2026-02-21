@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import {
   Sheet,
   SheetContent,
@@ -25,22 +25,30 @@ import {
   Trash2,
   Send,
   MessageSquare,
+  Bot,
 } from "lucide-react";
 import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
 import { trpc } from "@/lib/trpc";
-import { useTaskNotify } from "@/hooks/use-task-notify";
+import { useTaskSessions } from "@/hooks/use-task-sessions";
+import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
+import { useGateway } from "@/hooks/use-gateway";
+import { SessionMessageRow } from "@/components/chat/session-blocks";
+import { MessageContent } from "@/components/messenger/message-content";
+import { getAtQuery, parseContentSegments, parseAgentName } from "@/lib/mentions";
+import { MentionDropdown, getFilteredAgents } from "./mention-dropdown";
+import { LoaderFive } from "@/components/ui/loader";
 
 const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
   todo: "bg-gray-400",
   doing: "bg-blue-500",
   stuck: "bg-red-500",
-  in_review: "bg-yellow-500",
   done: "bg-green-500",
 };
 
 // -- Tab definitions (extend this to add more right-panel tabs) --
 const TABS = [
   { id: "comments", label: "Comments", icon: MessageSquare },
+  { id: "session", label: "Session", icon: Bot },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -54,7 +62,7 @@ interface TaskDetailSheetProps {
 
 export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
   const utils = trpc.useUtils();
-  const { notify } = useTaskNotify();
+  const notifyTask = useTaskNotify();
   const [activeTab, setActiveTab] = useState<TabId>("comments");
 
   const { data: task } = trpc.task.get.useQuery(
@@ -85,17 +93,21 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
   }, [task]);
 
   const updateTask = trpc.task.update.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (updated) => {
       utils.task.list.invalidate();
       utils.task.get.invalidate({ id: taskId! });
-      notify("updated", data);
+      if (updated?.assignee) {
+        notifyTask(updated.assignee, updated.id, formatTaskNotification("updated", updated));
+      }
     },
   });
 
   const deleteTask = trpc.task.delete.useMutation({
     onSuccess: () => {
-      if (task) notify("deleted", task);
       utils.task.list.invalidate();
+      if (task?.assignee) {
+        notifyTask(task.assignee, task.id, formatTaskNotification("deleted", task));
+      }
       onClose();
     },
   });
@@ -156,17 +168,18 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
           <div className="px-6 space-y-0">
             {task?.createdAt && (
               <PropertyRow icon={<Clock className="size-4" />} label="Created">
-                <span className="text-sm">
+                <span className="text-sm font-mono">
                   {new Date(task.createdAt).toLocaleDateString("en-US", {
                     year: "numeric",
-                    month: "long",
+                    month: "short",
                     day: "numeric",
                   })}
                   {"  "}
                   <span className="text-muted-foreground">
                     {new Date(task.createdAt).toLocaleTimeString("en-US", {
-                      hour: "numeric",
+                      hour: "2-digit",
                       minute: "2-digit",
+                      hour12: false,
                     })}
                   </span>
                 </span>
@@ -258,7 +271,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
                 onBlur={() =>
                   save("dueDate", dueDate ? new Date(dueDate) : null)
                 }
-                className="text-sm bg-transparent border-none outline-none"
+                className="text-sm font-mono bg-transparent border-none outline-none"
               />
             </PropertyRow>
 
@@ -271,7 +284,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
                 onChange={(e) => setAssignor(e.target.value)}
                 onBlur={() => save("assignor", assignor || null)}
                 placeholder="Who assigned this"
-                className="text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/50 w-full"
+                className="text-sm font-mono bg-transparent border-none outline-none placeholder:text-muted-foreground/50 placeholder:font-sans w-full"
               />
             </PropertyRow>
 
@@ -281,7 +294,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
                 onChange={(e) => setAssignee(e.target.value)}
                 onBlur={() => save("assignee", assignee || null)}
                 placeholder="Who's doing this"
-                className="text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/50 w-full"
+                className="text-sm font-mono bg-transparent border-none outline-none placeholder:text-muted-foreground/50 placeholder:font-sans w-full"
               />
             </PropertyRow>
           </div>
@@ -331,9 +344,18 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-hidden">
             {activeTab === "comments" && task && (
-              <CommentsPanel taskId={task.id} comments={task.comments ?? []} onComment={(text) => notify("commented", task, text)} />
+              <CommentsPanel
+                taskId={task.id}
+                comments={task.comments ?? []}
+                assignee={task.assignee}
+                taskTitle={task.title}
+                notifyTask={notifyTask}
+              />
+            )}
+            {activeTab === "session" && task && (
+              <SessionPanel taskId={task.id} assignee={task.assignee} />
             )}
           </div>
         </div>
@@ -376,21 +398,39 @@ interface Comment {
 function CommentsPanel({
   taskId,
   comments,
-  onComment,
+  assignee,
+  taskTitle,
+  notifyTask,
 }: {
   taskId: string;
   comments: Comment[];
-  onComment: (text: string) => void;
+  assignee: string | null;
+  taskTitle: string;
+  notifyTask: (agentId: string, taskId: string, message: string) => void;
 }) {
   const [content, setContent] = useState("");
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const utils = trpc.useUtils();
+  const { agents } = useGateway();
 
   const addComment = trpc.task.comment.add.useMutation({
-    onSuccess: (_, variables) => {
+    onSuccess: (_result, variables) => {
       utils.task.list.invalidate();
       utils.task.get.invalidate({ id: taskId });
-      onComment(variables.content);
       setContent("");
+      setMentionQuery(null);
+      if (assignee) {
+        notifyTask(
+          assignee,
+          taskId,
+          formatTaskNotification("commented", { id: taskId, title: taskTitle }, {
+            author: variables.author,
+            comment: variables.content,
+          }),
+        );
+      }
     },
   });
 
@@ -400,6 +440,64 @@ function CommentsPanel({
       utils.task.get.invalidate({ id: taskId });
     },
   });
+
+  const filteredAgents = mentionQuery !== null
+    ? getFilteredAgents(agents, mentionQuery)
+    : [];
+
+  const insertMention = (agentId: string) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const cursorPos = ta.selectionStart;
+    const before = content.slice(0, cursorPos);
+    const after = content.slice(cursorPos);
+    const atIdx = before.lastIndexOf("@");
+    if (atIdx === -1) return;
+    const newContent = before.slice(0, atIdx) + `@[${agentId}] ` + after;
+    setContent(newContent);
+    setMentionQuery(null);
+    setSelectedIdx(0);
+    // Restore focus and cursor position after React re-render
+    const newCursorPos = atIdx + agentId.length + 4; // @[ + id + ] + space
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(newCursorPos, newCursorPos);
+    });
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setContent(val);
+    const cursorPos = e.target.selectionStart;
+    const query = getAtQuery(val, cursorPos);
+    setMentionQuery(query);
+    if (query !== null) setSelectedIdx(0);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionQuery !== null && filteredAgents.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIdx((i) => (i + 1) % filteredAgents.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIdx((i) => (i - 1 + filteredAgents.length) % filteredAgents.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertMention(filteredAgents[selectedIdx].id);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionQuery(null);
+        return;
+      }
+    }
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -432,7 +530,7 @@ function CommentsPanel({
                 <span className="text-sm font-normal">
                   {c.author.charAt(0).toUpperCase() + c.author.slice(1)}
                 </span>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground font-mono">
                   {new Date(c.createdAt).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -453,7 +551,7 @@ function CommentsPanel({
                 </button>
               </div>
               <p className="text-sm text-muted-foreground opacity-60 mt-0.5 whitespace-pre-wrap">
-                {c.content}
+                <CommentContent content={c.content} agents={agents} />
               </p>
             </div>
           </div>
@@ -465,10 +563,20 @@ function CommentsPanel({
         onSubmit={handleSubmit}
         className="relative border-t bg-muted/30 shrink-0"
       >
+        {mentionQuery !== null && filteredAgents.length > 0 && (
+          <MentionDropdown
+            agents={agents}
+            query={mentionQuery}
+            selectedIdx={selectedIdx}
+            onSelect={insertMention}
+          />
+        )}
         <textarea
-          placeholder="Write a comment..."
+          ref={textareaRef}
+          placeholder="Write a comment... (@ to mention)"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
           rows={3}
           className="w-full bg-transparent px-4 py-3 pr-11 text-sm resize-none outline-none placeholder:text-muted-foreground/50"
         />
@@ -485,3 +593,154 @@ function CommentsPanel({
     </div>
   );
 }
+
+/** Renders comment content with highlighted @mentions. */
+function CommentContent({ content, agents }: { content: string; agents: { id: string; name?: string; identity?: { name?: string; emoji?: string } }[] }) {
+  const segments = parseContentSegments(content);
+  if (segments.length === 1 && segments[0].type === "text") {
+    return <>{content}</>;
+  }
+  return (
+    <>
+      {segments.map((seg, i) => {
+        if (seg.type === "text") return <span key={i}>{seg.text}</span>;
+        const agent = agents.find((a) => a.id === seg.agentId);
+        const raw = agent?.identity?.name ?? agent?.name ?? seg.agentId;
+        const { name } = parseAgentName(raw);
+        return (
+          <span
+            key={i}
+            className="text-blue-500 dark:text-blue-400 font-medium opacity-100"
+          >
+            @{name}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+// -- Session panel --
+
+function SessionPanel({
+  taskId,
+  assignee,
+}: {
+  taskId: string;
+  assignee: string | null;
+}) {
+  const { agents, connected } = useGateway();
+  const fallbackAgentId = assignee || agents[0]?.id;
+  const agent = assignee ? agents.find((a) => a.id === assignee) : agents[0];
+  const emoji = agent?.identity?.emoji;
+
+  return (
+    <SessionChat
+      taskId={taskId}
+      fallbackAgentId={fallbackAgentId}
+      agentEmoji={emoji}
+      connected={connected}
+    />
+  );
+}
+
+function SessionChat({
+  taskId,
+  fallbackAgentId,
+  agentEmoji,
+  connected,
+}: {
+  taskId: string;
+  fallbackAgentId?: string;
+  agentEmoji?: string;
+  connected: boolean;
+}) {
+  const { messages, stream, isStreaming, loading, error, sendMessage } =
+    useTaskSessions(taskId, fallbackAgentId);
+  const [input, setInput] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
+  }, [messages, stream]);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isStreaming) return;
+    void sendMessage(input);
+    setInput("");
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <LoaderFive text="Thinking..." />
+          </div>
+        )}
+
+        {!loading && messages.length === 0 && !error && (
+          <p className="text-xs text-muted-foreground text-center py-8">
+            No messages in this session yet.
+          </p>
+        )}
+
+        {messages.map((msg, i) => (
+          <SessionMessageRow key={i} msg={msg} agentEmoji={agentEmoji} />
+        ))}
+
+        {isStreaming && (
+          <div className="flex gap-2.5">
+            <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-[9px]">{agentEmoji ?? "🤖"}</span>
+            </div>
+            {stream ? (
+              <div className="flex-1 min-w-0 text-sm text-muted-foreground leading-relaxed">
+                <MessageContent text={stream} />
+                <span className="inline-block w-0.5 h-3.5 ml-0.5 bg-foreground/40 animate-pulse" />
+              </div>
+            ) : (
+              <div className="flex items-center pt-1">
+                <LoaderFive text="Thinking..." />
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <p className="text-xs text-destructive text-center py-2">{error}</p>
+        )}
+      </div>
+
+      {/* Input */}
+      <form onSubmit={handleSubmit} className="relative border-t bg-muted/30 shrink-0">
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit(e);
+            }
+          }}
+          placeholder={connected ? "Message agent..." : "Connecting..."}
+          disabled={!connected || isStreaming}
+          rows={2}
+          className="w-full bg-transparent px-4 py-3 pr-11 text-sm resize-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-40"
+        />
+        <Button
+          type="submit"
+          size="icon"
+          variant="ghost"
+          className="absolute right-2 bottom-2 size-7"
+          disabled={!connected || isStreaming || !input.trim()}
+        >
+          <Send className="size-3.5" />
+        </Button>
+      </form>
+    </div>
+  );
+}
+

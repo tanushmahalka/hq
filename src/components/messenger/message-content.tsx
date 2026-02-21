@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Code, BrainCircuit } from "lucide-react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Code, ExternalLink, FileText, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,12 +14,69 @@ import {
 type Segment =
   | { type: "text"; content: string }
   | { type: "json"; content: string }
-  | { type: "context"; content: string };
+  | { type: "link"; url: string; label: string };
 
-/**
- * Try to extract a balanced JSON value (object or array) starting at `start`.
- * Returns the end index (exclusive) or -1 if it doesn't parse.
- */
+/* ── URL regex: matches http/https URLs ── */
+const URL_RE =
+  /https?:\/\/[^\s<>)"'\]]+/g;
+
+/* ── Known domain icons ── */
+const DOMAIN_ICONS: Record<string, string> = {
+  "docs.google.com": "📄",
+  "drive.google.com": "📁",
+  "sheets.google.com": "📊",
+  "slides.google.com": "📽️",
+  "github.com": "🐙",
+  "figma.com": "🎨",
+  "notion.so": "📝",
+  "linear.app": "📋",
+  "slack.com": "💬",
+  "youtube.com": "▶️",
+  "youtu.be": "▶️",
+};
+
+function getDomainIcon(hostname: string): string | null {
+  for (const [domain, icon] of Object.entries(DOMAIN_ICONS)) {
+    if (hostname === domain || hostname.endsWith("." + domain)) return icon;
+  }
+  return null;
+}
+
+function friendlyLabel(url: string): string {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+
+    // Google Docs
+    if (host === "docs.google.com") {
+      const match = u.pathname.match(/\/document\/d\/([^/]+)/);
+      if (match) return "Google Document";
+      if (u.pathname.includes("/spreadsheets/")) return "Google Sheet";
+      if (u.pathname.includes("/presentation/")) return "Google Slides";
+      return "Google Docs";
+    }
+    if (host === "drive.google.com") return "Google Drive";
+    if (host === "sheets.google.com") return "Google Sheet";
+    if (host === "slides.google.com") return "Google Slides";
+
+    // GitHub
+    if (host === "github.com") {
+      const parts = u.pathname.split("/").filter(Boolean);
+      if (parts.length >= 2) return `${parts[0]}/${parts[1]}`;
+      return "GitHub";
+    }
+
+    // Fallback: show domain + first path segment
+    const firstPath = u.pathname.split("/").filter(Boolean)[0];
+    if (firstPath) return `${host}/${firstPath}`;
+    return host;
+  } catch {
+    return url.slice(0, 40);
+  }
+}
+
+/* ── JSON extraction ── */
+
 function extractJsonEnd(text: string, start: number): number {
   const open = text[start];
   const close = open === "{" ? "}" : "]";
@@ -27,31 +86,16 @@ function extractJsonEnd(text: string, start: number): number {
 
   for (let i = start; i < text.length; i++) {
     const ch = text[i];
-
-    if (escape) {
-      escape = false;
-      continue;
-    }
-
-    if (ch === "\\") {
-      escape = true;
-      continue;
-    }
-
-    if (ch === '"') {
-      inString = !inString;
-      continue;
-    }
-
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
     if (inString) continue;
-
     if (ch === open) depth++;
     else if (ch === close) {
       depth--;
       if (depth === 0) return i + 1;
     }
   }
-
   return -1;
 }
 
@@ -65,60 +109,9 @@ function tryParseJson(text: string): string | null {
   }
 }
 
-const CONTEXT_OPEN = "<supermemory-context>";
-const CONTEXT_CLOSE = "</supermemory-context>";
-
-/**
- * First pass: extract <supermemory-context> blocks, then parse remaining
- * chunks for JSON segments.
- */
-export function parseSegments(text: string): Segment[] {
-  const segments: Segment[] = [];
-  let cursor = 0;
-
-  // Split on supermemory-context tags first
-  while (cursor < text.length) {
-    const openIdx = text.indexOf(CONTEXT_OPEN, cursor);
-
-    if (openIdx === -1) {
-      // No more context tags — parse rest for JSON
-      const rest = text.slice(cursor);
-      if (rest) segments.push(...parseJsonSegments(rest));
-      break;
-    }
-
-    // Text before the tag
-    if (openIdx > cursor) {
-      const before = text.slice(cursor, openIdx);
-      segments.push(...parseJsonSegments(before));
-    }
-
-    const contentStart = openIdx + CONTEXT_OPEN.length;
-    const closeIdx = text.indexOf(CONTEXT_CLOSE, contentStart);
-
-    if (closeIdx === -1) {
-      // Unclosed tag — treat rest as context
-      segments.push({
-        type: "context",
-        content: text.slice(contentStart).trim(),
-      });
-      cursor = text.length;
-      break;
-    }
-
-    segments.push({
-      type: "context",
-      content: text.slice(contentStart, closeIdx).trim(),
-    });
-    cursor = closeIdx + CONTEXT_CLOSE.length;
-  }
-
-  return segments;
-}
-
-/** Parse a chunk of text for JSON segments (no context tags present). */
-function parseJsonSegments(text: string): Segment[] {
-  // Fast path: entire chunk is JSON
+/** Parse text into text, JSON, and link segments. */
+function parseSegments(text: string): Segment[] {
+  // Fast path: entire text is JSON
   const trimmed = text.trim();
   if (trimmed[0] === "{" || trimmed[0] === "[") {
     const formatted = tryParseJson(trimmed);
@@ -128,38 +121,60 @@ function parseJsonSegments(text: string): Segment[] {
   const segments: Segment[] = [];
   let cursor = 0;
 
-  while (cursor < text.length) {
-    let nextJson = -1;
-    for (let i = cursor; i < text.length; i++) {
-      if (text[i] === "{" || text[i] === "[") {
-        if (i === 0 || /\s/.test(text[i - 1])) {
-          const end = extractJsonEnd(text, i);
-          if (end !== -1) {
-            const candidate = text.slice(i, end);
-            if (tryParseJson(candidate)) {
-              nextJson = i;
-              break;
-            }
+  // First pass: extract JSON blocks
+  const jsonRanges: Array<{ start: number; end: number; formatted: string }> =
+    [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "{" || text[i] === "[") {
+      if (i === 0 || /\s/.test(text[i - 1])) {
+        const end = extractJsonEnd(text, i);
+        if (end !== -1) {
+          const candidate = text.slice(i, end);
+          const formatted = tryParseJson(candidate);
+          if (formatted) {
+            jsonRanges.push({ start: i, end, formatted });
+            i = end - 1;
           }
         }
       }
     }
+  }
 
-    if (nextJson === -1) {
-      const remaining = text.slice(cursor);
-      if (remaining) segments.push({ type: "text", content: remaining });
-      break;
+  // Second pass: split remaining text into text + link segments
+  function pushTextAndLinks(str: string) {
+    if (!str) return;
+    let lastIdx = 0;
+    const re = new RegExp(URL_RE.source, "g");
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(str)) !== null) {
+      if (match.index > lastIdx) {
+        segments.push({ type: "text", content: str.slice(lastIdx, match.index) });
+      }
+      const url = match[0].replace(/[.,;:!?)]+$/, ""); // strip trailing punctuation
+      segments.push({
+        type: "link",
+        url,
+        label: friendlyLabel(url),
+      });
+      lastIdx = match.index + url.length;
     }
-
-    if (nextJson > cursor) {
-      segments.push({ type: "text", content: text.slice(cursor, nextJson) });
+    if (lastIdx < str.length) {
+      segments.push({ type: "text", content: str.slice(lastIdx) });
     }
+  }
 
-    const end = extractJsonEnd(text, nextJson);
-    const raw = text.slice(nextJson, end);
-    const formatted = tryParseJson(raw)!;
-    segments.push({ type: "json", content: formatted });
-    cursor = end;
+  if (jsonRanges.length === 0) {
+    pushTextAndLinks(text);
+  } else {
+    for (let i = 0; i < jsonRanges.length; i++) {
+      const range = jsonRanges[i];
+      const before = text.slice(cursor, range.start);
+      pushTextAndLinks(before);
+      segments.push({ type: "json", content: range.formatted });
+      cursor = range.end;
+    }
+    const remaining = text.slice(cursor);
+    pushTextAndLinks(remaining);
   }
 
   return segments;
@@ -169,24 +184,69 @@ export function MessageContent({ text }: { text: string }) {
   const segments = parseSegments(text);
 
   return (
-    <>
+    <div className="break-words overflow-hidden">
       {segments.map((seg, i) => {
         if (seg.type === "json") {
           return <JsonButton key={i} content={seg.content} />;
         }
-        if (seg.type === "context") {
-          return <ContextButton key={i} content={seg.content} />;
+        if (seg.type === "link") {
+          return <LinkCard key={i} url={seg.url} label={seg.label} />;
         }
         return (
-          <span key={i} className="whitespace-pre-wrap break-words">
-            {seg.content}
-          </span>
+          <div
+            key={i}
+            className="prose prose-sm dark:prose-invert max-w-none text-inherit break-words prose-headings:text-inherit prose-strong:text-inherit prose-a:text-inherit prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-pre:my-1 prose-pre:overflow-x-auto prose-li:my-0 prose-table:my-2 [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full [&_pre]:whitespace-pre-wrap [&_code]:break-all"
+          >
+            <Markdown remarkPlugins={[remarkGfm]}>{seg.content}</Markdown>
+          </div>
         );
       })}
-    </>
+    </div>
   );
 }
 
+/* ── Link embed card ── */
+function LinkCard({ url, label }: { url: string; label: string }) {
+  let hostname = "";
+  let icon: string | null = null;
+  try {
+    const u = new URL(url);
+    hostname = u.hostname.replace(/^www\./, "");
+    icon = getDomainIcon(hostname);
+  } catch {
+    hostname = url.slice(0, 30);
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 rounded-lg border border-border/40 bg-card/80 hover:bg-muted/40 px-3 py-2.5 my-1.5 transition-colors group no-underline"
+    >
+      <div className="size-9 rounded-md bg-muted/60 flex items-center justify-center shrink-0">
+        {icon ? (
+          <span className="text-base">{icon}</span>
+        ) : hostname.includes("google") ? (
+          <FileText className="size-4 text-muted-foreground/60" />
+        ) : (
+          <Globe className="size-4 text-muted-foreground/60" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-foreground truncate">
+          {label}
+        </div>
+        <div className="text-[11px] text-muted-foreground/40 font-mono truncate">
+          {hostname}
+        </div>
+      </div>
+      <ExternalLink className="size-3.5 text-muted-foreground/25 group-hover:text-muted-foreground/50 shrink-0 transition-colors" />
+    </a>
+  );
+}
+
+/* ── JSON expand button ── */
 function JsonButton({ content }: { content: string }) {
   const [open, setOpen] = useState(false);
 
@@ -204,8 +264,8 @@ function JsonButton({ content }: { content: string }) {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col gap-0 p-0">
-          <DialogHeader className="px-4 py-3 border-b">
-            <DialogTitle className="text-sm font-medium">JSON</DialogTitle>
+          <DialogHeader className="px-4 py-3 border-b border-border/50">
+            <DialogTitle className="text-sm font-normal">JSON</DialogTitle>
             <DialogDescription className="sr-only">
               Code block content
             </DialogDescription>
@@ -214,43 +274,6 @@ function JsonButton({ content }: { content: string }) {
             <pre className="text-xs font-mono leading-relaxed whitespace-pre-wrap break-words">
               <code>{content}</code>
             </pre>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-function ContextButton({ content }: { content: string }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <Button
-        variant="ghost"
-        size="xs"
-        className="mx-1 my-0.5 h-6 gap-1.5 text-[11px] font-medium border border-current/20 bg-current/5 hover:bg-current/10 hover:text-current transition-colors inline-flex"
-        onClick={() => setOpen(true)}
-      >
-        <BrainCircuit className="size-3" />
-        Memory Context
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col gap-0 p-0">
-          <DialogHeader className="px-4 py-3 border-b">
-            <DialogTitle className="text-sm font-medium flex items-center gap-2">
-              <BrainCircuit className="size-4" />
-              Memory Context
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              Supermemory context content
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto p-4 min-h-0">
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-              {content}
-            </p>
           </div>
         </DialogContent>
       </Dialog>

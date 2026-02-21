@@ -20,7 +20,7 @@ export function TaskStatusDropdown({
     <Select value={value} onValueChange={(v) => onValueChange(v as TaskStatus)}>
       <SelectTrigger
         size="sm"
-        className="h-7 text-xs"
+        className="h-7 text-xs font-mono"
         onClick={(e) => e.stopPropagation()}
       >
         <SelectValue />

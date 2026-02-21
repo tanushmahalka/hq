@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AutomationsColumn } from "./automations-column";
 import { KanbanColumn } from "./kanban-column";
 import { TaskCreateDialog } from "./task-create-dialog";
 import { TaskDetailSheet } from "./task-detail-sheet";
@@ -22,7 +23,7 @@ export function KanbanBoard() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-x-auto p-4">
+      <div className="flex-1 overflow-x-auto p-5">
         {isLoading ? (
           <div className="flex gap-4">
             {TASK_STATUSES.map((s) => (
@@ -34,7 +35,8 @@ export function KanbanBoard() {
             ))}
           </div>
         ) : (
-          <div className="flex gap-4 min-h-0 h-full">
+          <div className="flex gap-3 min-h-0 h-full">
+            <AutomationsColumn />
             {TASK_STATUSES.map((status) => (
               <KanbanColumn
                 key={status}

@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { tasks } from "../../../shared/schema";
 import { TASK_STATUSES } from "../../../shared/types";
-import { router, publicProcedure } from "../init";
+import { router, orgProcedure } from "../init";
 import { generateTaskSlug } from "../../../shared/slug";
 
 export const taskRouter = router({
-  list: publicProcedure
+  list: orgProcedure
     .input(
       z
         .object({
@@ -15,7 +15,17 @@ export const taskRouter = router({
         .optional()
     )
     .query(async ({ ctx, input }) => {
-      const where = input?.status ? eq(tasks.status, input.status) : undefined;
+      const conditions = [];
+      if (input?.status) conditions.push(eq(tasks.status, input.status));
+      if (!ctx.isAgent && ctx.organizationId) {
+        conditions.push(eq(tasks.organizationId, ctx.organizationId));
+      }
+
+      const where =
+        conditions.length > 1
+          ? and(...conditions)
+          : conditions[0] ?? undefined;
+
       const rows = await ctx.db.query.tasks.findMany({
         where,
         with: { comments: true },
@@ -24,17 +34,22 @@ export const taskRouter = router({
       return rows;
     }),
 
-  get: publicProcedure
+  get: orgProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
+      const conditions = [eq(tasks.id, input.id)];
+      if (!ctx.isAgent && ctx.organizationId) {
+        conditions.push(eq(tasks.organizationId, ctx.organizationId));
+      }
+
       const task = await ctx.db.query.tasks.findFirst({
-        where: eq(tasks.id, input.id),
+        where: conditions.length > 1 ? and(...conditions) : conditions[0],
         with: { comments: { orderBy: (c, { asc }) => [asc(c.createdAt)] } },
       });
       return task ?? null;
     }),
 
-  create: publicProcedure
+  create: orgProcedure
     .input(
       z.object({
         title: z.string().min(1),
@@ -45,10 +60,15 @@ export const taskRouter = router({
         dueDate: z.date().optional(),
         urgent: z.boolean().optional(),
         important: z.boolean().optional(),
+        organizationId: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const id = generateTaskSlug(input.title);
+      const orgId = ctx.isAgent
+        ? input.organizationId ?? null
+        : ctx.organizationId;
+
       const [task] = await ctx.db
         .insert(tasks)
         .values({
@@ -61,12 +81,13 @@ export const taskRouter = router({
           dueDate: input.dueDate,
           urgent: input.urgent ?? false,
           important: input.important ?? false,
+          organizationId: orgId,
         })
         .returning();
       return task;
     }),
 
-  update: publicProcedure
+  update: orgProcedure
     .input(
       z.object({
         id: z.string().min(1),
@@ -87,13 +108,22 @@ export const taskRouter = router({
         .set({ ...data, updatedAt: new Date() })
         .where(eq(tasks.id, id))
         .returning();
+
       return task;
     }),
 
-  delete: publicProcedure
+  delete: orgProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.delete(tasks).where(eq(tasks.id, input.id));
+      const [task] = await ctx.db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, input.id));
+
+      if (task) {
+        await ctx.db.delete(tasks).where(eq(tasks.id, input.id));
+      }
+
       return { success: true };
     }),
 });
