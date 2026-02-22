@@ -53,3 +53,15 @@ export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
     references: [tasks.id],
   }),
 }));
+
+export const agentDatabases = pgTable("agent_databases", {
+  agentId: text("agent_id").primaryKey(),
+  dbUrl: text("db_url").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});

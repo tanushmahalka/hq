@@ -1,12 +1,13 @@
 import { createDb, type Database } from "../db/client";
 import { createAuth, type Auth } from "../lib/auth";
+import { getPool } from "../db/local-pg";
+import { agentDatabases as agentDatabasesTable } from "../../shared/schema";
 
 export interface Env {
   DATABASE_URL: string;
   OPENCLAW_HOOKS_URL?: string;
   OPENCLAW_HOOKS_TOKEN?: string;
-  MAYA_DATABASE_URL?: string;
-  ARIA_DATABASE_URL?: string;
+  LOCAL_PG_ADMIN_URL?: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   ADMIN_EMAILS?: string;
@@ -20,6 +21,7 @@ export interface Context {
   hooksToken?: string;
   waitUntil: (promise: Promise<unknown>) => void;
   agentDatabases: Map<string, string>;
+  localPgAdminUrl?: string;
   user: { id: string; email: string; name: string; role?: string | null } | null;
   session: { id: string; activeOrganizationId?: string | null } | null;
   organizationId: string | null;
@@ -35,6 +37,19 @@ export function createAuthInstance(env: Env, db: Database): Auth {
   });
 }
 
+async function loadAgentDatabases(db: Database): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const rows = await db.select().from(agentDatabasesTable);
+    for (const row of rows) {
+      map.set(row.agentId, row.dbUrl);
+    }
+  } catch {
+    // Table may not exist yet (pre-migration) — return empty map
+  }
+  return map;
+}
+
 export async function createContext(
   env: Env,
   executionCtx: { waitUntil: (promise: Promise<unknown>) => void },
@@ -42,9 +57,7 @@ export async function createContext(
 ): Promise<Context> {
   const db = createDb(env.DATABASE_URL);
 
-  const agentDatabases = new Map<string, string>();
-  if (env.MAYA_DATABASE_URL) agentDatabases.set("maya", env.MAYA_DATABASE_URL);
-  if (env.ARIA_DATABASE_URL) agentDatabases.set("aria", env.ARIA_DATABASE_URL);
+  const agentDatabases = await loadAgentDatabases(db);
 
   let user: Context["user"] = null;
   let session: Context["session"] = null;
@@ -91,6 +104,7 @@ export async function createContext(
     hooksToken: env.OPENCLAW_HOOKS_TOKEN,
     waitUntil: executionCtx.waitUntil.bind(executionCtx),
     agentDatabases,
+    localPgAdminUrl: env.LOCAL_PG_ADMIN_URL,
     user,
     session,
     organizationId,
