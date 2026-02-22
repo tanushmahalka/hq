@@ -11,6 +11,7 @@ export interface Env {
   BETTER_AUTH_URL: string;
   ADMIN_EMAILS?: string;
   AGENT_API_TOKEN?: string;
+  ALLOWED_ORIGINS?: string;
 }
 
 export interface Context {

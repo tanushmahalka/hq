@@ -6,7 +6,10 @@ import * as customSchema from "../../shared/custom/schema";
 
 export function createDb(databaseUrl: string) {
   const sql = neon(databaseUrl);
-  return drizzle({ client: sql, schema: { ...schema, ...authSchema, ...customSchema } });
+  return drizzle({
+    client: sql,
+    schema: { ...schema, ...authSchema, ...customSchema },
+  });
 }
 
 export type Database = ReturnType<typeof createDb>;

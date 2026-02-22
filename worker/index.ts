@@ -7,13 +7,20 @@ import { createDb } from "./db/client";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use(
-  "/api/*",
-  cors({
-    origin: (origin) => origin || "*",
+app.use("/api/*", async (c, next) => {
+  const allowedOrigins = c.env.ALLOWED_ORIGINS
+    ? c.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+    : [];
+
+  return cors({
+    origin: (origin) => {
+      if (!origin) return null;
+      if (allowedOrigins.length === 0) return origin;
+      return allowedOrigins.includes(origin) ? origin : null;
+    },
     credentials: true,
-  })
-);
+  })(c, next);
+});
 
 app.get("/api/health", (c) => c.json({ ok: true }));
 
