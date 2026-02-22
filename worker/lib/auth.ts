@@ -9,6 +9,7 @@ interface AuthConfig {
   secret: string;
   baseURL: string;
   adminEmails?: string;
+  allowedOrigins?: string;
 }
 
 export function createAuth(db: Database, config: AuthConfig) {
@@ -16,11 +17,18 @@ export function createAuth(db: Database, config: AuthConfig) {
     ? config.adminEmails.split(",").map((e) => e.trim().toLowerCase())
     : [];
 
+  const trustedOrigins = [
+    config.baseURL,
+    ...(config.allowedOrigins
+      ? config.allowedOrigins.split(",").map((o) => o.trim())
+      : []),
+  ];
+
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg" }),
     secret: config.secret,
     baseURL: config.baseURL,
-    trustedOrigins: [config.baseURL],
+    trustedOrigins,
     emailAndPassword: { enabled: true },
     session: {
       expiresIn: 60 * 60 * 24 * 30, // 30 days

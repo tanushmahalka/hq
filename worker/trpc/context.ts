@@ -31,6 +31,7 @@ export function createAuthInstance(env: Env, db: Database): Auth {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
     adminEmails: env.ADMIN_EMAILS,
+    allowedOrigins: env.ALLOWED_ORIGINS,
   });
 }
 
