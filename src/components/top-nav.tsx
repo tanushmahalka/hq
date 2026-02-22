@@ -1,4 +1,5 @@
 import { Bot, Database, FolderOpen, ListTodo, MessageCircle, LogOut } from "lucide-react";
+import { DynamicIcon } from "lucide-react/dynamic";
 import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
@@ -16,6 +17,7 @@ import {
 import { useSession, signOut } from "@/lib/auth-client";
 import { AdminOnly } from "@/components/auth/admin-only";
 import { cn } from "@/lib/utils";
+import customPages from "@/pages/custom/registry";
 
 const baseNavLinks = [
   { to: "/tasks", label: "Tasks", icon: ListTodo },
@@ -46,7 +48,7 @@ export function TopNav() {
     navigate("/login");
   }
 
-  function NavLink({ to, label, icon: Icon }: { to: string; label: string; icon: React.ComponentType<{ className?: string }> }) {
+  function NavLink({ to, label, icon: Icon, iconName }: { to: string; label: string; icon?: React.ComponentType<{ className?: string }>; iconName?: string }) {
     return (
       <Link
         to={to}
@@ -57,7 +59,7 @@ export function TopNav() {
             : "border-transparent text-muted-foreground hover:text-foreground",
         )}
       >
-        <Icon className="size-4" />
+        {Icon ? <Icon className="size-4" /> : iconName ? <DynamicIcon name={iconName as never} className="size-4" /> : null}
         {label}
       </Link>
     );
@@ -75,6 +77,9 @@ export function TopNav() {
       <nav className="flex items-center gap-1 h-full">
         {baseNavLinks.map((link) => (
           <NavLink key={link.to} {...link} />
+        ))}
+        {customPages.map((page) => (
+          <NavLink key={page.id} to={`/custom/${page.id}`} label={page.label} iconName={page.icon} />
         ))}
         <AdminOnly>
           {adminNavLinks.map((link) => (

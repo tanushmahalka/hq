@@ -1,10 +1,11 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { ThemeProvider } from "@/components/theme-provider";
 import { GatewayProvider } from "@/hooks/use-gateway";
 import { TRPCProvider } from "@/hooks/use-trpc";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import { CustomPageErrorBoundary } from "@/components/custom-page-error-boundary";
 import { Toaster } from "@/components/ui/sonner";
 import "./index.css";
 import Layout from "./layout";
@@ -15,6 +16,12 @@ import Db from "./pages/db";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import CreateOrg from "./pages/onboarding/create-org";
+import customPages from "./pages/custom/registry";
+
+const customRoutes = customPages.map((page) => ({
+  ...page,
+  Component: lazy(page.component),
+}));
 
 const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL ?? "ws://localhost:18789";
 const GATEWAY_TOKEN = import.meta.env.VITE_GATEWAY_TOKEN ?? "";
@@ -66,6 +73,25 @@ createRoot(document.getElementById("root")!).render(
                     </ProtectedRoute>
                   }
                 />
+                {customRoutes.map((page) => (
+                  <Route
+                    key={page.id}
+                    path={`custom/${page.id}`}
+                    element={
+                      <CustomPageErrorBoundary pageId={page.id}>
+                        <Suspense
+                          fallback={
+                            <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                              Loading…
+                            </div>
+                          }
+                        >
+                          <page.Component />
+                        </Suspense>
+                      </CustomPageErrorBoundary>
+                    }
+                  />
+                ))}
               </Route>
             </Routes>
           </BrowserRouter>

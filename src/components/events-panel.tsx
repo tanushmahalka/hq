@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, Trash2, Pause, Play } from "lucide-react";
+import { X, Trash2, Pause, Play, ChevronRight, Send, Terminal, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGateway } from "@/hooks/use-gateway";
 import type { EventFrame } from "@/lib/gateway-client";
@@ -23,6 +23,22 @@ const EVENT_COLORS: Record<string, string> = {
   "exec.approval.resolved": "text-[var(--swarm-mint,oklch(0.75_0.14_165))]",
 };
 
+const RPC_METHODS = [
+  "health", "status", "usage.status", "usage.cost",
+  "agents.list", "agent", "agent.identity.get", "agent.wait",
+  "agents.files.list", "agents.files.get", "agents.files.set",
+  "chat.send", "chat.history", "chat.abort",
+  "sessions.list", "sessions.preview", "sessions.patch", "sessions.reset", "sessions.delete", "sessions.compact",
+  "config.get", "config.set", "config.apply", "config.patch", "config.schema",
+  "cron.list", "cron.add", "cron.update", "cron.remove", "cron.run",
+  "exec.approvals.get", "exec.approvals.set", "exec.approval.request", "exec.approval.resolve",
+  "channels.status", "channels.logout",
+  "node.list", "node.describe", "node.invoke",
+  "skills.status", "skills.bins", "skills.install", "skills.update",
+  "logs.tail", "models.list",
+  "send", "wake",
+];
+
 function getEventColor(event: string) {
   return EVENT_COLORS[event] ?? "text-muted-foreground/60";
 }
@@ -37,12 +53,212 @@ function formatPayload(payload: unknown): string {
   }
 }
 
+// --- RPC Console ---
+
+type RpcResult = {
+  id: number;
+  method: string;
+  params: unknown;
+  response: unknown;
+  error: string | null;
+  duration: number;
+  time: string;
+};
+
+function RpcConsole() {
+  const { client, connected } = useGateway();
+  const [method, setMethod] = useState("");
+  const [params, setParams] = useState("");
+  const [results, setResults] = useState<RpcResult[]>([]);
+  const [sending, setSending] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const idRef = useRef(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  const suggestions = method
+    ? RPC_METHODS.filter((m) => m.toLowerCase().includes(method.toLowerCase()))
+    : RPC_METHODS;
+
+  const send = useCallback(async () => {
+    if (!client || !connected || !method.trim()) return;
+    setSending(true);
+    const id = idRef.current++;
+    const time = new Date().toLocaleTimeString("en-US", {
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    });
+
+    let parsed: unknown = undefined;
+    if (params.trim()) {
+      try {
+        parsed = JSON.parse(params);
+      } catch {
+        setResults((prev) => [...prev, {
+          id, method, params: params, response: null,
+          error: "Invalid JSON params", duration: 0, time,
+        }]);
+        setSending(false);
+        return;
+      }
+    }
+
+    const start = performance.now();
+    try {
+      const res = await client.request(method.trim(), parsed);
+      const duration = Math.round(performance.now() - start);
+      setResults((prev) => [...prev, {
+        id, method, params: parsed, response: res,
+        error: null, duration, time,
+      }]);
+      setExpandedId(id);
+    } catch (err) {
+      const duration = Math.round(performance.now() - start);
+      setResults((prev) => [...prev, {
+        id, method, params: parsed, response: null,
+        error: err instanceof Error ? err.message : String(err), duration, time,
+      }]);
+      setExpandedId(id);
+    } finally {
+      setSending(false);
+      setTimeout(() => {
+        resultsRef.current?.scrollTo({ top: resultsRef.current.scrollHeight, behavior: "smooth" });
+      }, 50);
+    }
+  }, [client, connected, method, params]);
+
+  const copyResult = useCallback((id: number, data: unknown) => {
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2)).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
+    });
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-2 px-4 py-2.5 border-b border-border/20 shrink-0">
+      {/* Input row */}
+      <div className="flex items-center gap-2">
+        <Terminal className="size-3.5 text-muted-foreground/30 shrink-0" />
+        <div className="relative flex-1">
+          <input
+            ref={inputRef}
+            type="text"
+            value={method}
+            onChange={(e) => { setMethod(e.target.value); setShowSuggestions(true); }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); send(); }
+              if (e.key === "Escape") setShowSuggestions(false);
+            }}
+            placeholder="method (e.g. agents.list)"
+            className="w-full text-[11px] font-mono bg-transparent border border-border/20 rounded px-2 py-1 outline-none placeholder:text-muted-foreground/25 placeholder:font-sans focus:border-border/40"
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-[180px] overflow-y-auto rounded border border-border/30 bg-card dark:bg-[oklch(0.14_0.007_270)] shadow-lg">
+              {suggestions.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className="block w-full text-left px-2.5 py-1 text-[11px] font-mono text-muted-foreground/70 hover:bg-muted/30 hover:text-foreground"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setMethod(m);
+                    setShowSuggestions(false);
+                    inputRef.current?.focus();
+                  }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <input
+          type="text"
+          value={params}
+          onChange={(e) => setParams(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); send(); } }}
+          placeholder='params (JSON)'
+          className="flex-1 min-w-0 text-[11px] font-mono bg-transparent border border-border/20 rounded px-2 py-1 outline-none placeholder:text-muted-foreground/25 placeholder:font-sans focus:border-border/40"
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6 text-muted-foreground/40 hover:text-foreground shrink-0"
+          onClick={send}
+          disabled={!connected || !method.trim() || sending}
+          title="Send RPC"
+        >
+          <Send className="size-3" />
+        </Button>
+      </div>
+
+      {/* Results */}
+      {results.length > 0 && (
+        <div ref={resultsRef} className="max-h-[200px] overflow-y-auto space-y-1">
+          {results.map((r) => {
+            const isExpanded = expandedId === r.id;
+            return (
+              <div key={r.id} className="rounded border border-border/15 bg-muted/10">
+                <div
+                  className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-white/[0.02]"
+                  onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                >
+                  <ChevronRight className={`size-3 text-muted-foreground/30 transition-transform shrink-0 ${isExpanded ? "rotate-90" : ""}`} />
+                  <span className="text-[10px] text-muted-foreground/25 tabular-nums font-mono shrink-0">
+                    {r.time}
+                  </span>
+                  <span className="text-[11px] font-mono text-muted-foreground/70 shrink-0">
+                    {r.method}
+                  </span>
+                  <span className={`text-[10px] font-mono tabular-nums shrink-0 ${r.error ? "text-red-400/70" : "text-[var(--swarm-mint)]/70"}`}>
+                    {r.error ? "err" : "ok"} {r.duration}ms
+                  </span>
+                  {!r.error && r.response !== null && (
+                    <button
+                      type="button"
+                      className="ml-auto text-muted-foreground/20 hover:text-muted-foreground/60 transition-colors shrink-0"
+                      onClick={(e) => { e.stopPropagation(); copyResult(r.id, r.response); }}
+                      title="Copy response"
+                    >
+                      {copiedId === r.id
+                        ? <Check className="size-3 text-[var(--swarm-mint)]" />
+                        : <Copy className="size-3" />
+                      }
+                    </button>
+                  )}
+                </div>
+                {isExpanded && (
+                  <pre className="px-2 pb-2 text-[10px] font-mono leading-relaxed whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto">
+                    {r.error ? (
+                      <span className="text-red-400/60">{r.error}</span>
+                    ) : (
+                      <span className="text-muted-foreground/50">
+                        {JSON.stringify(r.response, null, 2)}
+                      </span>
+                    )}
+                  </pre>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Events Panel ---
+
 export function EventsPanel({ onClose }: { onClose: () => void }) {
   const { subscribe } = useGateway();
   const [entries, setEntries] = useState<EventEntry[]>([]);
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState("");
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [showConsole, setShowConsole] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const seqRef = useRef(0);
   const pausedRef = useRef(false);
@@ -138,6 +354,15 @@ export function EventsPanel({ onClose }: { onClose: () => void }) {
           <Button
             variant="ghost"
             size="icon"
+            className={`size-6 hover:text-foreground ${showConsole ? "text-[var(--swarm-violet)]" : "text-muted-foreground/30"}`}
+            onClick={() => setShowConsole((v) => !v)}
+            title="RPC Console"
+          >
+            <Terminal className="size-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             className="size-6 text-muted-foreground/30 hover:text-foreground"
             onClick={() => setPaused((v) => !v)}
             title={paused ? "Resume" : "Pause"}
@@ -164,6 +389,9 @@ export function EventsPanel({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
       </div>
+
+      {/* RPC Console */}
+      {showConsole && <RpcConsole />}
 
       {/* Paused indicator */}
       {paused && (
