@@ -104,7 +104,10 @@ function cleanMessageText(text: string): {
           if (cleaned[i] === "{") depth++;
           else if (cleaned[i] === "}") {
             depth--;
-            if (depth === 0) { end = i + 1; break; }
+            if (depth === 0) {
+              end = i + 1;
+              break;
+            }
           }
         }
         if (end !== -1) {
@@ -189,7 +192,9 @@ export function SessionMessageRow({
           return (
             <div className="px-4 py-1.5">
               <div className="flex items-start gap-2 text-[11px] text-muted-foreground/50">
-                <span className="shrink-0 font-mono text-[var(--swarm-blue)] opacity-60">task</span>
+                <span className="shrink-0 font-mono text-[var(--swarm-blue)] opacity-60">
+                  task
+                </span>
                 <span className="leading-relaxed">{task}</span>
               </div>
             </div>
@@ -634,7 +639,7 @@ function AssistantTimeline({
         className="ml-[5px] border-l pl-4 space-y-0.5"
         style={{
           borderColor:
-            "color-mix(in oklch, var(--swarm-violet) 25%, transparent)",
+            "color-mix(in oklab, var(--muted-foreground) 40%, transparent)",
         }}
       >
         {flat.map((entry, i) => {
@@ -662,7 +667,10 @@ function AssistantTimeline({
               <div className="size-[20px] rounded-full bg-background flex items-center justify-center shrink-0">
                 <Icon
                   className="size-[11px]"
-                  style={{ color: "var(--swarm-violet)", opacity: 0.5 }}
+                  style={{
+                    color:
+                      "color-mix(in oklab, var(--muted-foreground) 40%, transparent)",
+                  }}
                 />
               </div>
               <p
@@ -708,7 +716,13 @@ function extractAgentName(sessionKey: string): string {
 
 type MessageGroup =
   | { type: "message"; msg: RawMessage; index: number }
-  | { type: "subagent"; label: string; sessionKey: string; msgs: RawMessage[]; startIndex: number };
+  | {
+      type: "subagent";
+      label: string;
+      sessionKey: string;
+      msgs: RawMessage[];
+      startIndex: number;
+    };
 
 function groupMessages(messages: RawMessage[]): MessageGroup[] {
   const groups: MessageGroup[] = [];
@@ -754,11 +768,11 @@ function SubAgentGroup({
 
   // Count meaningful content for the summary
   const textBlocks = msgs.filter(
-    (m) => m.role === "assistant" && m.blocks.some((b) => b.type === "text"),
+    (m) => m.role === "assistant" && m.blocks.some((b) => b.type === "text")
   ).length;
   const toolCalls = msgs.reduce(
     (n, m) => n + m.blocks.filter((b) => b.type === "toolCall").length,
-    0,
+    0
   );
 
   const summary = [
@@ -799,7 +813,9 @@ function SubAgentGroup({
             </span>
           )}
           <ChevronRight
-            className={`size-3 ml-auto transition-transform ${open ? "rotate-90" : ""}`}
+            className={`size-3 ml-auto transition-transform ${
+              open ? "rotate-90" : ""
+            }`}
           />
         </button>
         {open && (
@@ -825,10 +841,7 @@ function SubAgentGroup({
           className="size-6 rounded-full flex items-center justify-center shrink-0"
           style={{ backgroundColor: "var(--swarm-blue-dim)" }}
         >
-          <Bot
-            className="size-3"
-            style={{ color: "var(--swarm-blue)" }}
-          />
+          <Bot className="size-3" style={{ color: "var(--swarm-blue)" }} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -852,7 +865,9 @@ function SubAgentGroup({
           </span>
         )}
         <ChevronRight
-          className={`size-3.5 text-muted-foreground/25 shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
+          className={`size-3.5 text-muted-foreground/25 shrink-0 transition-transform ${
+            open ? "rotate-90" : ""
+          }`}
         />
       </button>
 
