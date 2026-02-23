@@ -44,7 +44,11 @@ export async function notifyMentionedAgents(
         },
         body: JSON.stringify({
           agentId,
-          message: `You were mentioned in task "${taskTitle}" (${taskId}) by ${author}:\n\n${comment}. ( If you want to reply something, then comment back )`,
+          message: JSON.stringify({
+            type: "task.mentioned",
+            task: { id: taskId, title: taskTitle },
+            comment: { author, content: comment },
+          }),
           deliver: false,
           name: "task-mention",
         }),

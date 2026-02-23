@@ -4,6 +4,7 @@ import { tasks } from "../../../shared/schema";
 import { TASK_STATUSES } from "../../../shared/types";
 import { router, orgProcedure } from "../init";
 import { generateTaskSlug } from "../../../shared/slug";
+import { notifyAgent } from "../../lib/notify-agent";
 
 export const taskRouter = router({
   list: orgProcedure
@@ -69,6 +70,8 @@ export const taskRouter = router({
         ? input.organizationId ?? null
         : ctx.organizationId;
 
+      const assignor = input.assignor ?? (ctx.user?.name || "operator");
+
       const [task] = await ctx.db
         .insert(tasks)
         .values({
@@ -76,7 +79,7 @@ export const taskRouter = router({
           title: input.title,
           description: input.description,
           status: input.status ?? "todo",
-          assignor: input.assignor,
+          assignor,
           assignee: input.assignee,
           dueDate: input.dueDate,
           urgent: input.urgent ?? false,
@@ -84,6 +87,31 @@ export const taskRouter = router({
           organizationId: orgId,
         })
         .returning();
+
+      // Dispatch to lead agent for triage/delegation
+      const leadId = ctx.leadAgentId;
+      const sessionKey = `agent:${leadId}:task:${id}`;
+
+      ctx.waitUntil(
+        notifyAgent(ctx, {
+          agentId: leadId,
+          message: JSON.stringify({
+            type: "task.created",
+            task: {
+              id,
+              title: input.title,
+              description: input.description ?? null,
+              status: input.status ?? "todo",
+              urgent: input.urgent ?? false,
+              important: input.important ?? false,
+              assignor,
+              assignee: input.assignee ?? null,
+            },
+          }),
+          sessionKey,
+        })
+      );
+
       return task;
     }),
 
@@ -103,11 +131,46 @@ export const taskRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
+
+      // Fetch existing task to detect assignee changes
+      const existing = input.assignee !== undefined
+        ? await ctx.db.query.tasks.findFirst({ where: eq(tasks.id, id) })
+        : null;
+
       const [task] = await ctx.db
         .update(tasks)
         .set({ ...data, updatedAt: new Date() })
         .where(eq(tasks.id, id))
         .returning();
+
+      // Notify new assignee when assignee changes
+      if (
+        task &&
+        input.assignee &&
+        existing &&
+        input.assignee !== existing.assignee
+      ) {
+        const sessionKey = `agent:${input.assignee}:task:${id}`;
+        ctx.waitUntil(
+          notifyAgent(ctx, {
+            agentId: input.assignee,
+            message: JSON.stringify({
+              type: "task.assigned",
+              task: {
+                id,
+                title: task.title,
+                description: task.description ?? null,
+                status: task.status,
+                urgent: task.urgent,
+                important: task.important,
+                assignor: task.assignor,
+                assignee: input.assignee,
+              },
+            }),
+            sessionKey,
+          })
+        );
+      }
 
       return task;
     }),

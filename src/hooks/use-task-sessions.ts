@@ -70,7 +70,10 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
             "chat.history",
             { sessionKey: key, limit: 200 },
           );
-          return { key, msgs: parseRawMessages(h.messages ?? []) };
+          const msgs = parseRawMessages(h.messages ?? []);
+          // Tag each message with its session key
+          for (const m of msgs) m.sessionKey = key;
+          return { key, msgs };
         }),
       );
       if (fetchIdRef.current !== id) return;
@@ -109,7 +112,9 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
               "chat.history",
               { sessionKey: key, limit: 200 },
             );
-            return parseRawMessages(h.messages ?? []);
+            const msgs = parseRawMessages(h.messages ?? []);
+            for (const m of msgs) m.sessionKey = key;
+            return msgs;
           }),
         );
         if (fetchIdRef.current !== id) return;

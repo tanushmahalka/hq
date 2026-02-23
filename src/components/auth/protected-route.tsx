@@ -1,5 +1,6 @@
 import { Navigate } from "react-router";
 import { useSession } from "@/lib/auth-client";
+import { useAdminView } from "@/hooks/use-admin-view";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ export function ProtectedRoute({
   requireAdmin = false,
 }: ProtectedRouteProps) {
   const { data: session, isPending } = useSession();
+  const { isAdminView } = useAdminView();
 
   if (isPending) {
     return (
@@ -30,7 +32,7 @@ export function ProtectedRoute({
     return <Navigate to="/onboarding/create-org" replace />;
   }
 
-  if (requireAdmin && session.user.role !== "admin") {
+  if (requireAdmin && (session.user.role !== "admin" || !isAdminView)) {
     return <Navigate to="/" replace />;
   }
 

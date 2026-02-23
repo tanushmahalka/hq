@@ -1,14 +1,27 @@
 import { useCallback, useEffect, useState } from "react";
 import { useGateway } from "./use-gateway";
 
+export type CronJobState = {
+  nextRunAtMs?: number;
+  lastRunAtMs?: number;
+  lastStatus?: string;
+  lastDurationMs?: number;
+  consecutiveErrors?: number;
+};
+
 export type CronJob = {
   id: string;
   name?: string;
   schedule?: { kind?: string; expr?: string; tz?: string; everyMs?: number; at?: string };
   agentId?: string;
-  lastRun?: string;
-  nextRun?: string;
   enabled?: boolean;
+  state?: CronJobState;
+  sessionTarget?: string;
+  wakeMode?: string;
+  payload?: { kind?: string; message?: string };
+  delivery?: { mode?: string };
+  createdAtMs?: number;
+  updatedAtMs?: number;
   [key: string]: unknown;
 };
 

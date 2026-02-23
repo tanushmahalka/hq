@@ -32,7 +32,7 @@ import { trpc } from "@/lib/trpc";
 import { useTaskSessions } from "@/hooks/use-task-sessions";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { useGateway } from "@/hooks/use-gateway";
-import { SessionMessageRow } from "@/components/chat/session-blocks";
+import { SessionMessageRow, SessionMessageList } from "@/components/chat/session-blocks";
 import { MessageContent } from "@/components/messenger/message-content";
 import { getAtQuery, parseContentSegments, parseAgentName } from "@/lib/mentions";
 import { MentionDropdown, getFilteredAgents } from "./mention-dropdown";
@@ -687,9 +687,7 @@ function SessionChat({
           </p>
         )}
 
-        {messages.map((msg, i) => (
-          <SessionMessageRow key={i} msg={msg} agentEmoji={agentEmoji} />
-        ))}
+        <SessionMessageList messages={messages} agentEmoji={agentEmoji} />
 
         {isStreaming && (
           <div className="flex gap-2.5">

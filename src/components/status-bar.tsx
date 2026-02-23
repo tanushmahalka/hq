@@ -3,6 +3,7 @@ import { useGateway } from "@/hooks/use-gateway";
 import { trpc } from "@/lib/trpc";
 import type { EventFrame } from "@/lib/gateway-client";
 import { Circle, CheckCircle2, Users, Zap, Terminal, Radio } from "lucide-react";
+import { AdminOnly } from "@/components/auth/admin-only";
 
 type ChatEventPayload = {
   sessionKey: string;
@@ -78,29 +79,31 @@ export function StatusBar({
 
   return (
     <div className="h-7 border-t border-border/30 px-4 flex items-center gap-6 shrink-0 text-[11px] text-muted-foreground/60">
-      {/* Logs toggle */}
-      <button
-        onClick={onToggleLogs}
-        className={`flex items-center gap-1.5 transition-colors hover:text-foreground ${
-          logsOpen ? "text-foreground" : ""
-        }`}
-      >
-        <Terminal className="size-3" />
-        <span className="font-mono">logs</span>
-      </button>
+      <AdminOnly>
+        {/* Logs toggle */}
+        <button
+          onClick={onToggleLogs}
+          className={`flex items-center gap-1.5 transition-colors hover:text-foreground ${
+            logsOpen ? "text-foreground" : ""
+          }`}
+        >
+          <Terminal className="size-3" />
+          <span className="font-mono">logs</span>
+        </button>
 
-      {/* Events toggle */}
-      <button
-        onClick={onToggleEvents}
-        className={`flex items-center gap-1.5 transition-colors hover:text-foreground ${
-          eventsOpen ? "text-foreground" : ""
-        }`}
-      >
-        <Radio className="size-3" />
-        <span className="font-mono">events</span>
-      </button>
+        {/* Events toggle */}
+        <button
+          onClick={onToggleEvents}
+          className={`flex items-center gap-1.5 transition-colors hover:text-foreground ${
+            eventsOpen ? "text-foreground" : ""
+          }`}
+        >
+          <Radio className="size-3" />
+          <span className="font-mono">events</span>
+        </button>
 
-      <div className="h-3 w-px bg-border/30" />
+        <div className="h-3 w-px bg-border/30" />
+      </AdminOnly>
 
       {/* Connection */}
       <div className="flex items-center gap-1.5">

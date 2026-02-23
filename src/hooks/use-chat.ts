@@ -31,6 +31,8 @@ export type RawMessage = {
   role: "user" | "assistant" | "toolResult";
   blocks: ContentBlock[];
   timestamp: number;
+  /** Session key this message belongs to (set by multi-session hooks). */
+  sessionKey?: string;
 };
 
 type ChatEventPayload = {

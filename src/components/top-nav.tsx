@@ -1,4 +1,13 @@
-import { Bot, Database, FolderOpen, ListTodo, MessageCircle, LogOut } from "lucide-react";
+import {
+  Bot,
+  Database,
+  FolderOpen,
+  ListTodo,
+  MessageCircle,
+  LogOut,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { DynamicIcon } from "lucide-react/dynamic";
 import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -16,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSession, signOut } from "@/lib/auth-client";
 import { AdminOnly } from "@/components/auth/admin-only";
+import { useAdminView } from "@/hooks/use-admin-view";
 import { cn } from "@/lib/utils";
 import customPages from "@/pages/custom/registry";
 
@@ -33,6 +43,7 @@ export function TopNav() {
   const navigate = useNavigate();
   const { isOpen, toggle } = useMessengerPanel();
   const { data: session } = useSession();
+  const { isAdminView, setIsAdminView } = useAdminView();
 
   function getInitials(name: string) {
     return name
@@ -48,7 +59,17 @@ export function TopNav() {
     navigate("/login");
   }
 
-  function NavLink({ to, label, icon: Icon, iconName }: { to: string; label: string; icon?: React.ComponentType<{ className?: string }>; iconName?: string }) {
+  function NavLink({
+    to,
+    label,
+    icon: Icon,
+    iconName,
+  }: {
+    to: string;
+    label: string;
+    icon?: React.ComponentType<{ className?: string }>;
+    iconName?: string;
+  }) {
     return (
       <Link
         to={to}
@@ -59,7 +80,11 @@ export function TopNav() {
             : "border-transparent text-muted-foreground hover:text-foreground",
         )}
       >
-        {Icon ? <Icon className="size-4" /> : iconName ? <DynamicIcon name={iconName as never} className="size-4" /> : null}
+        {Icon ? (
+          <Icon className="size-4" />
+        ) : iconName ? (
+          <DynamicIcon name={iconName as never} className="size-4" />
+        ) : null}
         {label}
       </Link>
     );
@@ -79,7 +104,12 @@ export function TopNav() {
           <NavLink key={link.to} {...link} />
         ))}
         {customPages.map((page) => (
-          <NavLink key={page.id} to={`/custom/${page.id}`} label={page.label} iconName={page.icon} />
+          <NavLink
+            key={page.id}
+            to={`/custom/${page.id}`}
+            label={page.label}
+            iconName={page.icon}
+          />
         ))}
         <AdminOnly>
           {adminNavLinks.map((link) => (
@@ -113,11 +143,25 @@ export function TopNav() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">{session.user.name}</span>
-                  <span className="text-xs text-muted-foreground">{session.user.email}</span>
+                  <span className="text-sm font-medium">
+                    {session.user.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {session.user.email}
+                  </span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {session.user.role === "admin" && (
+                <DropdownMenuItem onClick={() => setIsAdminView(!isAdminView)}>
+                  {isAdminView ? (
+                    <EyeOff className="mr-2 size-4" />
+                  ) : (
+                    <Eye className="mr-2 size-4" />
+                  )}
+                  {isAdminView ? "View as User" : "View as Admin"}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={handleSignOut}>
                 <LogOut className="mr-2 size-4" />
                 Sign out
