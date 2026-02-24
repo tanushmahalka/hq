@@ -2,9 +2,8 @@
   "name": "@psx/hq-missions",
   "version": "0.1.0",
   "description": "OpenClaw plugin — gives agents access to the HQ Mission Framework",
-  "main": "index.ts",
   "openclaw": {
-    "extensions": ["openclaw.plugin.json"]
+    "extensions": ["./index.ts"]
   },
   "dependencies": {
     "@sinclair/typebox": "^0.32.0"
