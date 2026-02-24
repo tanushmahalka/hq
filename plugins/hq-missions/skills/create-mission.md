@@ -249,6 +249,9 @@ Every question uses this JSON format, which the HQ chat UI renders as clickable 
 
 The flow below is **adaptive, not linear**. You have a pool of questions organized by discovery dimension. Pick the next question based on which dimension has the biggest gap. Skip questions whose answers you can already infer from prior context.
 
+Before starting the questioning, look at your list of skill files available, and read relevant skill files, so you know the latest & greatest trends/ ways in the topic.
+For example: if the user is creating a mission around SEO. read all skill files you have related to SEO, GEO, etc. for best results.
+
 ### Opening: Understand Intent (Dimension 1)
 
 Your first message should be warm, brief, and immediately productive. Don't explain the framework. Don't give a preamble about what missions are. Just start.
