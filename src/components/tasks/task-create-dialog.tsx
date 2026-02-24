@@ -26,9 +26,10 @@ interface TaskCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialStatus?: TaskStatus;
+  initialCampaignId?: string;
 }
 
-export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo" }: TaskCreateDialogProps) {
+export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", initialCampaignId }: TaskCreateDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>(initialStatus);
@@ -84,6 +85,7 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo" }:
       dueDate: dueDate ? new Date(dueDate) : undefined,
       urgent,
       important,
+      campaignId: initialCampaignId,
     });
   };
 

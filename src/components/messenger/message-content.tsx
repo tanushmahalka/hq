@@ -10,6 +10,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  ChoiceCard,
+  isChoicesPayload,
+} from "@/components/chat/choice-card";
 
 type Segment =
   | { type: "text"; content: string }
@@ -187,6 +191,15 @@ export function MessageContent({ text }: { text: string }) {
     <div className="break-words overflow-hidden">
       {segments.map((seg, i) => {
         if (seg.type === "json") {
+          // Check if the JSON is a choices payload — render as interactive card
+          try {
+            const parsed = JSON.parse(seg.content);
+            if (isChoicesPayload(parsed)) {
+              return <ChoiceCard key={i} payload={parsed} />;
+            }
+          } catch {
+            /* not parseable, fall through to JsonButton */
+          }
           return <JsonButton key={i} content={seg.content} />;
         }
         if (seg.type === "link") {

@@ -1,4 +1,4 @@
-import { Calendar, CircleAlert, Star, User } from "lucide-react";
+import { Calendar, CircleAlert, Link2, Star, User } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useTaskActive } from "@/hooks/use-task-active";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
@@ -15,6 +15,7 @@ interface TaskCardProps {
     dueDate: Date | null;
     urgent: boolean;
     important: boolean;
+    campaignId?: string | null;
   };
   onClick: () => void;
 }
@@ -95,6 +96,14 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
           {task.description}
         </p>
+      )}
+
+      {/* Campaign link */}
+      {task.campaignId && (
+        <div className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground/50">
+          <Link2 className="size-3 shrink-0" />
+          <span className="font-mono truncate">{task.campaignId.slice(0, 8)}</span>
+        </div>
       )}
 
       {/* Footer */}

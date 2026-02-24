@@ -11,6 +11,7 @@ import "./index.css";
 import Layout from "./layout";
 import Dashboard from "./pages/dashboard";
 import Tasks from "./pages/tasks";
+import Missions from "./pages/missions";
 import Files from "./pages/files";
 import Db from "./pages/db";
 import Login from "./pages/login";
@@ -57,6 +58,7 @@ createRoot(document.getElementById("root")!).render(
               >
                 <Route index element={<Dashboard />} />
                 <Route path="tasks" element={<Tasks />} />
+                <Route path="missions" element={<Missions />} />
                 <Route
                   path="files"
                   element={

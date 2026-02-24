@@ -3,6 +3,7 @@ import { ChevronLeft, X, ArrowUp } from "lucide-react";
 import { useChat } from "@/hooks/use-chat";
 import { useGateway } from "@/hooks/use-gateway";
 import { useMessengerPanel } from "@/hooks/use-messenger-panel";
+import { ChatSendProvider } from "@/hooks/use-chat-send";
 import { SessionMessageRow } from "@/components/chat/session-blocks";
 import { MessageContent } from "./message-content";
 import { parseAgentName } from "@/lib/mentions";
@@ -147,49 +148,51 @@ function ChatView({ agentId }: { agentId: string }) {
       </div>
 
       {/* Messages */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto scrollbar-hide"
-      >
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <StreamingDots />
-          </div>
-        )}
-
-        {!loading && rawMessages.length === 0 && !isStreaming && (
-          <p className="text-xs text-muted-foreground/50 text-center py-12">
-            Start a conversation
-          </p>
-        )}
-
-        {rawMessages.map((msg, i) => (
-          <SessionMessageRow key={i} msg={msg} />
-        ))}
-
-        {isStreaming && (
-          <div className="px-4 py-1.5">
-            <div className="max-w-[90%]">
-              {stream ? (
-                <div className="text-sm text-foreground/90 leading-relaxed">
-                  <MessageContent text={stream} />
-                  <span className="inline-block w-0.5 h-3.5 ml-0.5 bg-[var(--swarm-violet)] animate-pulse rounded-full" />
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 py-1">
-                  <StreamingDots />
-                </div>
-              )}
+      <ChatSendProvider sendMessage={(text) => void sendMessage(text)}>
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto scrollbar-hide"
+        >
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <StreamingDots />
             </div>
-          </div>
-        )}
+          )}
 
-        {error && (
-          <div className="mx-4 my-2 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-            {error}
-          </div>
-        )}
-      </div>
+          {!loading && rawMessages.length === 0 && !isStreaming && (
+            <p className="text-xs text-muted-foreground/50 text-center py-12">
+              Start a conversation
+            </p>
+          )}
+
+          {rawMessages.map((msg, i) => (
+            <SessionMessageRow key={i} msg={msg} />
+          ))}
+
+          {isStreaming && (
+            <div className="px-4 py-1.5">
+              <div className="max-w-[90%]">
+                {stream ? (
+                  <div className="text-sm text-foreground/90 leading-relaxed">
+                    <MessageContent text={stream} />
+                    <span className="inline-block w-0.5 h-3.5 ml-0.5 bg-[var(--swarm-violet)] animate-pulse rounded-full" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 py-1">
+                    <StreamingDots />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="mx-4 my-2 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              {error}
+            </div>
+          )}
+        </div>
+      </ChatSendProvider>
 
       {/* Input */}
       <div className="px-3 pb-3 pt-1 shrink-0">

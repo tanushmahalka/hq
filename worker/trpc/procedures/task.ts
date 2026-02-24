@@ -5,6 +5,10 @@ import { TASK_STATUSES } from "../../../shared/types";
 import { router, orgProcedure } from "../init";
 import { generateTaskSlug } from "../../../shared/slug";
 import { notifyAgent } from "../../lib/notify-agent";
+import {
+  fetchMissionChain,
+  formatMissionContext,
+} from "../../lib/mission-chain";
 
 export const taskRouter = router({
   list: orgProcedure
@@ -61,6 +65,7 @@ export const taskRouter = router({
         dueDate: z.date().optional(),
         urgent: z.boolean().optional(),
         important: z.boolean().optional(),
+        campaignId: z.string().optional(),
         organizationId: z.string().optional(),
       })
     )
@@ -84,6 +89,7 @@ export const taskRouter = router({
           dueDate: input.dueDate,
           urgent: input.urgent ?? false,
           important: input.important ?? false,
+          campaignId: input.campaignId,
           organizationId: orgId,
         })
         .returning();
@@ -92,22 +98,33 @@ export const taskRouter = router({
       const leadId = ctx.leadAgentId;
       const sessionKey = `agent:${leadId}:task:${id}`;
 
+      const taskPayload: Record<string, unknown> = {
+        type: "task.created",
+        task: {
+          id,
+          title: input.title,
+          description: input.description ?? null,
+          status: input.status ?? "todo",
+          urgent: input.urgent ?? false,
+          important: input.important ?? false,
+          assignor,
+          assignee: input.assignee ?? null,
+          campaignId: input.campaignId ?? null,
+        },
+      };
+
+      // Enrich with mission context when task belongs to a campaign
+      if (input.campaignId) {
+        const chain = await fetchMissionChain(ctx.db, input.campaignId);
+        if (chain) {
+          taskPayload.missionContext = formatMissionContext(chain);
+        }
+      }
+
       ctx.waitUntil(
         notifyAgent(ctx, {
           agentId: leadId,
-          message: JSON.stringify({
-            type: "task.created",
-            task: {
-              id,
-              title: input.title,
-              description: input.description ?? null,
-              status: input.status ?? "todo",
-              urgent: input.urgent ?? false,
-              important: input.important ?? false,
-              assignor,
-              assignee: input.assignee ?? null,
-            },
-          }),
+          message: JSON.stringify(taskPayload),
           sessionKey,
         })
       );

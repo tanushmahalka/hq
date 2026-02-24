@@ -1,0 +1,35 @@
+{
+  "id": "hq-missions",
+  "name": "HQ Missions",
+  "description": "Gives agents structured access to the HQ Mission Framework (missions, objectives, campaigns) and enriches task context with mission hierarchy.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "hqApiUrl": {
+        "type": "string",
+        "description": "HQ worker API base URL"
+      },
+      "hqApiToken": {
+        "type": "string",
+        "description": "Bearer token for HQ API"
+      },
+      "autoEnrich": {
+        "type": "boolean",
+        "default": true,
+        "description": "Auto-inject mission context into task sessions"
+      }
+    },
+    "required": ["hqApiUrl", "hqApiToken"]
+  },
+  "uiHints": {
+    "hqApiUrl": {
+      "label": "HQ API URL",
+      "placeholder": "https://hq.example.com/api/trpc"
+    },
+    "hqApiToken": {
+      "label": "HQ API Token",
+      "sensitive": true
+    }
+  }
+}

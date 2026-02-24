@@ -34,6 +34,7 @@ import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { useGateway } from "@/hooks/use-gateway";
 import { SessionMessageRow, SessionMessageList } from "@/components/chat/session-blocks";
 import { MessageContent } from "@/components/messenger/message-content";
+import { ChatSendProvider } from "@/hooks/use-chat-send";
 import { getAtQuery, parseContentSegments, parseAgentName } from "@/lib/mentions";
 import { MentionDropdown, getFilteredAgents } from "./mention-dropdown";
 import { LoaderFive } from "@/components/ui/loader";
@@ -672,73 +673,75 @@ function SessionChat({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-        {loading && (
-          <div className="flex items-center justify-center py-8">
-            <LoaderFive text="Thinking..." />
-          </div>
-        )}
-
-        {!loading && messages.length === 0 && !error && (
-          <p className="text-xs text-muted-foreground text-center py-8">
-            No messages in this session yet.
-          </p>
-        )}
-
-        <SessionMessageList messages={messages} agentEmoji={agentEmoji} />
-
-        {isStreaming && (
-          <div className="flex gap-2.5">
-            <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-              <span className="text-[9px]">{agentEmoji ?? "🤖"}</span>
+    <ChatSendProvider sendMessage={(text) => void sendMessage(text)}>
+      <div className="flex flex-col h-full">
+        {/* Messages */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+          {loading && (
+            <div className="flex items-center justify-center py-8">
+              <LoaderFive text="Thinking..." />
             </div>
-            {stream ? (
-              <div className="flex-1 min-w-0 text-sm text-muted-foreground leading-relaxed">
-                <MessageContent text={stream} />
-                <span className="inline-block w-0.5 h-3.5 ml-0.5 bg-foreground/40 animate-pulse" />
-              </div>
-            ) : (
-              <div className="flex items-center pt-1">
-                <LoaderFive text="Thinking..." />
-              </div>
-            )}
-          </div>
-        )}
+          )}
 
-        {error && (
-          <p className="text-xs text-destructive text-center py-2">{error}</p>
-        )}
+          {!loading && messages.length === 0 && !error && (
+            <p className="text-xs text-muted-foreground text-center py-8">
+              No messages in this session yet.
+            </p>
+          )}
+
+          <SessionMessageList messages={messages} agentEmoji={agentEmoji} />
+
+          {isStreaming && (
+            <div className="flex gap-2.5">
+              <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-[9px]">{agentEmoji ?? "🤖"}</span>
+              </div>
+              {stream ? (
+                <div className="flex-1 min-w-0 text-sm text-muted-foreground leading-relaxed">
+                  <MessageContent text={stream} />
+                  <span className="inline-block w-0.5 h-3.5 ml-0.5 bg-foreground/40 animate-pulse" />
+                </div>
+              ) : (
+                <div className="flex items-center pt-1">
+                  <LoaderFive text="Thinking..." />
+                </div>
+              )}
+            </div>
+          )}
+
+          {error && (
+            <p className="text-xs text-destructive text-center py-2">{error}</p>
+          )}
+        </div>
+
+        {/* Input */}
+        <form onSubmit={handleSubmit} className="relative border-t bg-muted/30 shrink-0">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+            placeholder={connected ? "Message agent..." : "Connecting..."}
+            disabled={!connected || isStreaming}
+            rows={2}
+            className="w-full bg-transparent px-4 py-3 pr-11 text-sm resize-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-40"
+          />
+          <Button
+            type="submit"
+            size="icon"
+            variant="ghost"
+            className="absolute right-2 bottom-2 size-7"
+            disabled={!connected || isStreaming || !input.trim()}
+          >
+            <Send className="size-3.5" />
+          </Button>
+        </form>
       </div>
-
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="relative border-t bg-muted/30 shrink-0">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSubmit(e);
-            }
-          }}
-          placeholder={connected ? "Message agent..." : "Connecting..."}
-          disabled={!connected || isStreaming}
-          rows={2}
-          className="w-full bg-transparent px-4 py-3 pr-11 text-sm resize-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-40"
-        />
-        <Button
-          type="submit"
-          size="icon"
-          variant="ghost"
-          className="absolute right-2 bottom-2 size-7"
-          disabled={!connected || isStreaming || !input.trim()}
-        >
-          <Send className="size-3.5" />
-        </Button>
-      </form>
-    </div>
+    </ChatSendProvider>
   );
 }
 
