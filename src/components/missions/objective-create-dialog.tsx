@@ -68,7 +68,7 @@ export function ObjectiveCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-normal">Add Objective</DialogTitle>
+          <DialogTitle className="font-display text-2xl font-normal">Add Objective</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

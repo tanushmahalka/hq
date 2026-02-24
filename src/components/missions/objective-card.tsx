@@ -132,7 +132,7 @@ export function ObjectiveCard({
           {/* Metric KPI badge — collapsed only */}
           {!open && target > 0 && (
             <span
-              className="flex items-center gap-1.5 shrink-0 font-mono text-xs px-2 py-0.5 rounded-md"
+              className="flex items-center gap-1.5 shrink-0 text-xs px-2 py-0.5 rounded-md"
               style={{
                 color: progress >= 100 ? "var(--swarm-mint)" : "var(--swarm-violet)",
                 backgroundColor: progress >= 100
@@ -146,7 +146,7 @@ export function ObjectiveCard({
               {targetMetric && (
                 <span style={{ opacity: 0.6 }} className="text-[10px]">{targetMetric}</span>
               )}
-              <div className="w-10 h-1 rounded-full overflow-hidden ml-0.5" style={{ backgroundColor: "oklch(1 0 0 / 12%)" }}>
+              <div className="w-10 h-1 rounded-full overflow-hidden ml-0.5 bg-border/40">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -160,7 +160,7 @@ export function ObjectiveCard({
 
           {/* Due date */}
           {objective.dueDate && (
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground/50 font-mono shrink-0">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground/50 shrink-0">
               <Calendar className="size-3" />
               {new Date(objective.dueDate).toLocaleDateString("en-US", {
                 month: "short",
@@ -170,7 +170,7 @@ export function ObjectiveCard({
           )}
 
           {/* Status badge */}
-          <span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/50 shrink-0">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground/50 shrink-0">
             <span className={`size-1.5 rounded-full ${STATUS_DOT_COLORS[objective.status]}`} />
             {OBJECTIVE_STATUS_LABELS[objective.status]}
           </span>
@@ -217,7 +217,7 @@ export function ObjectiveCard({
           <div className="ml-5 pl-2.5 border-l border-border/30 pb-2 space-y-2">
             {/* KPI metric section */}
             <div
-              className="rounded-md px-3 py-2 mt-1"
+              className="rounded-md px-4 py-3 mt-1"
               style={{
                 backgroundColor: target > 0
                   ? (progress >= 100 ? "var(--swarm-mint-dim, oklch(0.75 0.14 165 / 10%))" : "var(--swarm-violet-dim, oklch(0.65 0.18 280 / 12%))")
@@ -233,10 +233,10 @@ export function ObjectiveCard({
                   if (val !== (objective.targetMetric ?? null)) save("targetMetric", val);
                 }}
                 placeholder="metric name"
-                className="w-full text-[11px] font-mono bg-transparent border-none outline-none placeholder:text-muted-foreground/30 placeholder:font-sans"
+                className="w-full text-xs bg-transparent border-none outline-none placeholder:text-muted-foreground/30"
                 style={{ color: target > 0 ? (progress >= 100 ? "var(--swarm-mint)" : "var(--swarm-violet)") : "var(--swarm-violet)", opacity: 0.8 }}
               />
-              <div className="flex items-center gap-1 font-mono mt-0.5">
+              <div className="flex items-center gap-1 mt-0.5">
                 <input
                   value={currentValue}
                   onChange={(e) => setCurrentValue(e.target.value)}
@@ -264,7 +264,7 @@ export function ObjectiveCard({
               {/* Progress bar */}
               {target > 0 && (
                 <div className="flex items-center gap-2 mt-1.5">
-                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "oklch(1 0 0 / 10%)" }}>
+                  <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-border/40">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
@@ -274,7 +274,7 @@ export function ObjectiveCard({
                     />
                   </div>
                   <span
-                    className="text-xs font-mono font-medium w-10 text-right"
+                    className="text-xs font-medium w-10 text-right"
                     style={{ color: progress >= 100 ? "var(--swarm-mint)" : "var(--swarm-violet)" }}
                   >
                     {progress}%
@@ -286,16 +286,10 @@ export function ObjectiveCard({
             {/* Campaigns section */}
             <div className="mt-1">
               <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="text-[10px] font-medium tracking-widest uppercase"
-                  style={{ color: "color-mix(in oklch, var(--swarm-violet) 60%, var(--muted-foreground))" }}
-                >
+                <span className="text-xs font-medium text-muted-foreground">
                   Campaigns
                 </span>
-                <div
-                  className="flex-1 h-px"
-                  style={{ backgroundColor: "color-mix(in oklch, var(--swarm-violet) 12%, transparent)" }}
-                />
+                <div className="flex-1 h-px bg-border/50" />
                 <Button
                   variant="ghost"
                   size="sm"

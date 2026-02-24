@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import {
   Sheet,
   SheetContent,
@@ -32,18 +38,25 @@ import { trpc } from "@/lib/trpc";
 import { useTaskSessions } from "@/hooks/use-task-sessions";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { useGateway } from "@/hooks/use-gateway";
-import { SessionMessageRow, SessionMessageList } from "@/components/chat/session-blocks";
+import {
+  SessionMessageRow,
+  SessionMessageList,
+} from "@/components/chat/session-blocks";
 import { MessageContent } from "@/components/messenger/message-content";
 import { ChatSendProvider } from "@/hooks/use-chat-send";
-import { getAtQuery, parseContentSegments, parseAgentName } from "@/lib/mentions";
+import {
+  getAtQuery,
+  parseContentSegments,
+  parseAgentName,
+} from "@/lib/mentions";
 import { MentionDropdown, getFilteredAgents } from "./mention-dropdown";
 import { LoaderFive } from "@/components/ui/loader";
 
 const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
   todo: "bg-gray-400",
-  doing: "bg-blue-500",
-  stuck: "bg-red-500",
-  done: "bg-green-500",
+  doing: "bg-[var(--swarm-violet)]",
+  stuck: "bg-red-400",
+  done: "bg-[var(--swarm-mint)]",
 };
 
 // -- Tab definitions (extend this to add more right-panel tabs) --
@@ -98,7 +111,11 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
       utils.task.list.invalidate();
       utils.task.get.invalidate({ id: taskId! });
       if (updated?.assignee) {
-        notifyTask(updated.assignee, updated.id, formatTaskNotification("updated", updated));
+        notifyTask(
+          updated.assignee,
+          updated.id,
+          formatTaskNotification("updated", updated)
+        );
       }
     },
   });
@@ -107,7 +124,11 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
     onSuccess: () => {
       utils.task.list.invalidate();
       if (task?.assignee) {
-        notifyTask(task.assignee, task.id, formatTaskNotification("deleted", task));
+        notifyTask(
+          task.assignee,
+          task.id,
+          formatTaskNotification("deleted", task)
+        );
       }
       onClose();
     },
@@ -146,10 +167,10 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   onBlur={() => save("title", title)}
-                  className="w-full flex-1 text-2xl font-normal! bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground wrap-break-word"
+                  className="w-full flex-1 text-4xl font-display font-normal! bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground wrap-break-word"
                   placeholder="Task title"
                   rows={1}
-                  style={{ minHeight: "4rem", overflowWrap: "break-word" }}
+                  style={{ minHeight: "6rem", overflowWrap: "break-word" }}
                 />
               </SheetTitle>
               <button
@@ -426,10 +447,14 @@ function CommentsPanel({
         notifyTask(
           assignee,
           taskId,
-          formatTaskNotification("commented", { id: taskId, title: taskTitle }, {
-            author: variables.author,
-            comment: variables.content,
-          }),
+          formatTaskNotification(
+            "commented",
+            { id: taskId, title: taskTitle },
+            {
+              author: variables.author,
+              comment: variables.content,
+            }
+          )
         );
       }
     },
@@ -442,9 +467,8 @@ function CommentsPanel({
     },
   });
 
-  const filteredAgents = mentionQuery !== null
-    ? getFilteredAgents(agents, mentionQuery)
-    : [];
+  const filteredAgents =
+    mentionQuery !== null ? getFilteredAgents(agents, mentionQuery) : [];
 
   const insertMention = (agentId: string) => {
     const ta = textareaRef.current;
@@ -484,7 +508,9 @@ function CommentsPanel({
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedIdx((i) => (i - 1 + filteredAgents.length) % filteredAgents.length);
+        setSelectedIdx(
+          (i) => (i - 1 + filteredAgents.length) % filteredAgents.length
+        );
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
@@ -515,7 +541,7 @@ function CommentsPanel({
       {/* Comment list */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {comments.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-xs text-muted-foreground/50 text-center py-8">
             No comments yet.
           </p>
         )}
@@ -546,12 +572,12 @@ function CommentsPanel({
                 </span>
                 <button
                   onClick={() => deleteComment.mutate({ id: c.id })}
-                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10"
                 >
-                  <Trash2 className="size-3 text-muted-foreground" />
+                  <Trash2 className="size-3" />
                 </button>
               </div>
-              <p className="text-sm text-muted-foreground opacity-60 mt-0.5 whitespace-pre-wrap">
+              <p className="text-sm text-muted-foreground/60 mt-0.5 whitespace-pre-wrap">
                 <CommentContent content={c.content} agents={agents} />
               </p>
             </div>
@@ -596,7 +622,17 @@ function CommentsPanel({
 }
 
 /** Renders comment content with highlighted @mentions. */
-function CommentContent({ content, agents }: { content: string; agents: { id: string; name?: string; identity?: { name?: string; emoji?: string } }[] }) {
+function CommentContent({
+  content,
+  agents,
+}: {
+  content: string;
+  agents: {
+    id: string;
+    name?: string;
+    identity?: { name?: string; emoji?: string };
+  }[];
+}) {
   const segments = parseContentSegments(content);
   if (segments.length === 1 && segments[0].type === "text") {
     return <>{content}</>;
@@ -611,7 +647,7 @@ function CommentContent({ content, agents }: { content: string; agents: { id: st
         return (
           <span
             key={i}
-            className="text-blue-500 dark:text-blue-400 font-medium opacity-100"
+            className="text-blue-500 dark:text-blue-400 font-medium"
           >
             @{name}
           </span>
@@ -684,7 +720,7 @@ function SessionChat({
           )}
 
           {!loading && messages.length === 0 && !error && (
-            <p className="text-xs text-muted-foreground text-center py-8">
+            <p className="text-xs text-muted-foreground/50 text-center py-8">
               No messages in this session yet.
             </p>
           )}
@@ -715,7 +751,10 @@ function SessionChat({
         </div>
 
         {/* Input */}
-        <form onSubmit={handleSubmit} className="relative border-t bg-muted/30 shrink-0">
+        <form
+          onSubmit={handleSubmit}
+          className="relative border-t bg-muted/30 shrink-0"
+        >
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -744,4 +783,3 @@ function SessionChat({
     </ChatSendProvider>
   );
 }
-

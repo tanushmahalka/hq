@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useGateway } from "@/hooks/use-gateway";
 import { useAllAgentActivity } from "@/hooks/use-agent-activity";
+import { useSession } from "@/lib/auth-client";
 import { parseAgentName } from "@/lib/mentions";
 import { Activity } from "lucide-react";
 
@@ -20,18 +21,43 @@ function seededHeights(seed: string): number[] {
   return heights;
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getFirstName(fullName: string): string {
+  return fullName.split(" ")[0];
+}
+
 export default function Dashboard() {
   const { agents, connected } = useGateway();
   const activityMap = useAllAgentActivity();
+  const { data: session } = useSession();
+
+  const greeting = getGreeting();
+  const firstName = session?.user?.name ? getFirstName(session.user.name) : "";
 
   return (
-    <div className="flex flex-col h-full p-5">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+    <div className="flex flex-col h-full p-12">
+      {/* Greeting */}
+      <div className="pt-4 pb-8">
+        <h1 className="font-display text-6xl font-normal text-foreground">
+          {greeting}
+          {firstName ? `, ${firstName}` : ""}
+        </h1>
+      </div>
+
+      {/* Team section */}
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-normal">Team</h1>
-          <span className="font-mono text-xs text-muted-foreground/60 tabular-nums">
-            {agents.length} AGENTS
+          <h2 className="text-sm font-normal text-muted-foreground">
+            Your team
+          </h2>
+          <span className="font-mono text-xs text-muted-foreground/50 tabular-nums">
+            {agents.length}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -41,8 +67,8 @@ export default function Dashboard() {
             } active`}
             style={{ backgroundColor: "currentColor" }}
           />
-          <span className="text-xs text-muted-foreground">
-            {connected ? "Connected" : "Disconnected"}
+          <span className="text-xs text-muted-foreground/60">
+            {connected ? "Connected" : "Offline"}
           </span>
         </div>
       </div>
@@ -105,7 +131,7 @@ function AgentCard({
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-xl border bg-card p-4 swarm-card ${
+      className={`group relative overflow-hidden rounded-lg border bg-card p-4 swarm-card ${
         active ? "border-[var(--swarm-violet)]/20" : "border-border/40"
       }`}
     >

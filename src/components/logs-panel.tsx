@@ -86,7 +86,7 @@ export function LogsPanel({ onClose }: { onClose: () => void }) {
     : entries;
 
   return (
-    <div className="flex flex-col h-[320px] border-t border-border/30 bg-card dark:bg-[oklch(0.11_0.005_270)]">
+    <div className="flex flex-col h-[320px] border-t border-border/30 bg-card">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/20 shrink-0 gap-3">
         <div className="flex items-center gap-3">

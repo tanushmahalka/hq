@@ -29,9 +29,12 @@ export interface MissionChain {
 export function createHQClient(baseUrl: string, token: string) {
   async function call<T = unknown>(
     procedure: string,
-    input?: unknown
+    input?: unknown,
+    options?: { type?: "query" | "mutation" }
   ): Promise<T> {
-    const isQuery = !input;
+    const isQuery = options?.type
+      ? options.type === "query"
+      : !input;
     const url = isQuery
       ? `${baseUrl}/${procedure}?input=${encodeURIComponent(JSON.stringify(input ?? {}))}`
       : `${baseUrl}/${procedure}`;
@@ -57,9 +60,11 @@ export function createHQClient(baseUrl: string, token: string) {
     campaignId: string
   ): Promise<MissionChain | null> {
     try {
-      return await call<MissionChain | null>("custom.mission.chain", {
-        campaignId,
-      });
+      return await call<MissionChain | null>(
+        "custom.mission.chain",
+        { campaignId },
+        { type: "query" }
+      );
     } catch {
       return null;
     }

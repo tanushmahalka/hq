@@ -43,10 +43,10 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
   return (
     <div
-      className={`group relative cursor-pointer overflow-hidden rounded-lg border bg-card p-3.5 swarm-card ${
+      className={`group relative cursor-pointer overflow-hidden rounded-xl border bg-card p-4 swarm-card ${
         isDoing
-          ? "border-[var(--swarm-violet)]/15 dark:bg-[var(--swarm-violet-dim)]"
-          : "border-border/40 hover:border-border"
+          ? "border-[var(--swarm-violet)]/30 bg-[var(--swarm-violet-dim)]"
+          : "border-border hover:border-border dark:border-border/60 dark:hover:border-border"
       }`}
       onClick={onClick}
     >
@@ -56,9 +56,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           <div
             className="h-full w-full"
             style={{
-              background: active
-                ? "linear-gradient(90deg, transparent 0%, var(--swarm-violet, oklch(0.65 0.18 280)) 50%, transparent 100%)"
-                : "linear-gradient(90deg, transparent 0%, var(--swarm-violet, oklch(0.65 0.18 280)) 50%, transparent 100%)",
+              background: "linear-gradient(90deg, transparent 0%, var(--swarm-violet) 50%, transparent 100%)",
               opacity: active ? 0.6 : 0.25,
               animation: active
                 ? "swarm-shimmer 2s ease-in-out infinite"
@@ -93,30 +91,30 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
       {/* Description */}
       {task.description && (
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+        <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground line-clamp-2">
           {task.description}
         </p>
       )}
 
       {/* Campaign link */}
       {task.campaignId && (
-        <div className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground/50">
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground/50">
           <Link2 className="size-3 shrink-0" />
-          <span className="font-mono truncate">{task.campaignId.slice(0, 8)}</span>
+          <span className="truncate">{task.campaignId.slice(0, 8)}</span>
         </div>
       )}
 
       {/* Footer */}
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70 min-w-0">
+      <div className="mt-3.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground/60 min-w-0">
           {task.assignee && (
-            <span className="flex items-center gap-1 truncate">
+            <span className="flex items-center gap-1.5 truncate">
               <User className="size-3 shrink-0" />
-              <span className="font-mono truncate">{task.assignee}</span>
+              <span className="truncate">{task.assignee}</span>
             </span>
           )}
           {task.dueDate && (
-            <span className="flex items-center gap-1 shrink-0 font-mono">
+            <span className="flex items-center gap-1.5 shrink-0">
               <Calendar className="size-3" />
               {new Date(task.dueDate).toLocaleDateString("en-US", {
                 month: "short",

@@ -109,7 +109,7 @@ export function StatusBar({
       <div className="flex items-center gap-1.5">
         <Circle
           className="size-1.5"
-          fill={connected ? "oklch(0.75 0.14 165)" : "oklch(0.65 0.2 25)"}
+          fill={connected ? "var(--swarm-mint, oklch(0.75 0.14 165))" : "var(--destructive, oklch(0.65 0.2 25))"}
           stroke="none"
         />
         <span className="font-mono">

@@ -138,7 +138,7 @@ export function MissionCard({
   return (
     <>
       <Collapsible open={open} onOpenChange={setOpen}>
-        <div className="group/mission relative rounded-lg border border-border/40 bg-card swarm-card overflow-hidden">
+        <div className="group/mission relative rounded-xl border border-border bg-card swarm-card overflow-hidden">
           {/* Shimmer */}
           {active && (
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
@@ -165,9 +165,9 @@ export function MissionCard({
             </CollapsibleTrigger>
 
             {/* Agent identity */}
-            <span className="text-[11px] text-muted-foreground/50 flex items-center gap-1.5 shrink-0">
+            <span className="text-xs text-muted-foreground/60 flex items-center gap-1.5 shrink-0">
               <span>{emoji}</span>
-              <span className="font-mono uppercase tracking-wide">{agentName}</span>
+              <span>{agentName}</span>
             </span>
 
             {/* Separator + title (collapsed only) */}
@@ -191,7 +191,7 @@ export function MissionCard({
                   return (
                     <span
                       key={o.id}
-                      className="flex items-center gap-1 font-mono text-[11px] px-1.5 py-0.5 rounded"
+                      className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded"
                       style={{
                         color: done ? "var(--swarm-mint)" : "var(--swarm-violet)",
                         backgroundColor: done
@@ -208,7 +208,7 @@ export function MissionCard({
                 {/* Objective count */}
                 {totalObjectives > 0 && (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-muted-foreground/50 font-mono">
+                    <span className="text-xs text-muted-foreground/50">
                       {completedObjectives}/{totalObjectives} obj
                     </span>
                     <div className="w-10 h-1 rounded-full bg-muted overflow-hidden">
@@ -226,7 +226,7 @@ export function MissionCard({
             )}
 
             {/* Status badge */}
-            <span className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground/60 shrink-0">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground/60 shrink-0">
               <span className={`size-1.5 rounded-full ${STATUS_DOT_COLORS[mission.status]}`} />
               {MISSION_STATUS_LABELS[mission.status]}
             </span>
@@ -325,7 +325,7 @@ export function MissionCard({
                   if (title.trim() && title !== mission.title)
                     save("title", title.trim());
                 }}
-                className="w-full text-base font-normal bg-transparent border-none outline-none placeholder:text-muted-foreground/50"
+                className="w-full text-lg font-display font-normal bg-transparent border-none outline-none placeholder:text-muted-foreground/50"
                 placeholder="Mission title"
               />
               <textarea
@@ -345,15 +345,11 @@ export function MissionCard({
             <div className="px-5 pb-4">
               <div className="flex items-center gap-2 mb-2">
                 <span
-                  className="text-[10px] font-medium tracking-widest uppercase"
-                  style={{ color: "var(--swarm-violet)" }}
+                  className="text-xs font-medium text-muted-foreground"
                 >
                   Objectives
                 </span>
-                <div
-                  className="flex-1 h-px"
-                  style={{ backgroundColor: "color-mix(in oklch, var(--swarm-violet) 20%, transparent)" }}
-                />
+                <div className="flex-1 h-px bg-border/50" />
                 <Button
                   variant="ghost"
                   size="sm"

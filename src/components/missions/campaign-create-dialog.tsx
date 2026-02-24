@@ -65,7 +65,7 @@ export function CampaignCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-normal">Add Campaign</DialogTitle>
+          <DialogTitle className="font-display text-2xl font-normal">Add Campaign</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

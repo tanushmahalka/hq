@@ -1,16 +1,19 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HQ - Mission Control</title>
+    <title>HQ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
     <script>
       // Prevent flash of wrong theme
       const t = localStorage.getItem("hq-ui-theme");
-      if (t === "light") document.documentElement.classList.replace("dark", "light");
-      else if (t === "system" && !matchMedia("(prefers-color-scheme: dark)").matches)
-        document.documentElement.classList.replace("dark", "light");
+      if (t === "dark") document.documentElement.classList.replace("light", "dark");
+      else if (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches)
+        document.documentElement.classList.replace("light", "dark");
     </script>
   </head>
   <body>

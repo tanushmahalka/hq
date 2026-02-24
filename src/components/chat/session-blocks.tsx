@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Terminal,
   ChevronRight,
+  ChevronDown,
   Brain,
   Info,
   BrainCircuit,
@@ -173,7 +174,7 @@ export function SessionMessageRow({
       const notification = parseNotification(text);
       if (notification) {
         return (
-          <div className="flex justify-end px-4 py-1.5">
+          <div className="px-4 py-1.5">
             <TaskNotificationCard notification={notification} />
           </div>
         );
@@ -280,29 +281,39 @@ export function SessionMessageRow({
   );
 }
 
-/* ── User message (right-aligned) ── */
+/* ── User message (left-aligned, comment-thread style) ── */
 function UserMessage({ text, timestamp }: { text: string; timestamp: number }) {
   const { cleaned, contexts } = cleanMessageText(text);
   if (!cleaned) return null;
 
   return (
-    <div className="flex justify-end px-4 py-1.5">
+    <div className="px-4 py-1.5">
       <div className="max-w-[85%]">
-        <div className="rounded-2xl rounded-br-sm bg-foreground text-background px-3.5 py-2.5">
+        {/* Speaker label + timestamp */}
+        {(timestamp > 0 || contexts.length > 0) && (
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xs text-muted-foreground/50">You</span>
+            {timestamp > 0 && (
+              <>
+                <span className="text-muted-foreground/20">·</span>
+                <span className="text-[10px] text-muted-foreground/30">
+                  {formatTimestamp(timestamp)}
+                </span>
+              </>
+            )}
+            {contexts.length > 0 && <ContextInfoButton contexts={contexts} />}
+          </div>
+        )}
+        {!timestamp && contexts.length === 0 && (
+          <div className="mb-1">
+            <span className="text-xs text-muted-foreground/50">You</span>
+          </div>
+        )}
+        <div className="rounded-lg bg-muted/40 px-3.5 py-2.5 border-l-2 border-foreground/10">
           <div className="text-sm leading-relaxed">
             <MessageContent text={cleaned} />
           </div>
         </div>
-        {(timestamp > 0 || contexts.length > 0) && (
-          <div className="flex items-center justify-end gap-1.5 mt-1 pr-1">
-            {contexts.length > 0 && <ContextInfoButton contexts={contexts} />}
-            {timestamp > 0 && (
-              <span className="text-[10px] font-mono text-muted-foreground/30">
-                {formatTimestamp(timestamp)}
-              </span>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -333,7 +344,7 @@ function AssistantMessage({
         {isFirst && (timestamp > 0 || contexts.length > 0) && (
           <div className="flex items-center gap-1.5 mt-1">
             {timestamp > 0 && (
-              <span className="text-[10px] font-mono text-muted-foreground/30">
+              <span className="text-[10px] text-muted-foreground/30">
                 {formatTimestamp(timestamp)}
               </span>
             )}
@@ -554,13 +565,23 @@ function buildTimeline(blocks: ContentBlock[]): TLEntry[] {
       toolNames.push(TOOL_LABELS[block.name] ?? block.name);
     } else if (block.type === "text" && block.text.trim()) {
       flushTools();
-      entries.push({ kind: "text", text: block.text });
+      // Merge with previous text entry if it exists (streaming fragments)
+      const last = entries[entries.length - 1];
+      if (last?.kind === "text") {
+        last.text += block.text;
+      } else {
+        entries.push({ kind: "text", text: block.text });
+      }
     }
   }
   flushTools();
   return entries;
 }
 
+/**
+ * AssistantTimeline — still used by SessionMessageRow for standalone rendering.
+ * In UXMessageList context, this is only called for simple text-only messages.
+ */
 function AssistantTimeline({
   blocks,
   timestamp,
@@ -571,133 +592,206 @@ function AssistantTimeline({
   const entries = buildTimeline(blocks);
   if (!entries.length) return null;
 
-  // Only text? Render normally without timeline chrome.
-  if (entries.every((e) => e.kind === "text")) {
-    return (
-      <>
-        {entries.map((e, i) =>
-          e.kind === "text" ? (
-            <AssistantMessage
-              key={i}
-              text={e.text}
-              timestamp={timestamp}
-              isFirst={i === 0}
-            />
-          ) : null
-        )}
-      </>
-    );
-  }
+  const textEntries = entries.filter((e) => e.kind === "text");
 
-  // Group consecutive non-text entries into timeline sections,
-  // text entries stand alone between them.
-  type Seg =
-    | { t: "tl"; items: Array<{ kind: "thinking" | "tools"; text: string }> }
-    | { t: "txt"; text: string };
+  return (
+    <>
+      {textEntries.map((e, i) => (
+        <AssistantMessage
+          key={i}
+          text={e.text}
+          timestamp={timestamp}
+          isFirst={i === 0}
+        />
+      ))}
+    </>
+  );
+}
 
-  const segs: Seg[] = [];
-  for (const e of entries) {
-    if (e.kind === "text") {
-      segs.push({ t: "txt", text: e.text });
-    } else {
-      const last = segs[segs.length - 1];
-      const item = {
-        kind: e.kind as "thinking" | "tools",
-        text: e.kind === "tools" ? e.summary : e.text,
-      };
-      if (last?.t === "tl") {
-        last.items.push(item);
-      } else {
-        segs.push({ t: "tl", items: [item] });
-      }
-    }
-  }
+/* ── Collapsible steps accordion (Perplexity-style) ── */
+function StepsAccordion({
+  steps,
+}: {
+  steps: Array<{ kind: "thinking" | "tools"; text: string; summary?: string }>;
+}) {
+  const [open, setOpen] = useState(false);
 
-  // Flatten everything into one list for a single continuous timeline
-  type FlatEntry =
-    | { kind: "thinking"; text: string }
-    | { kind: "tools"; text: string }
-    | { kind: "text"; text: string; isFirstText: boolean };
+  if (!steps.length) return null;
 
-  const flat: FlatEntry[] = [];
-  let firstText = true;
-  for (const seg of segs) {
-    if (seg.t === "txt") {
-      flat.push({ kind: "text", text: seg.text, isFirstText: firstText });
-      firstText = false;
-    } else {
-      for (const item of seg.items) {
-        flat.push({ kind: item.kind, text: item.text });
-      }
-    }
-  }
+  // If all steps are thinking (no tool calls), show "Thought"
+  const allThinking = steps.every((s) => s.kind === "thinking");
+  const label = allThinking
+    ? "Thought"
+    : `${steps.length} step${steps.length !== 1 ? "s" : ""} completed`;
 
   return (
     <div className="px-4 py-1">
-      {/* border-left IS the timeline line — no absolute positioning needed */}
-      <div
-        className="ml-[5px] border-l pl-4 space-y-0.5"
-        style={{
-          borderColor:
-            "color-mix(in oklab, var(--muted-foreground) 40%, transparent)",
-        }}
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 text-[11px] text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors"
       >
-        {flat.map((entry, i) => {
-          if (entry.kind === "text") {
-            const { cleaned } = cleanMessageText(entry.text);
-            if (!cleaned) return null;
+        <ChevronDown
+          className={`size-3 transition-transform ${open ? "" : "-rotate-90"}`}
+        />
+        <span>{label}</span>
+      </button>
+
+      {open && (
+        <div
+          className="ml-[5px] mt-1.5 border-l pl-4 space-y-0.5"
+          style={{
+            borderColor:
+              "color-mix(in oklab, var(--muted-foreground) 25%, transparent)",
+          }}
+        >
+          {steps.map((step, i) => {
+            const Icon = step.kind === "thinking" ? Brain : Terminal;
             return (
-              <div key={i} className="py-1">
-                <TimelineText text={cleaned} />
-                {entry.isFirstText && timestamp > 0 && (
-                  <span className="text-[10px] font-mono text-muted-foreground/30 mt-1 block">
-                    {formatTimestamp(timestamp)}
-                  </span>
-                )}
+              <div
+                key={i}
+                className="flex items-center gap-2 py-0.5 -ml-[calc(1rem+10px)]"
+              >
+                <div className="size-[20px] rounded-full bg-background flex items-center justify-center shrink-0">
+                  <Icon
+                    className="size-[11px]"
+                    style={{
+                      color:
+                        "color-mix(in oklab, var(--muted-foreground) 40%, transparent)",
+                    }}
+                  />
+                </div>
+                <p
+                  className={`text-[11px] leading-[1.7] min-w-0 ${
+                    step.kind === "thinking"
+                      ? "text-muted-foreground/40"
+                      : "text-muted-foreground/30"
+                  }`}
+                >
+                  {step.kind === "tools" ? step.summary ?? step.text : step.text}
+                </p>
               </div>
             );
-          }
-
-          const Icon = entry.kind === "thinking" ? Brain : Terminal;
-          return (
-            <div
-              key={i}
-              className="flex items-center gap-2 py-0.5 -ml-[calc(1rem+10px)]"
-            >
-              <div className="size-[20px] rounded-full bg-background flex items-center justify-center shrink-0">
-                <Icon
-                  className="size-[11px]"
-                  style={{
-                    color:
-                      "color-mix(in oklab, var(--muted-foreground) 40%, transparent)",
-                  }}
-                />
-              </div>
-              <p
-                className={`text-[11px] leading-[1.7] min-w-0 ${
-                  entry.kind === "thinking"
-                    ? "text-muted-foreground/40"
-                    : "text-muted-foreground/30 font-mono"
-                }`}
-              >
-                {entry.text}
-              </p>
-            </div>
-          );
-        })}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-/* ── Timeline text block (UX mode — shorten session keys) ── */
-function TimelineText({ text }: { text: string }) {
+/* ═══════════════════════════════════════════════════════════════
+   UX Message List — accumulates steps across consecutive
+   assistant messages into a single accordion, Perplexity-style.
+   ═══════════════════════════════════════════════════════════════ */
+
+type UXBlock =
+  | { kind: "steps"; steps: Array<{ kind: "thinking" | "tools"; text: string; summary?: string }> }
+  | { kind: "text"; text: string; timestamp: number; isFirst: boolean }
+  | { kind: "raw"; msg: RawMessage };
+
+function buildUXBlocks(messages: RawMessage[]): UXBlock[] {
+  const blocks: UXBlock[] = [];
+  let pendingSteps: UXBlock & { kind: "steps" } | null = null;
+
+  const flushSteps = () => {
+    if (pendingSteps && pendingSteps.steps.length > 0) {
+      blocks.push(pendingSteps);
+    }
+    pendingSteps = null;
+  };
+
+  for (const msg of messages) {
+    // Skip tool results — they're hidden in UX mode and must not
+    // break the step accumulation chain between assistant messages
+    if (msg.role === "toolResult") continue;
+
+    if (msg.role === "user") {
+      flushSteps();
+      blocks.push({ kind: "raw", msg });
+      continue;
+    }
+
+    if (msg.role !== "assistant") {
+      blocks.push({ kind: "raw", msg });
+      continue;
+    }
+
+    // Build timeline for this assistant message
+    const entries = buildTimeline(msg.blocks);
+    if (!entries.length) continue;
+
+    const steps = entries.filter(
+      (e): e is TLEntry & { kind: "thinking" | "tools" } => e.kind !== "text"
+    );
+    const texts = entries.filter((e) => e.kind === "text");
+
+    // Accumulate steps into the pending bucket
+    if (steps.length > 0) {
+      if (!pendingSteps) {
+        pendingSteps = { kind: "steps", steps: [] };
+      }
+      for (const s of steps) {
+        pendingSteps.steps.push({
+          kind: s.kind,
+          text: s.kind === "tools" ? s.summary : s.text,
+          summary: s.kind === "tools" ? s.summary : undefined,
+        });
+      }
+    }
+
+    // Text found — flush all accumulated steps, then show merged text
+    if (texts.length > 0) {
+      flushSteps();
+      blocks.push({
+        kind: "text",
+        text: texts.map((t) => t.text).join(""),
+        timestamp: msg.timestamp,
+        isFirst: true,
+      });
+    }
+  }
+
+  // Flush any trailing steps
+  flushSteps();
+
+  return blocks;
+}
+
+export function UXMessageList({ messages }: { messages: RawMessage[] }) {
+  const { isAdminView } = useAdminView();
+
+  // Admin mode: render each message individually
+  if (isAdminView) {
+    return (
+      <>
+        {messages.map((msg, i) => (
+          <SessionMessageRow key={i} msg={msg} />
+        ))}
+      </>
+    );
+  }
+
+  const uxBlocks = buildUXBlocks(messages);
+
   return (
-    <div className="max-w-[90%]">
-      <div className="text-sm text-foreground/90 leading-[1.75]">
-        <MessageContent text={shortenSessionKeys(text)} />
-      </div>
-    </div>
+    <>
+      {uxBlocks.map((block, i) => {
+        if (block.kind === "steps") {
+          return <StepsAccordion key={`s${i}`} steps={block.steps} />;
+        }
+        if (block.kind === "text") {
+          return (
+            <AssistantMessage
+              key={`t${i}`}
+              text={block.text}
+              timestamp={block.timestamp}
+              isFirst={block.isFirst}
+            />
+          );
+        }
+        // raw — user messages, tool results, etc.
+        return <SessionMessageRow key={`r${i}`} msg={block.msg} />;
+      })}
+    </>
   );
 }
 

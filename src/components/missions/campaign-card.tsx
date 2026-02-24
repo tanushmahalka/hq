@@ -147,7 +147,7 @@ export function CampaignCard({ campaign, tasks }: CampaignCardProps) {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <span className="text-[11px] text-muted-foreground/50 font-mono w-8 text-right">
+              <span className="text-xs text-muted-foreground/50 w-8 text-right">
                 {done}/{total}
               </span>
             </div>
@@ -156,7 +156,7 @@ export function CampaignCard({ campaign, tasks }: CampaignCardProps) {
           )}
 
           {/* Status badge */}
-          <span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/50 shrink-0">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground/50 shrink-0">
             <span className={`size-1.5 rounded-full ${STATUS_DOT_COLORS[campaign.status]}`} />
             {CAMPAIGN_STATUS_LABELS[campaign.status]}
           </span>

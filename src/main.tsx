@@ -29,7 +29,7 @@ const GATEWAY_TOKEN = import.meta.env.VITE_GATEWAY_TOKEN ?? "";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="dark">
+    <ThemeProvider defaultTheme="light">
       <TRPCProvider>
         <GatewayProvider url={GATEWAY_URL} token={GATEWAY_TOKEN}>
           <BrowserRouter>

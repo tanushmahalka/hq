@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useGateway } from "./use-gateway";
 import type { EventFrame } from "@/lib/gateway-client";
+import { markSessionPending, clearSessionPending } from "./use-any-agent-active";
 
 export type ChatMessage = {
   role: "user" | "assistant";
@@ -272,6 +273,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       awaitingRef.current = true;
       setStream("");
       setError(null);
+      markSessionPending(sessionKey);
 
       const idempotencyKey = crypto.randomUUID();
       try {
@@ -286,6 +288,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
         awaitingRef.current = false;
         setStream(null);
         setError(String(err));
+        clearSessionPending(sessionKey);
       }
     },
     [client, connected, sessionKey]

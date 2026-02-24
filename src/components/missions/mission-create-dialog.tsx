@@ -68,7 +68,7 @@ export function MissionCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-normal">Create Mission</DialogTitle>
+          <DialogTitle className="font-display text-2xl font-normal">Create Mission</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -85,7 +85,7 @@ export function MissionCreateDialog({
                     <SelectItem key={agent.id} value={agent.id}>
                       <span className="flex items-center gap-2">
                         <span>{emoji}</span>
-                        <span className="font-mono text-sm">{name}</span>
+                        <span className="text-sm">{name}</span>
                       </span>
                     </SelectItem>
                   );

@@ -16,9 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, CircleAlert, Star } from "lucide-react";
 import { toast } from "sonner";
 import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
+
+const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
+  todo: "bg-gray-400",
+  doing: "bg-[var(--swarm-violet)]",
+  stuck: "bg-red-400",
+  done: "bg-[var(--swarm-mint)]",
+};
 import { trpc } from "@/lib/trpc";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 
@@ -93,7 +100,7 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-lg font-normal">Create Task</DialogTitle>
+          <DialogTitle className="font-display text-2xl font-normal">Create Task</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -128,7 +135,10 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
                 <SelectContent>
                   {TASK_STATUSES.map((s) => (
                     <SelectItem key={s} value={s}>
-                      {STATUS_LABELS[s]}
+                      <span className="flex items-center gap-2">
+                        <span className={`size-2 rounded-full ${STATUS_DOT_COLORS[s]}`} />
+                        {STATUS_LABELS[s]}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -164,25 +174,31 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={urgent}
-                onChange={(e) => setUrgent(e.target.checked)}
-                className="size-4 rounded border-border accent-[var(--swarm-violet)]"
-              />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setUrgent(!urgent)}
+              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs cursor-pointer transition-colors ${
+                urgent
+                  ? "border-red-300/40 bg-red-50 text-red-600 dark:border-red-400/30 dark:bg-red-950/40 dark:text-red-300"
+                  : "border-border/50 text-muted-foreground/50 hover:text-muted-foreground"
+              }`}
+            >
+              <CircleAlert className="size-3" />
               Urgent
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={important}
-                onChange={(e) => setImportant(e.target.checked)}
-                className="size-4 rounded border-border accent-[var(--swarm-violet)]"
-              />
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportant(!important)}
+              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs cursor-pointer transition-colors ${
+                important
+                  ? "border-amber-300/40 bg-amber-50 text-amber-600 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300"
+                  : "border-border/50 text-muted-foreground/50 hover:text-muted-foreground"
+              }`}
+            >
+              <Star className="size-3" />
               Important
-            </label>
+            </button>
           </div>
 
           <DialogFooter>

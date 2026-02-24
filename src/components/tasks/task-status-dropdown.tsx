@@ -7,6 +7,13 @@ import {
 } from "@/components/ui/select";
 import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
 
+const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
+  todo: "bg-gray-400",
+  doing: "bg-[var(--swarm-violet)]",
+  stuck: "bg-red-400",
+  done: "bg-[var(--swarm-mint)]",
+};
+
 interface TaskStatusDropdownProps {
   value: TaskStatus;
   onValueChange: (status: TaskStatus) => void;
@@ -20,7 +27,7 @@ export function TaskStatusDropdown({
     <Select value={value} onValueChange={(v) => onValueChange(v as TaskStatus)}>
       <SelectTrigger
         size="sm"
-        className="h-7 text-xs font-mono"
+        className="h-7 text-xs"
         onClick={(e) => e.stopPropagation()}
       >
         <SelectValue />
@@ -28,7 +35,10 @@ export function TaskStatusDropdown({
       <SelectContent>
         {TASK_STATUSES.map((status) => (
           <SelectItem key={status} value={status}>
-            {STATUS_LABELS[status]}
+            <span className="flex items-center gap-2">
+              <span className={`size-2 rounded-full ${STATUS_DOT_COLORS[status]}`} />
+              {STATUS_LABELS[status]}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>

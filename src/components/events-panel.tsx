@@ -156,7 +156,7 @@ function RpcConsole() {
             className="w-full text-[11px] font-mono bg-transparent border border-border/20 rounded px-2 py-1 outline-none placeholder:text-muted-foreground/25 placeholder:font-sans focus:border-border/40"
           />
           {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-[180px] overflow-y-auto rounded border border-border/30 bg-card dark:bg-[oklch(0.14_0.007_270)] shadow-lg">
+            <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-[180px] overflow-y-auto rounded border border-border/30 bg-card shadow-lg">
               {suggestions.map((m) => (
                 <button
                   key={m}
@@ -329,7 +329,7 @@ export function EventsPanel({ onClose }: { onClose: () => void }) {
     : entries;
 
   return (
-    <div className="flex flex-col h-[320px] border-t border-border/30 bg-card dark:bg-[oklch(0.11_0.005_270)]">
+    <div className="flex flex-col h-[320px] border-t border-border/30 bg-card">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/20 shrink-0 gap-3">
         <div className="flex items-center gap-3">

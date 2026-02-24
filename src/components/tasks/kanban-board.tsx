@@ -23,19 +23,24 @@ export function KanbanBoard() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-x-auto p-5">
+      {/* Page header */}
+      <div className="px-12 pt-10 pb-6">
+        <h1 className="font-display text-5xl font-normal text-foreground">Tasks</h1>
+      </div>
+
+      <div className="flex-1 overflow-x-auto px-12 pb-8">
         {isLoading ? (
           <div className="flex gap-4">
             {TASK_STATUSES.map((s) => (
-              <div key={s} className="min-w-[280px] w-[280px] space-y-2">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
+              <div key={s} className="min-w-[280px] w-[280px] space-y-3">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-28 w-full rounded-xl" />
+                <Skeleton className="h-28 w-full rounded-xl" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex gap-3 min-h-0 h-full">
+          <div className="flex gap-4 min-h-0 h-full">
             <AutomationsColumn />
             {TASK_STATUSES.map((status) => (
               <KanbanColumn

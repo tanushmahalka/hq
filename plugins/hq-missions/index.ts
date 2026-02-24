@@ -53,7 +53,8 @@ export default function register(api: PluginAPI) {
     async execute(_id, params) {
       const briefing = await hq.call(
         "custom.mission.list",
-        params.agentId ? { agentId: params.agentId as string } : undefined
+        params.agentId ? { agentId: params.agentId as string } : undefined,
+        { type: "query" }
       );
       return {
         content: [{ type: "text", text: JSON.stringify(briefing, null, 2) }],
@@ -219,7 +220,7 @@ export default function register(api: PluginAPI) {
     async execute(_id, params) {
       const tasks = (await hq.call<
         { campaignId?: string; id: string; title: string; status: string }[]
-      >("task.list")) as {
+      >("task.list", undefined, { type: "query" })) as {
         campaignId?: string;
         id: string;
         title: string;
@@ -236,16 +237,17 @@ export default function register(api: PluginAPI) {
 
   // ── Gateway RPC ──
 
-  api.registerGatewayMethod("missions.sync", async ({ params, respond }) => {
+  api.registerGatewayMethod("hq-missions.sync", async ({ params, respond }) => {
     const { agentId } = params as { agentId?: string };
     const briefing = await hq.call(
       "custom.mission.list",
-      agentId ? { agentId } : undefined
+      agentId ? { agentId } : undefined,
+      { type: "query" }
     );
     respond(true, { ok: true, missions: briefing });
   });
 
-  api.registerGatewayMethod("missions.status", async ({ respond }) => {
+  api.registerGatewayMethod("hq-missions.status", async ({ respond }) => {
     respond(true, { ok: true, connected: true });
   });
 
