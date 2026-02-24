@@ -76,13 +76,11 @@ export const missionRouter = router({
         description: z.string().optional(),
         autonomyLevel: z.enum(AUTONOMY_LEVELS).optional(),
         status: z.enum(MISSION_STATUSES).optional(),
-        organizationId: z.string().optional(),
+        organizationId: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const orgId = ctx.isAgent
-        ? input.organizationId ?? null
-        : ctx.organizationId;
+      const orgId = ctx.isAgent ? input.organizationId : ctx.organizationId;
 
       const [mission] = await ctx.db
         .insert(missions)

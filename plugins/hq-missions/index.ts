@@ -137,6 +137,88 @@ export default function register(api: PluginAPI) {
   });
 
   api.registerTool({
+    name: "create_mission",
+    description:
+      "Create a new mission for an agent. A mission is the top-level strategic directive that groups objectives and campaigns.",
+    parameters: Type.Object({
+      agentId: Type.String({ description: "ID of the agent this mission belongs to" }),
+      title: Type.String({ description: "Mission title" }),
+      description: Type.Optional(Type.String({ description: "Mission description" })),
+      autonomyLevel: Type.Optional(
+        Type.Union([
+          Type.Literal("notify"),
+          Type.Literal("suggest"),
+          Type.Literal("act-and-report"),
+          Type.Literal("full-auto"),
+        ], { description: "How autonomously the agent should operate (default: suggest)" })
+      ),
+      organizationId: Type.String({ description: "Organization ID this mission belongs to" }),
+    }),
+    async execute(_id, params) {
+      const mission = await hq.call("custom.mission.create", {
+        agentId: params.agentId as string,
+        title: params.title as string,
+        description: params.description as string | undefined,
+        autonomyLevel: params.autonomyLevel as string | undefined,
+        organizationId: params.organizationId as string,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(mission, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "create_objective",
+    description:
+      "Create a new objective under a mission. An objective defines a measurable outcome with an optional target metric (e.g., 'organic visits: 5000').",
+    parameters: Type.Object({
+      missionId: Type.String({ description: "UUID of the parent mission" }),
+      title: Type.String({ description: "Objective title" }),
+      description: Type.Optional(Type.String()),
+      hypothesis: Type.Optional(Type.String({ description: "Hypothesis for achieving this objective" })),
+      targetMetric: Type.Optional(Type.String({ description: "Metric to track (e.g., 'organic visits')" })),
+      targetValue: Type.Optional(Type.String({ description: "Target value to reach (e.g., '5000')" })),
+    }),
+    async execute(_id, params) {
+      const objective = await hq.call("custom.objective.create", {
+        missionId: params.missionId as string,
+        title: params.title as string,
+        description: params.description as string | undefined,
+        hypothesis: params.hypothesis as string | undefined,
+        targetMetric: params.targetMetric as string | undefined,
+        targetValue: params.targetValue as string | undefined,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(objective, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "create_campaign",
+    description:
+      "Create a new campaign under an objective. A campaign is a specific initiative with a hypothesis to test, executed to move an objective's metric.",
+    parameters: Type.Object({
+      objectiveId: Type.String({ description: "UUID of the parent objective" }),
+      title: Type.String({ description: "Campaign title" }),
+      description: Type.Optional(Type.String()),
+      hypothesis: Type.Optional(Type.String({ description: "What you expect this campaign to achieve and why" })),
+    }),
+    async execute(_id, params) {
+      const campaign = await hq.call("custom.campaign.create", {
+        objectiveId: params.objectiveId as string,
+        title: params.title as string,
+        description: params.description as string | undefined,
+        hypothesis: params.hypothesis as string | undefined,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
     name: "list_campaign_tasks",
     description:
       "List all tasks linked to a specific campaign, showing their status and progress.",
