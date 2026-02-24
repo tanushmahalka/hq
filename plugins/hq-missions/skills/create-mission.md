@@ -26,7 +26,6 @@ The top-level container. A mission represents a strategic area of responsibility
 | ------------------ | ------------------------------------------------------------------------- |
 | **Title**          | Clear, action-oriented (e.g., "Own organic growth for Acme SaaS")         |
 | **Description**    | What this mission covers, why it matters, and key context the agent needs |
-| **Autonomy Level** | `notify` · `suggest` · `act-and-report` · `full-auto`                     |
 | **Status**         | `active` · `paused` · `completed` · `archived`                            |
 | **Constraints**    | Hard boundaries: budget, brand rules, off-limits tactics, approval gates  |
 
@@ -151,19 +150,17 @@ Before you can create a quality mission, you need to fill **five discovery dimen
 - Your plan includes actions they can't afford or don't have access to
 - You'd suggest the same plan regardless of their budget
 
-#### Dimension 5: AMBITION — "How far, how fast, how free?"
+#### Dimension 5: AMBITION — "How far, how fast?"
 
 **Sufficient when you know:**
 
 - Target timeline (quarter, 6 months, ongoing)
-- Desired autonomy level (how much should the agent do independently?)
 - Risk tolerance (conservative and steady vs. aggressive and experimental)
 - Definition of success in their words (not your framework's words)
 
 **Red flags that you don't have enough:**
 
 - You can't tell if they want a quick win or a long-term transformation
-- You don't know if they want you to ask permission or just go
 
 ---
 
@@ -603,7 +600,7 @@ _Replace bracket content with domain-appropriate ranges. For organic traffic: "U
 }
 ```
 
-### Ambition & Autonomy (Dimension 5)
+### Ambition (Dimension 5)
 
 **Timeline:**
 
@@ -623,34 +620,6 @@ _Replace bracket content with domain-appropriate ranges. For organic traffic: "U
     {
       "label": "Ongoing / evergreen",
       "description": "No fixed end date — continuous improvement"
-    }
-  ],
-  "allowCustom": true
-}
-```
-
-**Autonomy:**
-
-```json
-{
-  "type": "choices",
-  "question": "How much freedom should I have on this mission?",
-  "options": [
-    {
-      "label": "Suggest first",
-      "description": "You propose actions and wait for my OK before executing anything"
-    },
-    {
-      "label": "Act and report",
-      "description": "Take action on your own, keep me posted on what you did and why"
-    },
-    {
-      "label": "Full autonomy",
-      "description": "Handle everything independently — I'll check in on results periodically"
-    },
-    {
-      "label": "Just flag things",
-      "description": "Surface things I should know about, but I'll drive all decisions"
     }
   ],
   "allowCustom": true
@@ -784,7 +753,7 @@ Here's what I'll set up based on everything you've told me:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🎯 MISSION: [Title]
-   Agent: me | Autonomy: [level]
+   Agent: me
    Timeline: [duration]
 
    [2-3 sentence description that reflects THEIR specific situation,
@@ -870,7 +839,6 @@ Once confirmed, execute in this exact sequence:
    - `agentId`: your own agent ID
    - `title`: mission title
    - `description`: the full contextual description (not a one-liner — include the business situation, key constraints, and strategic reasoning)
-   - `autonomyLevel`: as confirmed with user
 
 2. **Create objectives** (in priority order):
    For each objective, call `custom.objective.create` with:

@@ -93,11 +93,11 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create Task</DialogTitle>
+          <DialogTitle className="text-lg font-normal">Create Task</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Title *</label>
+            <label className="text-sm">Title *</label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -107,7 +107,7 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Description</label>
+            <label className="text-sm">Description</label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -117,7 +117,7 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm">Status</label>
               <Select
                 value={status}
                 onValueChange={(v) => setStatus(v as TaskStatus)}
@@ -136,7 +136,7 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Due Date</label>
+              <label className="text-sm">Due Date</label>
               <Input
                 type="date"
                 value={dueDate}
@@ -147,7 +147,7 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Assignor</label>
+              <label className="text-sm">Assignor</label>
               <Input
                 value={assignor}
                 onChange={(e) => setAssignor(e.target.value)}
@@ -155,7 +155,7 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Assignee</label>
+              <label className="text-sm">Assignee</label>
               <Input
                 value={assignee}
                 onChange={(e) => setAssignee(e.target.value)}
@@ -165,21 +165,21 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
           </div>
 
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={urgent}
                 onChange={(e) => setUrgent(e.target.checked)}
-                className="rounded"
+                className="size-4 rounded border-border accent-[var(--swarm-violet)]"
               />
               Urgent
             </label>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={important}
                 onChange={(e) => setImportant(e.target.checked)}
-                className="rounded"
+                className="size-4 rounded border-border accent-[var(--swarm-violet)]"
               />
               Important
             </label>

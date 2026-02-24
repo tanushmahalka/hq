@@ -20,11 +20,6 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useGateway } from "@/hooks/use-gateway";
-import {
-  AUTONOMY_LEVELS,
-  AUTONOMY_LEVEL_LABELS,
-  type AutonomyLevel,
-} from "@shared/custom/types";
 
 interface MissionCreateDialogProps {
   open: boolean;
@@ -39,7 +34,6 @@ export function MissionCreateDialog({
   const [agentId, setAgentId] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [autonomyLevel, setAutonomyLevel] = useState<AutonomyLevel>("suggest");
 
   const utils = trpc.useUtils();
 
@@ -58,7 +52,6 @@ export function MissionCreateDialog({
     setAgentId("");
     setTitle("");
     setDescription("");
-    setAutonomyLevel("suggest");
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -68,7 +61,6 @@ export function MissionCreateDialog({
       agentId,
       title: title.trim(),
       description: description.trim() || undefined,
-      autonomyLevel,
     });
   };
 
@@ -120,25 +112,6 @@ export function MissionCreateDialog({
               placeholder="What is this agent's overarching mission?"
               rows={3}
             />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm">Autonomy Level</label>
-            <Select
-              value={autonomyLevel}
-              onValueChange={(v) => setAutonomyLevel(v as AutonomyLevel)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AUTONOMY_LEVELS.map((level) => (
-                  <SelectItem key={level} value={level}>
-                    {AUTONOMY_LEVEL_LABELS[level]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <DialogFooter>

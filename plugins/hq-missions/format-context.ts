@@ -20,7 +20,7 @@ export function formatMissionContext(chain: MissionChain): string {
     `${"=".repeat(40)}`,
     ``,
     `Mission: ${mission.title}`,
-    `  Agent: ${mission.agentId} | Autonomy: ${mission.autonomyLevel} | Status: ${mission.status}`,
+    `  Agent: ${mission.agentId} | Status: ${mission.status}`,
   ];
 
   if (mission.description) {

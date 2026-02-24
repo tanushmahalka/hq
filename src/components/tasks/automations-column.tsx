@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ChevronRight, Timer } from "lucide-react";
+import { ChevronDown, ChevronRight, Timer } from "lucide-react";
+import { useLocalStorage } from "@uidotdev/usehooks";
 import { useCron, type CronJob } from "@/hooks/use-cron";
 import { useGateway, type Agent } from "@/hooks/use-gateway";
 import { useSession } from "@/lib/auth-client";
@@ -280,17 +281,53 @@ export function AutomationsColumn() {
   const { isAdminView } = useAdminView();
   const isAdmin = session?.user.role === "admin" && isAdminView;
   const [selectedJob, setSelectedJob] = useState<CronJob | null>(null);
+  const [expanded, setExpanded] = useLocalStorage("hq:automations:open", true);
+
+  if (!expanded) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="flex flex-col items-center shrink-0 w-9 border-r border-border/50 bg-card/50 py-3 gap-2 hover:bg-muted/30 transition-colors cursor-pointer"
+        >
+          <ChevronRight className="size-3.5 text-muted-foreground/60" />
+          <Timer className="size-3.5 text-[var(--swarm-violet)]" />
+          <span className="font-mono text-[10px] text-muted-foreground/60 tabular-nums">
+            {isLoading ? "—" : jobs.length}
+          </span>
+          <span
+            className="text-[10px] font-mono text-muted-foreground/50 tracking-widest"
+            style={{ writingMode: "vertical-lr" }}
+          >
+            AUTO
+          </span>
+        </button>
+
+        <CronDetailSheet
+          job={selectedJob}
+          agents={agents}
+          onClose={() => setSelectedJob(null)}
+        />
+      </>
+    );
+  }
 
   return (
     <>
-      <div className="flex flex-col min-w-[280px] flex-1 rounded-xl border border-[var(--swarm-violet-dim)] bg-card/50 dark:swarm-glass">
-        <div className="flex items-center gap-2.5 px-4 py-3">
+      <div className="flex flex-col shrink-0 w-[240px] border-r border-border/50 bg-card/50">
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="flex items-center gap-2.5 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer"
+        >
+          <ChevronDown className="size-3.5 text-muted-foreground/60" />
           <Timer className="size-4 text-[var(--swarm-violet)]" />
           <h2 className="text-sm font-normal text-foreground">Automations</h2>
           <span className="font-mono text-[11px] text-muted-foreground/60 tabular-nums">
             {isLoading ? "—" : jobs.length}
           </span>
-        </div>
+        </button>
 
         <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-1.5">
           {isLoading ? (

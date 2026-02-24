@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import { missions, campaigns, objectives } from "../../../../shared/custom/schema";
-import { MISSION_STATUSES, AUTONOMY_LEVELS } from "../../../../shared/custom/types";
+import { MISSION_STATUSES } from "../../../../shared/custom/types";
 import { router, orgProcedure } from "../../init";
 import { notifyAgent } from "../../../lib/notify-agent";
 import { fetchMissionChain } from "../../../lib/mission-chain";
@@ -74,7 +74,6 @@ export const missionRouter = router({
         agentId: z.string().min(1),
         title: z.string().min(1),
         description: z.string().optional(),
-        autonomyLevel: z.enum(AUTONOMY_LEVELS).optional(),
         status: z.enum(MISSION_STATUSES).optional(),
         organizationId: z.string(),
       })
@@ -88,7 +87,6 @@ export const missionRouter = router({
           agentId: input.agentId,
           title: input.title,
           description: input.description,
-          autonomyLevel: input.autonomyLevel ?? "suggest",
           status: input.status ?? "active",
           organizationId: orgId,
         })
@@ -104,7 +102,6 @@ export const missionRouter = router({
               id: mission.id,
               title: input.title,
               description: input.description ?? null,
-              autonomyLevel: mission.autonomyLevel,
             },
           }),
           sessionKey,
@@ -120,7 +117,6 @@ export const missionRouter = router({
         id: z.string().uuid(),
         title: z.string().min(1).optional(),
         description: z.string().nullable().optional(),
-        autonomyLevel: z.enum(AUTONOMY_LEVELS).optional(),
         status: z.enum(MISSION_STATUSES).optional(),
         metadata: z.record(z.unknown()).nullable().optional(),
       })
@@ -145,7 +141,6 @@ export const missionRouter = router({
                 id: mission.id,
                 title: mission.title,
                 description: mission.description,
-                autonomyLevel: mission.autonomyLevel,
                 status: mission.status,
               },
             }),

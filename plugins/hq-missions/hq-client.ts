@@ -4,7 +4,6 @@ export interface MissionChain {
     agentId: string;
     title: string;
     description: string | null;
-    autonomyLevel: string;
     status: string;
   };
   objective: {

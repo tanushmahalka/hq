@@ -16,14 +16,16 @@ export default function Missions() {
   const { data: allTasks } = trpc.task.list.useQuery();
 
   // Build tasksByCampaign map
-  const tasksByCampaign: Record<string, { done: number; total: number }> = {};
+  type CampaignTaskEntry = { done: number; total: number; tasks: Array<{ id: string; title: string; status: string }> };
+  const tasksByCampaign: Record<string, CampaignTaskEntry> = {};
   if (allTasks) {
     for (const task of allTasks) {
       const cid = (task as { campaignId?: string | null }).campaignId;
       if (!cid) continue;
-      if (!tasksByCampaign[cid]) tasksByCampaign[cid] = { done: 0, total: 0 };
+      if (!tasksByCampaign[cid]) tasksByCampaign[cid] = { done: 0, total: 0, tasks: [] };
       tasksByCampaign[cid].total++;
       if (task.status === "done") tasksByCampaign[cid].done++;
+      tasksByCampaign[cid].tasks.push({ id: task.id, title: task.title, status: task.status });
     }
   }
 
@@ -57,7 +59,7 @@ export default function Missions() {
       )}
 
       {/* Mission cards */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         {missions?.map((mission) => {
           const agent = agents.find((a) => a.id === mission.agentId);
           return (

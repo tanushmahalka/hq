@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type FormEvent } from "react";
-import { ChevronLeft, X, ArrowUp } from "lucide-react";
+import { X, ArrowUp } from "lucide-react";
 import { useChat } from "@/hooks/use-chat";
 import { useGateway } from "@/hooks/use-gateway";
 import { useMessengerPanel } from "@/hooks/use-messenger-panel";
@@ -7,89 +7,123 @@ import { ChatSendProvider } from "@/hooks/use-chat-send";
 import { SessionMessageRow } from "@/components/chat/session-blocks";
 import { MessageContent } from "./message-content";
 import { parseAgentName } from "@/lib/mentions";
+import { useAllAgentActivity } from "@/hooks/use-agent-activity";
 
-export function MessengerPanel() {
-  const { selectedAgentId } = useMessengerPanel();
+/* ── Agent Strip (always-visible right edge) ── */
+
+export function AgentStrip() {
+  const { agents, connected } = useGateway();
+  const { selectedAgentId, selectAgent } = useMessengerPanel();
+  const activityMap = useAllAgentActivity();
 
   return (
-    <div className="h-full w-[420px] flex flex-col border-l border-border dark:bg-[oklch(0.11_0.005_270)]">
-      {selectedAgentId ? (
-        <ChatView agentId={selectedAgentId} />
-      ) : (
-        <AgentListView />
-      )}
+    <div className="h-full w-16 flex flex-col items-center border-l border-border/50 dark:bg-[oklch(0.10_0.005_270)] py-3 gap-1 shrink-0">
+      <span className="text-[8px] uppercase tracking-[0.2em] text-muted-foreground/40 font-medium mb-2">
+        Agents
+      </span>
+
+      <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col items-center gap-3 w-full px-1.5">
+        {agents.length === 0 && (
+          <div className="flex-1 flex items-center justify-center">
+            <span className="text-[9px] text-muted-foreground/30 text-center leading-tight">
+              No<br />agents
+            </span>
+          </div>
+        )}
+
+        {agents.map((agent) => {
+          const raw = agent.identity?.name ?? agent.name ?? agent.id;
+          const { name, role } = parseAgentName(raw);
+          const activity = activityMap.get(agent.id);
+          const isActive = activity?.active ?? false;
+          const isSelected = selectedAgentId === agent.id;
+          const initial = name.charAt(0).toUpperCase();
+
+          return (
+            <AgentBubble
+              key={agent.id}
+              initial={initial}
+              role={role}
+              active={isActive}
+              selected={isSelected}
+              connected={connected}
+              onClick={() => selectAgent(agent.id)}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function AgentListView() {
-  const { agents, connected } = useGateway();
-  const { selectAgent, close } = useMessengerPanel();
-
+function AgentBubble({
+  initial,
+  role,
+  active,
+  selected,
+  connected,
+  onClick,
+}: {
+  initial: string;
+  role?: string;
+  active: boolean;
+  selected: boolean;
+  connected: boolean;
+  onClick: () => void;
+}) {
   return (
-    <>
-      {/* Header */}
-      <div className="h-11 px-4 flex items-center justify-between border-b border-border/50 shrink-0">
-        <span className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium">
-          Agents
-        </span>
-        <button
-          onClick={close}
-          className="p-1 rounded text-muted-foreground/30 hover:text-foreground transition-colors"
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1 group"
+    >
+      {/* Bubble with optional shimmer ring */}
+      <div className="relative">
+        {/* Shimmer ring (behind the bubble) */}
+        {active && (
+          <div
+            className="absolute -inset-[3px] rounded-full"
+            style={{
+              background: "conic-gradient(from 0deg, transparent 0%, var(--swarm-violet) 25%, transparent 50%, var(--swarm-violet) 75%, transparent 100%)",
+              opacity: 0.5,
+              animation: "agent-ring-shimmer 3s linear infinite",
+            }}
+          />
+        )}
+
+        {/* Avatar circle */}
+        <div
+          className={`relative size-10 rounded-full flex items-center justify-center transition-colors text-sm font-mono ${
+            selected
+              ? "bg-[var(--swarm-violet)]/15 text-[var(--swarm-violet)] ring-1 ring-[var(--swarm-violet)]/40"
+              : "bg-muted text-muted-foreground group-hover:bg-muted/80"
+          }`}
         >
-          <X className="size-3.5" />
-        </button>
+          {initial}
+
+          {/* Connection status dot */}
+          <div
+            className={`absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-[oklch(0.10_0.005_270)] ${
+              connected ? "bg-[var(--swarm-mint)]" : "bg-red-400"
+            }`}
+          />
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-1">
-        {agents.length === 0 && (
-          <p className="text-xs text-muted-foreground/50 text-center py-8">
-            No agents available
-          </p>
-        )}
-        {agents.map((agent) => {
-          const raw = agent.identity?.name ?? agent.name ?? agent.id;
-          const { name, role } = parseAgentName(raw);
-          const emoji = agent.identity?.emoji;
-          return (
-            <button
-              key={agent.id}
-              onClick={() => selectAgent(agent.id)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--swarm-surface-hover)] transition-colors text-left group"
-            >
-              <div className="size-7 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <span className="text-xs">{emoji ?? "🤖"}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-mono font-normal truncate">
-                    {name}
-                  </span>
-                  {role && (
-                    <span className="inline-flex items-center rounded-full bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground/60 shrink-0">
-                      {role}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <span
-                className={`size-1.5 rounded-full shrink-0 ${
-                  connected
-                    ? "bg-[var(--swarm-mint)]"
-                    : "bg-red-400"
-                }`}
-              />
-            </button>
-          );
-        })}
-      </div>
-    </>
+      {/* Role label */}
+      {role && (
+        <span className="text-[8px] uppercase tracking-wider text-muted-foreground/40 font-medium truncate max-w-[56px] text-center leading-none">
+          {role}
+        </span>
+      )}
+    </button>
   );
 }
 
-function ChatView({ agentId }: { agentId: string }) {
+/* ── Chat Panel (slides in/out) ── */
+
+export function ChatPanel({ agentId }: { agentId: string }) {
   const { agents, connected } = useGateway();
-  const { goBack, close } = useMessengerPanel();
+  const { closeChat } = useMessengerPanel();
   const { rawMessages, stream, isStreaming, loading, error, sendMessage } =
     useChat(agentId);
   const [input, setInput] = useState("");
@@ -112,15 +146,9 @@ function ChatView({ agentId }: { agentId: string }) {
   };
 
   return (
-    <>
+    <div className="h-full w-[380px] flex flex-col border-l border-border/50 dark:bg-[oklch(0.11_0.005_270)]">
       {/* Header */}
       <div className="h-11 px-3 flex items-center gap-2 border-b border-border/50 shrink-0">
-        <button
-          onClick={goBack}
-          className="p-1 rounded text-muted-foreground/30 hover:text-foreground transition-colors"
-        >
-          <ChevronLeft className="size-4" />
-        </button>
         <div className="size-6 rounded-full bg-muted flex items-center justify-center shrink-0">
           <span className="text-[10px]">{emoji ?? "🤖"}</span>
         </div>
@@ -140,7 +168,7 @@ function ChatView({ agentId }: { agentId: string }) {
           }`}
         />
         <button
-          onClick={close}
+          onClick={closeChat}
           className="p-1 rounded text-muted-foreground/30 hover:text-foreground transition-colors"
         >
           <X className="size-3.5" />
@@ -229,7 +257,7 @@ function ChatView({ agentId }: { agentId: string }) {
           </button>
         </form>
       </div>
-    </>
+    </div>
   );
 }
 

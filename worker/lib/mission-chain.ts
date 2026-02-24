@@ -19,7 +19,6 @@ export interface MissionChain {
     agentId: string;
     title: string;
     description: string | null;
-    autonomyLevel: string;
     status: string;
   };
   objective: {
@@ -83,7 +82,6 @@ export async function fetchMissionChain(
     agentId: string;
     title: string;
     description: string | null;
-    autonomyLevel: string;
     status: string;
   } | null;
 
@@ -95,7 +93,6 @@ export async function fetchMissionChain(
       agentId: mission.agentId,
       title: mission.title,
       description: mission.description,
-      autonomyLevel: mission.autonomyLevel,
       status: mission.status,
     },
     objective: {
@@ -140,7 +137,7 @@ export function formatMissionContext(chain: MissionChain): string {
     `${"=".repeat(40)}`,
     ``,
     `Mission: ${mission.title}`,
-    `  Agent: ${mission.agentId} | Autonomy: ${mission.autonomyLevel} | Status: ${mission.status}`,
+    `  Agent: ${mission.agentId} | Status: ${mission.status}`,
   ];
 
   if (mission.description) {

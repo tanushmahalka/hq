@@ -4,7 +4,7 @@ import { TopNav } from "@/components/top-nav";
 import { StatusBar } from "@/components/status-bar";
 import { LogsPanel } from "@/components/logs-panel";
 import { EventsPanel } from "@/components/events-panel";
-import { MessengerPanel } from "@/components/messenger/messenger-panel";
+import { AgentStrip, ChatPanel } from "@/components/messenger/messenger-panel";
 import {
   MessengerPanelProvider,
   useMessengerPanel,
@@ -19,7 +19,7 @@ export default function Layout() {
 }
 
 function LayoutInner() {
-  const { isOpen } = useMessengerPanel();
+  const { selectedAgentId, chatOpen } = useMessengerPanel();
   const [logsOpen, setLogsOpen] = useState(false);
   const [eventsOpen, setEventsOpen] = useState(false);
 
@@ -30,11 +30,16 @@ function LayoutInner() {
         <main className="flex-1 overflow-auto min-w-0 dark:bg-[oklch(0.12_0.005_270)]">
           <Outlet />
         </main>
+
+        {/* Chat panel — slides in/out */}
         <div
-          className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "w-[420px]" : "w-0"}`}
+          className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${chatOpen ? "w-[380px]" : "w-0"}`}
         >
-          <MessengerPanel />
+          {selectedAgentId && <ChatPanel agentId={selectedAgentId} />}
         </div>
+
+        {/* Agent strip — always visible */}
+        <AgentStrip />
       </div>
       {logsOpen && <LogsPanel onClose={() => setLogsOpen(false)} />}
       {eventsOpen && <EventsPanel onClose={() => setEventsOpen(false)} />}

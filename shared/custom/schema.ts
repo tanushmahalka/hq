@@ -10,7 +10,6 @@ import {
 import { relations } from "drizzle-orm";
 import {
   MISSION_STATUSES,
-  AUTONOMY_LEVELS,
   OBJECTIVE_STATUSES,
   CAMPAIGN_STATUSES,
 } from "./types";
@@ -18,7 +17,6 @@ import {
 // -- Enums --
 
 export const missionStatusEnum = pgEnum("mission_status", MISSION_STATUSES);
-export const autonomyLevelEnum = pgEnum("autonomy_level", AUTONOMY_LEVELS);
 export const objectiveStatusEnum = pgEnum("objective_status", OBJECTIVE_STATUSES);
 export const campaignStatusEnum = pgEnum("campaign_status", CAMPAIGN_STATUSES);
 
@@ -29,7 +27,6 @@ export const missions = pgTable("missions", {
   agentId: text("agent_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
-  autonomyLevel: autonomyLevelEnum("autonomy_level").notNull().default("suggest"),
   status: missionStatusEnum("status").notNull().default("active"),
   organizationId: text("organization_id"),
   metadata: jsonb("metadata"),

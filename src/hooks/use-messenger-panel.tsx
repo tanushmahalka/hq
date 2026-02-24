@@ -1,7 +1,6 @@
 import {
   createContext,
   useContext,
-  useState,
   useCallback,
   type ReactNode,
 } from "react";
@@ -9,51 +8,41 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useLocalStorage } from "@uidotdev/usehooks";
 
 type MessengerPanelContextValue = {
-  isOpen: boolean;
-  toggle: () => void;
-  open: () => void;
-  close: () => void;
   selectedAgentId: string | null;
+  chatOpen: boolean;
   selectAgent: (id: string) => void;
-  goBack: () => void;
+  closeChat: () => void;
 };
 
 const MessengerPanelContext =
   createContext<MessengerPanelContextValue | null>(null);
 
 export function MessengerPanelProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] =
     useLocalStorage<string | null>("hq:messenger:agentId", null);
 
-  const toggle = useCallback(() => setIsOpen((prev) => !prev), []);
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => {
-    setIsOpen(false);
-    setSelectedAgentId(null);
-  }, [setSelectedAgentId]);
+  const chatOpen = selectedAgentId !== null;
 
   const selectAgent = useCallback(
     (id: string) => {
-      setSelectedAgentId(id);
-      if (!isOpen) setIsOpen(true);
+      setSelectedAgentId((prev) => (prev === id ? null : id));
     },
-    [isOpen, setSelectedAgentId],
+    [setSelectedAgentId],
   );
 
-  const goBack = useCallback(
+  const closeChat = useCallback(
     () => setSelectedAgentId(null),
     [setSelectedAgentId],
   );
 
   useHotkeys("mod+k", (e) => {
     e.preventDefault();
-    toggle();
+    if (chatOpen) closeChat();
   });
 
   return (
     <MessengerPanelContext.Provider
-      value={{ isOpen, toggle, open, close, selectedAgentId, selectAgent, goBack }}
+      value={{ selectedAgentId, chatOpen, selectAgent, closeChat }}
     >
       {children}
     </MessengerPanelContext.Provider>

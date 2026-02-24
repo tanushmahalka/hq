@@ -144,14 +144,6 @@ export default function register(api: PluginAPI) {
       agentId: Type.String({ description: "ID of the agent this mission belongs to" }),
       title: Type.String({ description: "Mission title" }),
       description: Type.Optional(Type.String({ description: "Mission description" })),
-      autonomyLevel: Type.Optional(
-        Type.Union([
-          Type.Literal("notify"),
-          Type.Literal("suggest"),
-          Type.Literal("act-and-report"),
-          Type.Literal("full-auto"),
-        ], { description: "How autonomously the agent should operate (default: suggest)" })
-      ),
       organizationId: Type.String({ description: "Organization ID this mission belongs to" }),
     }),
     async execute(_id, params) {
@@ -159,7 +151,6 @@ export default function register(api: PluginAPI) {
         agentId: params.agentId as string,
         title: params.title as string,
         description: params.description as string | undefined,
-        autonomyLevel: params.autonomyLevel as string | undefined,
         organizationId: params.organizationId as string,
       });
       return {
