@@ -3,7 +3,7 @@ import { createHQClient, type HQClient } from "./hq-client";
 import { formatMissionContext } from "./format-context";
 
 interface PluginAPI {
-  config: { hqApiUrl: string; hqApiToken: string; autoEnrich?: boolean };
+  config: unknown;
   registerTool: (def: {
     name: string;
     description: string;
@@ -31,10 +31,117 @@ interface PluginAPI {
   ) => void;
 }
 
+type HQMissionsConfig = {
+  hqApiUrl?: string;
+  hqApiToken?: string;
+  autoEnrich?: boolean;
+};
+
+function toNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function resolvePluginConfig(config: unknown): HQMissionsConfig {
+  const hasUsableConfig = (value: HQMissionsConfig): boolean =>
+    Boolean(value.hqApiUrl || value.hqApiToken || typeof value.autoEnrich === "boolean");
+
+  const extractConfig = (value: unknown): HQMissionsConfig => {
+    if (!value || typeof value !== "object") return {};
+
+    const direct = value as HQMissionsConfig;
+    const directUrl = toNonEmptyString(direct.hqApiUrl);
+    const directToken = toNonEmptyString(direct.hqApiToken);
+    if (directUrl || directToken || typeof direct.autoEnrich === "boolean") {
+      return {
+        hqApiUrl: directUrl,
+        hqApiToken: directToken,
+        autoEnrich: direct.autoEnrich,
+      };
+    }
+
+    const nested = (value as { config?: HQMissionsConfig }).config;
+    if (!nested) return {};
+    const nestedUrl = toNonEmptyString(nested.hqApiUrl);
+    const nestedToken = toNonEmptyString(nested.hqApiToken);
+    if (nestedUrl || nestedToken || typeof nested.autoEnrich === "boolean") {
+      return {
+        hqApiUrl: nestedUrl,
+        hqApiToken: nestedToken,
+        autoEnrich: nested.autoEnrich,
+      };
+    }
+
+    return {};
+  };
+
+  const direct = extractConfig(config);
+  if (hasUsableConfig(direct)) {
+    return direct;
+  }
+
+  const entries =
+    (config as {
+      plugins?: { entries?: Record<string, { config?: HQMissionsConfig }> };
+    })?.plugins?.entries ?? {};
+  const shallowEntries =
+    (config as { entries?: Record<string, unknown> })?.entries ?? {};
+  const topLevel = (config as Record<string, unknown>) ?? {};
+
+  const configuredIds = Array.from(
+    new Set([
+      ...Object.keys(entries),
+      ...Object.keys(shallowEntries),
+      ...Object.keys(topLevel),
+    ])
+  );
+  const preferredIds = [
+    "hq-missions",
+    "@psx/hq-missions",
+    "psx/hq-missions",
+    ...configuredIds.filter((id) => id.endsWith("/hq-missions")),
+  ];
+
+  for (const id of preferredIds) {
+    const fromEntries = extractConfig(entries[id]);
+    if (hasUsableConfig(fromEntries)) return fromEntries;
+
+    const fromShallowEntries = extractConfig(shallowEntries[id]);
+    if (hasUsableConfig(fromShallowEntries)) return fromShallowEntries;
+
+    const fromTopLevel = extractConfig(topLevel[id]);
+    if (hasUsableConfig(fromTopLevel)) return fromTopLevel;
+  }
+
+  return {};
+}
+
 export default function register(api: PluginAPI) {
-  const config = api.config;
+  const resolved = resolvePluginConfig(api.config);
+  const env = (
+    globalThis as { process?: { env?: Record<string, string | undefined> } }
+  ).process?.env;
+  const config: Required<Pick<HQMissionsConfig, "hqApiUrl" | "hqApiToken">> & {
+    autoEnrich?: boolean;
+  } = {
+    hqApiUrl:
+      resolved.hqApiUrl ??
+      toNonEmptyString(env?.HQ_API_URL) ??
+      toNonEmptyString(env?.OPENCLAW_HQ_API_URL) ??
+      "",
+    hqApiToken:
+      resolved.hqApiToken ??
+      toNonEmptyString(env?.HQ_API_TOKEN) ??
+      toNonEmptyString(env?.OPENCLAW_HQ_API_TOKEN) ??
+      "",
+    autoEnrich: resolved.autoEnrich,
+  };
+
   if (!config.hqApiUrl || !config.hqApiToken) {
-    console.warn("[hq-missions] Missing hqApiUrl or hqApiToken — plugin inactive. Set config via: openclaw config set plugins.entries.hq-missions.config.hqApiUrl <url>");
+    console.warn(
+      "[hq-missions] Missing hqApiUrl or hqApiToken — plugin inactive. Set config via plugins.entries.<plugin-id>.config (e.g. hq-missions), or env HQ_API_URL/HQ_API_TOKEN."
+    );
     return;
   }
   const hq: HQClient = createHQClient(config.hqApiUrl, config.hqApiToken);
