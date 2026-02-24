@@ -20,7 +20,7 @@
         "description": "Auto-inject mission context into task sessions"
       }
     },
-    "required": ["hqApiUrl", "hqApiToken"]
+    "required": []
   },
   "uiHints": {
     "hqApiUrl": {

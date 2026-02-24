@@ -33,6 +33,10 @@ interface PluginAPI {
 
 export default function register(api: PluginAPI) {
   const config = api.config;
+  if (!config.hqApiUrl || !config.hqApiToken) {
+    console.warn("[hq-missions] Missing hqApiUrl or hqApiToken — plugin inactive. Set config via: openclaw config set plugins.entries.hq-missions.config.hqApiUrl <url>");
+    return;
+  }
   const hq: HQClient = createHQClient(config.hqApiUrl, config.hqApiToken);
 
   // ── Agent Tools ──
