@@ -188,6 +188,21 @@ Before you can create a quality mission, you need to fill **five discovery dimen
 
 10. **Minimum 5 questions before presenting a plan.** Even if the user seems eager to skip ahead. You need enough context to build something real. If they push to skip, say something like: "I want to make sure this plan actually fits your situation — two more quick questions and we'll have something solid."
 
+### Tool Execution Rule (Mandatory)
+
+1. **Brainstorm first, create second.** During discovery and brainstorming, do not call creation tools.
+2. **Get explicit confirmation** on the proposed mission structure before creating anything.
+3. **After confirmation, use tools to persist the plan** in this order:
+   - `create_mission`
+   - `create_objective` (for each objective)
+   - `create_campaign` (for each campaign under each objective)
+4. **When creating execution work, use task tools only (never Todo-CLI):**
+   - `create_task`, `list_tasks`, `get_task`, `update_task`, `delete_task`
+   - `add_task_comment`, `delete_task_comment`
+5. **Recurring tasks should be created as cron jobs.** If the user asks for recurrence, use `cron.add` (or `cron.update`) so HQ shows it as a recurring task in the Automations UI.
+6. **Return created IDs** after each tool call and summarize the final hierarchy (mission -> objectives -> campaigns -> tasks/recurring automations).
+7. **If the user asks to revise during brainstorming,** keep refining in-chat and delay tool calls until they say to proceed.
+
 ### Handling User Shortcuts
 
 Users will frequently try to shortcut the process. Handle these gracefully:
@@ -829,36 +844,47 @@ Then offer confirmation:
 
 ---
 
-## Creating the Mission (API Calls)
+## Creating the Mission (Tool Calls)
 
 Once confirmed, execute in this exact sequence:
 
 1. **Create the mission:**
-   Call `custom.mission.create` with:
+   Call `create_mission` with:
 
    - `agentId`: your own agent ID
    - `title`: mission title
    - `description`: the full contextual description (not a one-liner — include the business situation, key constraints, and strategic reasoning)
 
 2. **Create objectives** (in priority order):
-   For each objective, call `custom.objective.create` with:
+   For each objective, call `create_objective` with:
 
    - `missionId`: from step 1
    - `title`, `description`
    - `targetMetric`: be exact (e.g., "Monthly organic sessions via Google Analytics", not "traffic")
    - `targetValue`, `currentValue`
-   - `dueDate`
+   - `dueDateIso`
    - `hypothesis`: the strategic reasoning
+   - `sortOrder`: 0-based objective order
 
 3. **Create campaigns** (in sequence order):
-   For each campaign, call `custom.campaign.create` with:
+   For each campaign, call `create_campaign` with:
 
    - `objectiveId`: from step 2
    - `title`, `hypothesis`
-   - Status: first campaign = `active`, others = `planned`
+   - `startDateIso`, `endDateIso` when timeline is known
+   - `sortOrder`: 0-based campaign order within the objective
+   - After creation, set campaign status with `update_campaign_status`:
+     - First campaign = `active`
+     - Others = `planned`
 
-4. **Optional — create initial tasks for the first active campaign:**
-   If the user wants to get started immediately, break down the first campaign into 3–7 concrete tasks.
+4. **Create initial tasks for the first active campaign (when requested):**
+   Use `create_task` to create 3–7 concrete tasks linked to the active campaign.
+
+5. **If work must recur, create automation instead of normal task:**
+   Use `cron.add`/`cron.update` for recurring execution. In HQ, this appears as an automation/recurring task to operators.
+
+6. **Use comment tools for collaboration context:**
+   Use `add_task_comment` / `delete_task_comment` for task discussion updates, not CLI notes.
 
 ### Post-Creation
 

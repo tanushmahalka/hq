@@ -278,6 +278,9 @@ export default function register(api: PluginAPI) {
       hypothesis: Type.Optional(Type.String({ description: "Hypothesis for achieving this objective" })),
       targetMetric: Type.Optional(Type.String({ description: "Metric to track (e.g., 'organic visits')" })),
       targetValue: Type.Optional(Type.String({ description: "Target value to reach (e.g., '5000')" })),
+      currentValue: Type.Optional(Type.String({ description: "Current baseline value (e.g., '1200')" })),
+      dueDateIso: Type.Optional(Type.String({ description: "ISO date/time deadline" })),
+      sortOrder: Type.Optional(Type.Number({ description: "Ordering index within mission" })),
     }),
     async execute(_id, params) {
       const objective = await hq.call("custom.objective.create", {
@@ -287,6 +290,11 @@ export default function register(api: PluginAPI) {
         hypothesis: params.hypothesis as string | undefined,
         targetMetric: params.targetMetric as string | undefined,
         targetValue: params.targetValue as string | undefined,
+        currentValue: params.currentValue as string | undefined,
+        dueDate: params.dueDateIso
+          ? new Date(params.dueDateIso as string)
+          : undefined,
+        sortOrder: params.sortOrder as number | undefined,
       });
       return {
         content: [{ type: "text", text: JSON.stringify(objective, null, 2) }],
@@ -303,6 +311,9 @@ export default function register(api: PluginAPI) {
       title: Type.String({ description: "Campaign title" }),
       description: Type.Optional(Type.String()),
       hypothesis: Type.Optional(Type.String({ description: "What you expect this campaign to achieve and why" })),
+      startDateIso: Type.Optional(Type.String({ description: "ISO start date/time" })),
+      endDateIso: Type.Optional(Type.String({ description: "ISO end date/time" })),
+      sortOrder: Type.Optional(Type.Number({ description: "Ordering index within objective" })),
     }),
     async execute(_id, params) {
       const campaign = await hq.call("custom.campaign.create", {
@@ -310,6 +321,13 @@ export default function register(api: PluginAPI) {
         title: params.title as string,
         description: params.description as string | undefined,
         hypothesis: params.hypothesis as string | undefined,
+        startDate: params.startDateIso
+          ? new Date(params.startDateIso as string)
+          : undefined,
+        endDate: params.endDateIso
+          ? new Date(params.endDateIso as string)
+          : undefined,
+        sortOrder: params.sortOrder as number | undefined,
       });
       return {
         content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }],
@@ -338,6 +356,205 @@ export default function register(api: PluginAPI) {
       );
       return {
         content: [{ type: "text", text: JSON.stringify(linked, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "create_task",
+    description:
+      "Create a task in HQ. Use this instead of Todo-CLI for task creation.",
+    parameters: Type.Object({
+      title: Type.String({ description: "Task title" }),
+      description: Type.Optional(Type.String({ description: "Task description" })),
+      status: Type.Optional(
+        Type.Union([
+          Type.Literal("todo"),
+          Type.Literal("doing"),
+          Type.Literal("stuck"),
+          Type.Literal("done"),
+        ])
+      ),
+      assignor: Type.Optional(Type.String()),
+      assignee: Type.Optional(Type.String()),
+      dueDateIso: Type.Optional(
+        Type.String({ description: "ISO date/time for due date" })
+      ),
+      urgent: Type.Optional(Type.Boolean()),
+      important: Type.Optional(Type.Boolean()),
+      campaignId: Type.Optional(Type.String()),
+      organizationId: Type.Optional(
+        Type.String({
+          description:
+            "Organization ID (required when agent context does not provide org)",
+        })
+      ),
+    }),
+    async execute(_id, params) {
+      const task = await hq.call("task.create", {
+        title: params.title as string,
+        description: params.description as string | undefined,
+        status: params.status as "todo" | "doing" | "stuck" | "done" | undefined,
+        assignor: params.assignor as string | undefined,
+        assignee: params.assignee as string | undefined,
+        dueDate: params.dueDateIso
+          ? new Date(params.dueDateIso as string)
+          : undefined,
+        urgent: params.urgent as boolean | undefined,
+        important: params.important as boolean | undefined,
+        campaignId: params.campaignId as string | undefined,
+        organizationId: params.organizationId as string | undefined,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(task, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "list_tasks",
+    description:
+      "List HQ tasks, optionally filtered by status. Use this instead of Todo-CLI.",
+    parameters: Type.Object({
+      status: Type.Optional(
+        Type.Union([
+          Type.Literal("todo"),
+          Type.Literal("doing"),
+          Type.Literal("stuck"),
+          Type.Literal("done"),
+        ])
+      ),
+    }),
+    async execute(_id, params) {
+      const tasks = await hq.call(
+        "task.list",
+        params.status ? { status: params.status as string } : undefined,
+        { type: "query" }
+      );
+      return {
+        content: [{ type: "text", text: JSON.stringify(tasks, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "get_task",
+    description: "Get one HQ task by ID, including comments.",
+    parameters: Type.Object({
+      taskId: Type.String(),
+    }),
+    async execute(_id, params) {
+      const task = await hq.call(
+        "task.get",
+        { id: params.taskId as string },
+        { type: "query" }
+      );
+      return {
+        content: [{ type: "text", text: JSON.stringify(task, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "update_task",
+    description: "Update an existing HQ task by ID.",
+    parameters: Type.Object({
+      taskId: Type.String(),
+      title: Type.Optional(Type.String()),
+      description: Type.Optional(
+        Type.Union([Type.String(), Type.Null()])
+      ),
+      status: Type.Optional(
+        Type.Union([
+          Type.Literal("todo"),
+          Type.Literal("doing"),
+          Type.Literal("stuck"),
+          Type.Literal("done"),
+        ])
+      ),
+      assignor: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+      assignee: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+      dueDateIso: Type.Optional(
+        Type.Union([
+          Type.String({ description: "ISO date/time for due date" }),
+          Type.Null(),
+        ])
+      ),
+      urgent: Type.Optional(Type.Boolean()),
+      important: Type.Optional(Type.Boolean()),
+    }),
+    async execute(_id, params) {
+      const payload: Record<string, unknown> = {
+        id: params.taskId as string,
+      };
+      if (params.title !== undefined) payload.title = params.title;
+      if (params.description !== undefined) payload.description = params.description;
+      if (params.status !== undefined) payload.status = params.status;
+      if (params.assignor !== undefined) payload.assignor = params.assignor;
+      if (params.assignee !== undefined) payload.assignee = params.assignee;
+      if (params.dueDateIso !== undefined) {
+        payload.dueDate =
+          params.dueDateIso === null
+            ? null
+            : new Date(params.dueDateIso as string);
+      }
+      if (params.urgent !== undefined) payload.urgent = params.urgent;
+      if (params.important !== undefined) payload.important = params.important;
+
+      const task = await hq.call("task.update", payload);
+      return {
+        content: [{ type: "text", text: JSON.stringify(task, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "delete_task",
+    description: "Delete an HQ task by ID.",
+    parameters: Type.Object({
+      taskId: Type.String(),
+    }),
+    async execute(_id, params) {
+      const result = await hq.call("task.delete", { id: params.taskId as string });
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "add_task_comment",
+    description:
+      "Add a comment to a task in HQ. Use this instead of Todo-CLI comments.",
+    parameters: Type.Object({
+      taskId: Type.String(),
+      author: Type.String({ description: "Comment author display name" }),
+      content: Type.String({ description: "Comment text" }),
+    }),
+    async execute(_id, params) {
+      const comment = await hq.call("task.comment.add", {
+        taskId: params.taskId as string,
+        author: params.author as string,
+        content: params.content as string,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(comment, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "delete_task_comment",
+    description: "Delete a task comment by comment UUID.",
+    parameters: Type.Object({
+      commentId: Type.String({ description: "Task comment UUID" }),
+    }),
+    async execute(_id, params) {
+      const result = await hq.call("task.comment.delete", {
+        id: params.commentId as string,
+      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
     },
   });
