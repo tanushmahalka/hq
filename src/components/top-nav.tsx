@@ -36,7 +36,7 @@ const baseNavLinks = [
 ] as const;
 
 const adminNavLinks = [
-  { to: "/files", label: "Files", icon: FolderOpen },
+  { to: "/agents", label: "Agents", icon: FolderOpen },
   { to: "/db", label: "Db", icon: Database },
 ] as const;
 

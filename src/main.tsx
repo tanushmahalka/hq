@@ -60,6 +60,14 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="tasks" element={<Tasks />} />
                 <Route path="missions" element={<Missions />} />
                 <Route
+                  path="agents"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Files />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="files"
                   element={
                     <ProtectedRoute requireAdmin>
