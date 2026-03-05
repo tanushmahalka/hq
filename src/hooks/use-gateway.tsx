@@ -71,9 +71,7 @@ export function GatewayProvider({
         client
           .request<AgentsListResult>("agents.list")
           .then((res) => {
-            const list = (res.agents ?? []).filter(
-              (a) => a.id !== "main",
-            );
+            const list = res.agents ?? [];
             setAgents(list);
           })
           .catch(() => {});
