@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
-import { authClient, useSession } from "@/lib/auth-client";
+import { ensureActiveOrganization, useSession } from "@/lib/auth-client";
 import { useAdminView } from "@/hooks/use-admin-view";
 
 interface ProtectedRouteProps {
@@ -17,23 +17,43 @@ export function ProtectedRoute({
   const { data: session, isPending } = useSession();
   const { isAdminView } = useAdminView();
   const [resolvingOrg, setResolvingOrg] = useState(false);
+  const [orgResolved, setOrgResolved] = useState(false);
+  const [hasOrgMembership, setHasOrgMembership] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    if (!requireOrg || !session || session.session.activeOrganizationId || resolvingOrg) {
+    if (!requireOrg) {
+      setOrgResolved(false);
+      setHasOrgMembership(null);
+      return;
+    }
+
+    if (!session) {
+      setOrgResolved(false);
+      setHasOrgMembership(null);
+      return;
+    }
+
+    if (session.session.activeOrganizationId) {
+      setOrgResolved(true);
+      setHasOrgMembership(true);
+      return;
+    }
+
+    if (resolvingOrg) {
       return;
     }
 
     setResolvingOrg(true);
+    setOrgResolved(false);
 
     (async () => {
       try {
-        const { data: orgs } = await authClient.organization.list();
-        if (!cancelled && orgs && orgs.length > 0) {
-          await authClient.organization.setActive({
-            organizationId: orgs[0].id,
-          });
+        const result = await ensureActiveOrganization();
+        if (!cancelled) {
+          setHasOrgMembership(result.hasMembership);
+          setOrgResolved(true);
         }
       } finally {
         if (!cancelled) {
@@ -47,7 +67,7 @@ export function ProtectedRoute({
     };
   }, [requireOrg, resolvingOrg, session]);
 
-  if (isPending || resolvingOrg) {
+  if (isPending || (requireOrg && session && !session.session.activeOrganizationId && !orgResolved)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -60,7 +80,12 @@ export function ProtectedRoute({
   }
 
   if (requireOrg && !session.session.activeOrganizationId) {
-    return <Navigate to="/no-access" replace />;
+    return (
+      <Navigate
+        to={hasOrgMembership ? "/no-access?reason=no-active-org" : "/no-access?reason=no-membership"}
+        replace
+      />
+    );
   }
 
   if (requireAdmin && (session.user.role !== "admin" || !isAdminView)) {

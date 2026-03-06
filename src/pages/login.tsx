@@ -35,7 +35,7 @@ export default function Login() {
     const redirectTo = searchParams.get("redirectTo");
     await refetch();
 
-    const activeOrganizationId = await ensureActiveOrganization();
+    const { activeOrganizationId } = await ensureActiveOrganization();
     await refetch();
 
     if (activeOrganizationId) {

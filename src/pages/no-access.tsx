@@ -1,5 +1,5 @@
-import { Link } from "react-router";
-import { Mail, ShieldAlert } from "lucide-react";
+import { Link, useSearchParams } from "react-router";
+import { Mail, ShieldAlert, UserX } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { useUserInvitations } from "@/hooks/use-organization";
 import { Button } from "@/components/ui/button";
@@ -12,30 +12,49 @@ function formatDate(value: string) {
 
 export default function NoAccess() {
   const { data: session } = useSession();
+  const [searchParams] = useSearchParams();
   const invitations = useUserInvitations(Boolean(session));
   const pendingInvites = (invitations.data ?? []).filter(
     (invite) => invite.status === "pending"
   );
+  const reason = searchParams.get("reason");
+  const hasPendingInvites = pendingInvites.length > 0;
+
+  const heading =
+    reason === "no-active-org"
+      ? "Organization not activated"
+      : hasPendingInvites
+        ? "Invite pending"
+        : "Not authorized";
+
+  const description =
+    reason === "no-active-org"
+      ? "You are signed in, but HQ could not activate your organization automatically."
+      : hasPendingInvites
+        ? "Your account is signed in, but access is still waiting on an invitation flow to complete."
+        : "This account does not currently have access to this HQ deployment.";
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <div className="mb-2 flex size-10 items-center justify-center rounded-md bg-muted">
-            <ShieldAlert className="size-5" />
+            {hasPendingInvites ? (
+              <ShieldAlert className="size-5" />
+            ) : (
+              <UserX className="size-5" />
+            )}
           </div>
-          <CardTitle>Access pending</CardTitle>
-          <CardDescription>
-            Your account is signed in, but it is not attached to an active HQ organization yet.
-          </CardDescription>
+          <CardTitle>{heading}</CardTitle>
+          <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            Ask your HQ admin to send an invite link to{" "}
+            Ask your HQ admin to send or confirm the invite for{" "}
             <span className="font-medium text-foreground">
               {session?.user.email ?? "your email"}
             </span>
-            . Existing invitations will appear below.
+            . Invite links remain locked to the exact invited email address.
           </div>
 
           {pendingInvites.length > 0 ? (
