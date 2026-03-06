@@ -4,12 +4,13 @@ import { Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient } from "@/lib/auth-client";
+import { authClient, useSession } from "@/lib/auth-client";
 import { SwarmVisualization } from "@/components/auth/swarm-visualization";
 
 export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { refetch } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,6 +33,7 @@ export default function Login() {
     }
 
     const redirectTo = searchParams.get("redirectTo");
+    await refetch();
 
     // Check if user already has orgs — activate the first one
     const { data: orgs } = await authClient.organization.list();
@@ -39,9 +41,11 @@ export default function Login() {
       await authClient.organization.setActive({
         organizationId: orgs[0].id,
       });
+      await refetch();
       setLoading(false);
       navigate(redirectTo || "/");
     } else {
+      await refetch();
       setLoading(false);
       navigate(redirectTo || "/no-access");
     }

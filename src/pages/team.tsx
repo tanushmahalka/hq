@@ -31,6 +31,7 @@ export default function TeamPage() {
   const [role, setRole] = useState("member");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -42,15 +43,21 @@ export default function TeamPage() {
     e.preventDefault();
     setSubmitting(true);
     setError("");
+    setNotice("");
 
     try {
-      await inviteMember({ email, role });
+      const invitation = await inviteMember({ email, role });
+      const inviteUrl = `${window.location.origin}/invite/${invitation.id}`;
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopiedId(invitation.id);
+      setNotice(`Invite link copied. Only ${invitation.email} can use it to create an account.`);
       setEmail("");
       setRole("member");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["organization", "members"] }),
         queryClient.invalidateQueries({ queryKey: ["organization", "invitations"] }),
       ]);
+      window.setTimeout(() => setCopiedId(null), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create invite");
     } finally {
@@ -68,6 +75,7 @@ export default function TeamPage() {
   async function handleCancel(invitationId: string) {
     setCancellingId(invitationId);
     setError("");
+    setNotice("");
 
     try {
       await cancelInvitation(invitationId);
@@ -152,11 +160,12 @@ export default function TeamPage() {
             </div>
             <div className="flex items-end">
               <Button type="submit" disabled={submitting} className="w-full md:w-auto">
-                {submitting ? "Sending..." : "Send invite"}
+                {submitting ? "Copying..." : "Copy invite link"}
               </Button>
             </div>
           </form>
           {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
+          {notice ? <p className="mt-3 text-sm text-muted-foreground">{notice}</p> : null}
         </CardContent>
       </Card>
 
