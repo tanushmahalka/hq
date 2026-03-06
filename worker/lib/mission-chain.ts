@@ -4,14 +4,7 @@ import {
   objectives,
   missions,
 } from "../../shared/custom/schema";
-
-type Database = {
-  query: {
-    campaigns: { findFirst: (opts: unknown) => Promise<unknown> };
-    objectives: { findFirst: (opts: unknown) => Promise<unknown> };
-    missions: { findFirst: (opts: unknown) => Promise<unknown> };
-  };
-};
+import type { Database } from "../db/client";
 
 export interface MissionChain {
   mission: {

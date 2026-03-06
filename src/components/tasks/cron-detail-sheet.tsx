@@ -17,14 +17,15 @@ import {
 import type { CronJob } from "@/hooks/use-cron";
 import { useCronSessions, type CronSession } from "@/hooks/use-cron-sessions";
 import { useGateway, type Agent } from "@/hooks/use-gateway";
-import { SessionMessageRow, SessionMessageList } from "@/components/chat/session-blocks";
+import { SessionMessageList } from "@/components/chat/session-blocks";
 import { MessageContent } from "@/components/messenger/message-content";
 import { LoaderFive } from "@/components/ui/loader";
 
 // --- Helpers ---
 
 function formatScheduleDetail(schedule: unknown): string {
-  if (!schedule || typeof schedule === "string") return schedule || "—";
+  if (!schedule) return "—";
+  if (typeof schedule === "string") return schedule;
   if (typeof schedule === "object" && schedule !== null) {
     const s = schedule as Record<string, unknown>;
     if (s.expr) return String(s.expr);
@@ -79,6 +80,11 @@ export function CronDetailSheet({ job, agents, onClose }: CronDetailSheetProps) 
   const nameMatch = rawName?.match(/^(.+?)\s*\(\s*(.+?)\s*\)$/);
   const agentName = nameMatch ? nameMatch[1].trim() : rawName;
   const agentRole = nameMatch ? nameMatch[2] : null;
+  const scheduleTzRaw =
+    job.schedule && typeof job.schedule === "object"
+      ? (job.schedule as Record<string, unknown>).tz
+      : null;
+  const scheduleTz = typeof scheduleTzRaw === "string" ? scheduleTzRaw : null;
 
   return (
     <Sheet open={!!job} onOpenChange={(open) => !open && onClose()}>
@@ -111,10 +117,10 @@ export function CronDetailSheet({ job, agents, onClose }: CronDetailSheetProps) 
               </span>
             </PropertyRow>
 
-            {job.schedule && typeof job.schedule === "object" && (job.schedule as Record<string, unknown>).tz && (
+            {scheduleTz && (
               <PropertyRow icon={<Clock className="size-4" />} label="Timezone">
                 <span className="text-sm font-mono">
-                  {String((job.schedule as Record<string, unknown>).tz)}
+                  {String(scheduleTz)}
                 </span>
               </PropertyRow>
             )}

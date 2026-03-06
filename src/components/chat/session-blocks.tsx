@@ -848,12 +848,10 @@ function groupMessages(messages: RawMessage[]): MessageGroup[] {
 
 function SubAgentGroup({
   label,
-  sessionKey,
   msgs,
   agentEmoji,
 }: {
   label: string;
-  sessionKey: string;
   msgs: RawMessage[];
   agentEmoji?: string;
 }) {
@@ -998,7 +996,6 @@ export function SessionMessageList({
             <SubAgentGroup
               key={`sub-${group.startIndex}`}
               label={group.label}
-              sessionKey={group.sessionKey}
               msgs={group.msgs}
               agentEmoji={agentEmoji}
             />

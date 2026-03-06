@@ -4,7 +4,6 @@ import { router, authedProcedure, adminProcedure } from "../init";
 import { listTables, getTableData, executeSQL } from "../../lib/agent-db";
 import { getPool } from "../../db/local-pg";
 import { agentDatabases } from "../../../shared/schema";
-import { eq } from "drizzle-orm";
 
 export const dbRouter = router({
   agents: adminProcedure.query(({ ctx }) => {
@@ -94,7 +93,6 @@ export const dbRouter = router({
       await adminPool.query(`GRANT ALL PRIVILEGES ON DATABASE "${dbName}" TO "${roleName}"`);
 
       // Build connection URL from admin URL, replacing credentials and database
-      const adminUrl = new URL(ctx.localPgAdminUrl);
       const agentUrl = new URL(ctx.localPgAdminUrl);
       agentUrl.username = roleName;
       agentUrl.password = password;

@@ -39,7 +39,6 @@ import { useTaskSessions } from "@/hooks/use-task-sessions";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { useGateway } from "@/hooks/use-gateway";
 import {
-  SessionMessageRow,
   SessionMessageList,
 } from "@/components/chat/session-blocks";
 import { MessageContent } from "@/components/messenger/message-content";

@@ -2,11 +2,10 @@ import { router, mergeRouters } from "./init";
 import { taskRouter } from "./procedures/task";
 import { commentRouter } from "./procedures/comment";
 import { dbRouter } from "./procedures/db";
-import customRouters from "./procedures/custom/registry";
-
-const customRouterMap = Object.fromEntries(
-  customRouters.map((entry) => [entry.key, entry.router])
-);
+import { exampleRouter } from "./procedures/custom/example";
+import { missionRouter } from "./procedures/custom/mission";
+import { objectiveRouter } from "./procedures/custom/objective";
+import { campaignRouter } from "./procedures/custom/campaign";
 
 export const appRouter = router({
   task: mergeRouters(
@@ -14,7 +13,12 @@ export const appRouter = router({
     router({ comment: commentRouter })
   ),
   db: dbRouter,
-  custom: router(customRouterMap),
+  custom: router({
+    example: exampleRouter,
+    mission: missionRouter,
+    objective: objectiveRouter,
+    campaign: campaignRouter,
+  }),
 });
 
 export type AppRouter = typeof appRouter;

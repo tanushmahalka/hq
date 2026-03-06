@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
-import { missions, campaigns, objectives } from "../../../../shared/custom/schema";
+import { missions } from "../../../../shared/custom/schema";
 import { MISSION_STATUSES } from "../../../../shared/custom/types";
 import { router, orgProcedure } from "../../init";
 import { notifyAgent } from "../../../lib/notify-agent";
@@ -75,7 +75,7 @@ export const missionRouter = router({
         title: z.string().min(1),
         description: z.string().optional(),
         status: z.enum(MISSION_STATUSES).optional(),
-        organizationId: z.string(),
+        organizationId: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -118,7 +118,7 @@ export const missionRouter = router({
         title: z.string().min(1).optional(),
         description: z.string().nullable().optional(),
         status: z.enum(MISSION_STATUSES).optional(),
-        metadata: z.record(z.unknown()).nullable().optional(),
+        metadata: z.record(z.string(), z.unknown()).nullable().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
