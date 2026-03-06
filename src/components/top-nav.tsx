@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   MessageSquare,
+  Users,
 } from "lucide-react";
 import { DynamicIcon } from "lucide-react/dynamic";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -27,6 +28,7 @@ import { AdminOnly } from "@/components/auth/admin-only";
 import { useAdminView } from "@/hooks/use-admin-view";
 import { useMessengerPanel } from "@/hooks/use-messenger-panel";
 import { useAnyAgentActive } from "@/hooks/use-any-agent-active";
+import { useActiveMemberRole } from "@/hooks/use-organization";
 import { cn } from "@/lib/utils";
 import customPages from "@/pages/custom/registry";
 
@@ -40,6 +42,39 @@ const adminNavLinks = [
   { to: "/db", label: "Db", icon: Database },
 ] as const;
 
+function NavLink({
+  to,
+  label,
+  icon: Icon,
+  iconName,
+  currentPath,
+}: {
+  to: string;
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  iconName?: string;
+  currentPath: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "flex items-center gap-1.5 px-3 h-full text-sm font-medium border-b-2 transition-colors",
+        currentPath === to
+          ? "border-foreground text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground"
+      )}
+    >
+      {Icon ? (
+        <Icon className="size-4" />
+      ) : iconName ? (
+        <DynamicIcon name={iconName as never} className="size-4" />
+      ) : null}
+      {label}
+    </Link>
+  );
+}
+
 export function TopNav() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -47,6 +82,7 @@ export function TopNav() {
   const { isAdminView, setIsAdminView } = useAdminView();
   const { toggleChat } = useMessengerPanel();
   const anyAgentActive = useAnyAgentActive();
+  const activeMemberRole = useActiveMemberRole(Boolean(session?.session.activeOrganizationId));
 
   function getInitials(name: string) {
     return name
@@ -60,37 +96,6 @@ export function TopNav() {
   async function handleSignOut() {
     await signOut();
     navigate("/login");
-  }
-
-  function NavLink({
-    to,
-    label,
-    icon: Icon,
-    iconName,
-  }: {
-    to: string;
-    label: string;
-    icon?: React.ComponentType<{ className?: string }>;
-    iconName?: string;
-  }) {
-    return (
-      <Link
-        to={to}
-        className={cn(
-          "flex items-center gap-1.5 px-3 h-full text-sm font-medium border-b-2 transition-colors",
-          location.pathname === to
-            ? "border-foreground text-foreground"
-            : "border-transparent text-muted-foreground hover:text-foreground"
-        )}
-      >
-        {Icon ? (
-          <Icon className="size-4" />
-        ) : iconName ? (
-          <DynamicIcon name={iconName as never} className="size-4" />
-        ) : null}
-        {label}
-      </Link>
-    );
   }
 
   return (
@@ -111,19 +116,28 @@ export function TopNav() {
 
         <nav className="flex-1 flex items-center justify-center gap-1 h-full">
           {baseNavLinks.map((link) => (
-            <NavLink key={link.to} {...link} />
+            <NavLink key={link.to} {...link} currentPath={location.pathname} />
           ))}
+          {activeMemberRole.data?.role === "admin" && (
+            <NavLink
+              to="/team"
+              label="Team"
+              icon={Users}
+              currentPath={location.pathname}
+            />
+          )}
           {customPages.map((page) => (
             <NavLink
               key={page.id}
               to={`/custom/${page.id}`}
               label={page.label}
               iconName={page.icon}
+              currentPath={location.pathname}
             />
           ))}
           <AdminOnly>
             {adminNavLinks.map((link) => (
-              <NavLink key={link.to} {...link} />
+              <NavLink key={link.to} {...link} currentPath={location.pathname} />
             ))}
           </AdminOnly>
         </nav>

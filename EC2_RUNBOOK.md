@@ -149,12 +149,17 @@ Create `/opt/hq/.dev.vars` with production values (never commit secrets):
 DATABASE_URL=postgresql://...
 BETTER_AUTH_SECRET=...
 BETTER_AUTH_URL=https://hq.example.com
-ADMIN_EMAILS=you@example.com
+SUPER_ADMIN_EMAILS=dev1@example.com,dev2@example.com
+BOOTSTRAP_ORG_NAME=Acme Inc
+BOOTSTRAP_ORG_SLUG=acme-inc
+BOOTSTRAP_ADMIN_NAME=Jane Admin
+BOOTSTRAP_ADMIN_EMAIL=owner@acme.com
+BOOTSTRAP_ADMIN_PASSWORD=change-me
 AGENT_API_TOKEN=...
 ALLOWED_ORIGINS=https://hq.example.com
 OPENCLAW_HOOKS_URL=http://127.0.0.1:18789
 OPENCLAW_HOOKS_TOKEN=...
-VITE_GATEWAY_URL=ws://localhost:18789
+VITE_GATEWAY_URL=wss://hq.example.com/gateway
 VITE_GATEWAY_TOKEN=<gateway.auth.token from ~/.openclaw/openclaw.json>
 LOCAL_PG_ADMIN_URL=postgresql://postgres:password@localhost:5432/postgres
 LEAD_AGENT_ID=jessica
@@ -172,6 +177,38 @@ pnpm run db:push
 bun run db:push
 ```
 
+Bootstrap the single HQ organization and first admin user:
+
+```bash
+cd /opt/hq
+set -a
+source /opt/hq/.dev.vars
+set +a
+pnpm run bootstrap:hq
+# OR
+node --experimental-strip-types ./scripts/bootstrap-hq.ts
+```
+
+After bootstrap:
+
+- Public signup is no longer part of the HQ flow.
+- Only invited emails can create new user accounts.
+- The seeded bootstrap user is the customer's org admin, not a platform super-admin.
+- Platform/developer debug access comes from global `SUPER_ADMIN_EMAILS` or `pnpm run grant:super-admin`.
+- The seeded org admin should invite teammates from the `Team` page in HQ.
+
+Grant or create a platform super-admin:
+
+```bash
+cd /opt/hq
+set -a
+source /opt/hq/.dev.vars
+set +a
+SUPER_ADMIN_EMAIL=dev@example.com SUPER_ADMIN_NAME="Dev Admin" SUPER_ADMIN_PASSWORD="change-me" pnpm run grant:super-admin
+```
+
+If the user already exists, only `SUPER_ADMIN_EMAIL` is required and the script will promote that user to global super-admin.
+
 ## 7) Configure HQ plugin in OpenClaw
 
 ```bash
@@ -181,6 +218,7 @@ pnpm openclaw config set hooks.enabled true
 pnpm openclaw config set hooks.token "<OPENCLAW_HOOKS_TOKEN>"
 pnpm openclaw config set hooks.defaultSessionKey "hook:hq"
 pnpm openclaw config set hooks.allowRequestSessionKey false
+pnpm openclaw config set gateway.controlUi.allowedOrigins '["https://hq.example.com"]' --strict-json
 pnpm openclaw config set plugins.entries.hq-missions.config.hqApiUrl "http://127.0.0.1:5174/api/trpc"
 pnpm openclaw config set plugins.entries.hq-missions.config.hqApiToken "<AGENT_API_TOKEN>"
 pnpm openclaw gateway restart || sudo systemctl restart openclaw-gateway
@@ -222,14 +260,29 @@ sudo systemctl enable --now hq
 sudo systemctl status hq
 ```
 
+If `systemctl` warns that the unit file changed on disk, run `sudo systemctl daemon-reload`
+before restarting `hq`.
+
 ## 9) Reverse proxy (Nginx)
 
-Point your domain to port `5174` on loopback:
+Proxy HQ to `127.0.0.1:5174` and OpenClaw Gateway WebSocket traffic to
+`127.0.0.1:18789`:
 
 ```nginx
 server {
   listen 80;
   server_name hq.example.com;
+
+  location /gateway {
+    proxy_pass http://127.0.0.1:18789;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
 
   location / {
     proxy_pass http://127.0.0.1:5174;
@@ -242,7 +295,23 @@ server {
 }
 ```
 
-Then add TLS (Certbot).
+Enable the site:
+
+```bash
+sudo ln -sf /etc/nginx/sites-available/hq /etc/nginx/sites-enabled/hq
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Then add TLS (Certbot):
+
+```bash
+sudo apt update
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d hq.example.com
+```
+
+Choose the HTTP -> HTTPS redirect when prompted.
 
 ## 9A) Local testing before DNS is ready
 
@@ -262,6 +331,7 @@ For temporary tunnel testing, use these in `/opt/hq/.dev.vars`:
 ```env
 BETTER_AUTH_URL=http://127.0.0.1:5174
 ALLOWED_ORIGINS=http://127.0.0.1:5174,http://localhost:5174
+VITE_GATEWAY_URL=ws://localhost:18789
 ```
 
 After DNS + TLS is ready, switch them back to your public domain.
@@ -303,6 +373,9 @@ pnpm openclaw gateway restart || sudo systemctl restart openclaw-gateway
 ```bash
 curl -sS http://127.0.0.1:18789/healthz
 curl -sS http://127.0.0.1:5174/api/health
+curl -I http://hq.example.com
+curl -I https://hq.example.com
+curl -sS https://hq.example.com/api/health
 sudo systemctl status hq
 systemctl --user status openclaw-gateway.service --no-pager || sudo systemctl status openclaw-gateway --no-pager
 ```
@@ -311,6 +384,7 @@ Expected:
 
 - OpenClaw health endpoint returns OK JSON.
 - HQ `/api/health` returns `{ "ok": true }`.
+- Public domain returns HTTP/HTTPS responses and `/api/health` works over HTTPS.
 - `hq` systemd service is active.
 
 ## 12) Security reminders
@@ -333,5 +407,15 @@ Expected:
   - Set `VITE_GATEWAY_URL=ws://localhost:18789`
   - Set `VITE_GATEWAY_TOKEN` to gateway token from `~/.openclaw/openclaw.json`
   - Restart `hq` service.
+- Public HQ domain loads but gateway connect fails with `origin not allowed`:
+  - Add `https://hq.example.com` to `gateway.controlUi.allowedOrigins`.
+  - Restart the OpenClaw gateway.
+- Public HQ domain requires gateway websocket proxying:
+  - Nginx must proxy `/gateway` to `http://127.0.0.1:18789` with websocket headers.
+- Public HQ domain requires HTTPS:
+  - The browser-side gateway/device identity flow expects a secure context for remote access.
+  - Use Certbot and set `VITE_GATEWAY_URL=wss://hq.example.com/gateway`.
+- HQ service was updated but systemd still uses old unit:
+  - Run `sudo systemctl daemon-reload` before `sudo systemctl restart hq`.
 - Tunnel error `connect failed: Connection refused`:
   - Usually `hq` service is down on `127.0.0.1:5174`; check `sudo systemctl status hq`.

@@ -1,6 +1,6 @@
 import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router";
 import { ThemeProvider } from "@/components/theme-provider";
 import { GatewayProvider } from "@/hooks/use-gateway";
 import { TRPCProvider } from "@/hooks/use-trpc";
@@ -15,8 +15,9 @@ import Missions from "./pages/missions";
 import Files from "./pages/files";
 import Db from "./pages/db";
 import Login from "./pages/login";
-import Signup from "./pages/signup";
-import CreateOrg from "./pages/onboarding/create-org";
+import InvitePage from "./pages/invite";
+import NoAccess from "./pages/no-access";
+import TeamPage from "./pages/team";
 import customPages from "./pages/custom/registry";
 
 const customRoutes = customPages.map((page) => ({
@@ -36,14 +37,17 @@ createRoot(document.getElementById("root")!).render(
             <Routes>
               {/* Public routes */}
               <Route path="login" element={<Login />} />
-              <Route path="signup" element={<Signup />} />
-
-              {/* Onboarding (auth required, no org required) */}
+              <Route path="signup" element={<Navigate to="/login" replace />} />
               <Route
                 path="onboarding/create-org"
+                element={<Navigate to="/login" replace />}
+              />
+              <Route path="invite/:invitationId" element={<InvitePage />} />
+              <Route
+                path="no-access"
                 element={
                   <ProtectedRoute>
-                    <CreateOrg />
+                    <NoAccess />
                   </ProtectedRoute>
                 }
               />
@@ -59,6 +63,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route index element={<Dashboard />} />
                 <Route path="tasks" element={<Tasks />} />
                 <Route path="missions" element={<Missions />} />
+                <Route path="team" element={<TeamPage />} />
                 <Route
                   path="agents"
                   element={

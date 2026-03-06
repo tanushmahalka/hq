@@ -1,6 +1,5 @@
 import { createDb, type Database } from "../db/client";
 import { createAuth, type Auth } from "../lib/auth";
-import { getPool } from "../db/local-pg";
 import { agentDatabases as agentDatabasesTable } from "../../shared/schema";
 
 export interface Env {
@@ -10,6 +9,7 @@ export interface Env {
   LOCAL_PG_ADMIN_URL?: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
+  SUPER_ADMIN_EMAILS?: string;
   ADMIN_EMAILS?: string;
   AGENT_API_TOKEN?: string;
   ALLOWED_ORIGINS?: string;
@@ -34,7 +34,7 @@ export function createAuthInstance(env: Env, db: Database): Auth {
   return createAuth(db, {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
-    adminEmails: env.ADMIN_EMAILS,
+    superAdminEmails: env.SUPER_ADMIN_EMAILS ?? env.ADMIN_EMAILS,
     allowedOrigins: env.ALLOWED_ORIGINS,
   });
 }

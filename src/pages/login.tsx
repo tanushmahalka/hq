@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { SwarmVisualization } from "@/components/auth/swarm-visualization";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -30,6 +31,8 @@ export default function Login() {
       return;
     }
 
+    const redirectTo = searchParams.get("redirectTo");
+
     // Check if user already has orgs — activate the first one
     const { data: orgs } = await authClient.organization.list();
     if (orgs && orgs.length > 0) {
@@ -37,10 +40,10 @@ export default function Login() {
         organizationId: orgs[0].id,
       });
       setLoading(false);
-      navigate("/");
+      navigate(redirectTo || "/");
     } else {
       setLoading(false);
-      navigate("/onboarding/create-org");
+      navigate(redirectTo || "/no-access");
     }
   }
 
@@ -102,10 +105,7 @@ export default function Login() {
           </form>
 
           <p className="mt-6 text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-primary hover:underline">
-              Sign up
-            </Link>
+            Need access? Ask your HQ admin for an invite link.
           </p>
         </div>
       </div>

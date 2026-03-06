@@ -1,20 +1,24 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization, admin } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
-import { user as userTable } from "../../shared/auth-schema";
+import { and, eq, gt } from "drizzle-orm";
+import { APIError } from "better-call";
+import {
+  invitation as invitationTable,
+  user as userTable,
+} from "../../shared/auth-schema";
 import type { Database } from "../db/client";
 
 interface AuthConfig {
   secret: string;
   baseURL: string;
-  adminEmails?: string;
+  superAdminEmails?: string;
   allowedOrigins?: string;
 }
 
 export function createAuth(db: Database, config: AuthConfig) {
-  const adminEmailList = config.adminEmails
-    ? config.adminEmails.split(",").map((e) => e.trim().toLowerCase())
+  const superAdminEmailList = config.superAdminEmails
+    ? config.superAdminEmails.split(",").map((e) => e.trim().toLowerCase())
     : [];
 
   const trustedOrigins = [
@@ -39,14 +43,44 @@ export function createAuth(db: Database, config: AuthConfig) {
       },
     },
     plugins: [
-      organization({ allowUserToCreateOrganization: true }),
+      organization({
+        allowUserToCreateOrganization: false,
+        creatorRole: "admin",
+      }),
       admin({ defaultRole: "user" }),
     ],
     databaseHooks: {
       user: {
         create: {
+          before: async (user, context) => {
+            if (!context?.request) {
+              return;
+            }
+
+            const path = new URL(context.request.url).pathname;
+            const isAdminCreate = path.endsWith("/admin/create-user");
+            const isEmailSignup = path.endsWith("/sign-up/email");
+
+            if (!isEmailSignup || isAdminCreate) {
+              return;
+            }
+
+            const pendingInvite = await db.query.invitation.findFirst({
+              where: and(
+                eq(invitationTable.email, user.email.toLowerCase()),
+                eq(invitationTable.status, "pending"),
+                gt(invitationTable.expiresAt, new Date())
+              ),
+            });
+
+            if (!pendingInvite) {
+              throw new APIError("FORBIDDEN", {
+                message: "Account creation requires a valid invitation.",
+              });
+            }
+          },
           after: async (user) => {
-            if (adminEmailList.includes(user.email.toLowerCase())) {
+            if (superAdminEmailList.includes(user.email.toLowerCase())) {
               await db
                 .update(userTable)
                 .set({ role: "admin" })
