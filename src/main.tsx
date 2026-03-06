@@ -34,88 +34,88 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider defaultTheme="light">
       <TRPCProvider>
-        <GatewayProvider url={GATEWAY_URL} token={GATEWAY_TOKEN}>
-          <BrowserRouter>
-            <Routes>
-              {/* Public routes */}
-              <Route path="login" element={<Login />} />
-              <Route path="signup" element={<Navigate to="/login" replace />} />
-              <Route
-                path="onboarding/create-org"
-                element={<Navigate to="/login" replace />}
-              />
-              <Route path="invite/:invitationId" element={<InvitePage />} />
-              <Route
-                path="no-access"
-                element={
-                  <ProtectedRoute>
-                    <NoAccess />
-                  </ProtectedRoute>
-                }
-              />
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes */}
+            <Route path="login" element={<Login />} />
+            <Route path="signup" element={<Navigate to="/login" replace />} />
+            <Route
+              path="onboarding/create-org"
+              element={<Navigate to="/login" replace />}
+            />
+            <Route path="invite/:invitationId" element={<InvitePage />} />
+            <Route
+              path="no-access"
+              element={
+                <ProtectedRoute>
+                  <NoAccess />
+                </ProtectedRoute>
+              }
+            />
 
-              {/* App routes (auth + org required) */}
-              <Route
-                element={
-                  <ProtectedRoute requireOrg>
+            {/* App routes (auth + org required) */}
+            <Route
+              element={
+                <ProtectedRoute requireOrg>
+                  <GatewayProvider url={GATEWAY_URL} token={GATEWAY_TOKEN}>
                     <Layout />
+                  </GatewayProvider>
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="tasks" element={<Tasks />} />
+              <Route path="missions" element={<Missions />} />
+              <Route path="settings" element={<SettingsLayout />}>
+                <Route index element={<SettingsHome />} />
+                <Route path="team" element={<TeamPage />} />
+              </Route>
+              <Route
+                path="agents"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Files />
                   </ProtectedRoute>
                 }
-              >
-                <Route index element={<Dashboard />} />
-                <Route path="tasks" element={<Tasks />} />
-                <Route path="missions" element={<Missions />} />
-                <Route path="settings" element={<SettingsLayout />}>
-                  <Route index element={<SettingsHome />} />
-                  <Route path="team" element={<TeamPage />} />
-                </Route>
+              />
+              <Route
+                path="files"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Files />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="db"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Db />
+                  </ProtectedRoute>
+                }
+              />
+              {customRoutes.map((page) => (
                 <Route
-                  path="agents"
+                  key={page.id}
+                  path={`custom/${page.id}`}
                   element={
-                    <ProtectedRoute requireAdmin>
-                      <Files />
-                    </ProtectedRoute>
+                    <CustomPageErrorBoundary pageId={page.id}>
+                      <Suspense
+                        fallback={
+                          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                            Loading…
+                          </div>
+                        }
+                      >
+                        <page.Component />
+                      </Suspense>
+                    </CustomPageErrorBoundary>
                   }
                 />
-                <Route
-                  path="files"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Files />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="db"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Db />
-                    </ProtectedRoute>
-                  }
-                />
-                {customRoutes.map((page) => (
-                  <Route
-                    key={page.id}
-                    path={`custom/${page.id}`}
-                    element={
-                      <CustomPageErrorBoundary pageId={page.id}>
-                        <Suspense
-                          fallback={
-                            <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                              Loading…
-                            </div>
-                          }
-                        >
-                          <page.Component />
-                        </Suspense>
-                      </CustomPageErrorBoundary>
-                    }
-                  />
-                ))}
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </GatewayProvider>
+              ))}
+            </Route>
+          </Routes>
+        </BrowserRouter>
       </TRPCProvider>
       <Toaster />
     </ThemeProvider>

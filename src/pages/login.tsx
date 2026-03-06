@@ -4,7 +4,7 @@ import { Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ensureActiveOrganization, useSession } from "@/lib/auth-client";
+import { authClient, ensureActiveOrganization, useSession } from "@/lib/auth-client";
 import { SwarmVisualization } from "@/components/auth/swarm-visualization";
 
 export default function Login() {
