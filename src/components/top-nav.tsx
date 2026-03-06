@@ -33,13 +33,13 @@ import { cn } from "@/lib/utils";
 import customPages from "@/pages/custom/registry";
 
 const baseNavLinks = [
-  { to: "/tasks", label: "Tasks", icon: ListTodo },
-  { to: "/missions", label: "Missions", icon: Target },
+  { to: "/app/tasks", label: "Tasks", icon: ListTodo },
+  { to: "/app/missions", label: "Missions", icon: Target },
 ] as const;
 
 const adminNavLinks = [
-  { to: "/agents", label: "Agents", icon: FolderOpen },
-  { to: "/db", label: "Db", icon: Database },
+  { to: "/app/agents", label: "Agents", icon: FolderOpen },
+  { to: "/app/db", label: "Db", icon: Database },
 ] as const;
 
 function NavLink({
@@ -96,7 +96,7 @@ export function TopNav() {
 
   async function handleSignOut() {
     await signOut();
-    navigate("/login");
+    navigate("/app/login");
   }
 
   return (

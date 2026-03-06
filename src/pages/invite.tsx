@@ -174,7 +174,9 @@ export default function InvitePage() {
                 Sign in first, then accept the invitation.
               </div>
               <Button asChild>
-                <Link to={`/login?redirectTo=${encodeURIComponent(`/invite/${invite.id}`)}`}>
+                <Link
+                  to={`/app/login?redirectTo=${encodeURIComponent(`/app/invite/${invite.id}`)}`}
+                >
                   Sign in to accept
                 </Link>
               </Button>

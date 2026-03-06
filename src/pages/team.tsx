@@ -47,7 +47,7 @@ export default function TeamPage() {
 
     try {
       const invitation = await inviteMember({ email, role });
-      const inviteUrl = `${window.location.origin}/invite/${invitation.id}`;
+      const inviteUrl = `${window.location.origin}/app/invite/${invitation.id}`;
       await navigator.clipboard.writeText(inviteUrl);
       setCopiedId(invitation.id);
       setNotice(`Invite link copied. Only ${invitation.email} can use it to create an account.`);
@@ -66,7 +66,7 @@ export default function TeamPage() {
   }
 
   async function handleCopy(invitationId: string) {
-    const inviteUrl = `${window.location.origin}/invite/${invitationId}`;
+    const inviteUrl = `${window.location.origin}/app/invite/${invitationId}`;
     await navigator.clipboard.writeText(inviteUrl);
     setCopiedId(invitationId);
     window.setTimeout(() => setCopiedId(null), 1500);

@@ -43,7 +43,7 @@ export default function Login() {
       navigate(redirectTo || "/app");
     } else {
       setLoading(false);
-      navigate(redirectTo || "/no-access");
+      navigate(redirectTo || "/app/no-access");
     }
   }
 

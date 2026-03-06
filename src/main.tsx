@@ -1,6 +1,13 @@
 import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Navigate, Routes, Route } from "react-router";
+import {
+  BrowserRouter,
+  Navigate,
+  Routes,
+  Route,
+  useLocation,
+  useParams,
+} from "react-router";
 import { ThemeProvider } from "@/components/theme-provider";
 import { GatewayProvider } from "@/hooks/use-gateway";
 import { TRPCProvider } from "@/hooks/use-trpc";
@@ -30,22 +37,32 @@ const customRoutes = customPages.map((page) => ({
 const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL ?? "ws://localhost:18789";
 const GATEWAY_TOKEN = import.meta.env.VITE_GATEWAY_TOKEN ?? "";
 
+function LegacyInviteRedirect() {
+  const { invitationId = "" } = useParams();
+  return <Navigate to={`/app/invite/${invitationId}`} replace />;
+}
+
+function LegacyNoAccessRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/app/no-access${location.search}`} replace />;
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider defaultTheme="light">
       <TRPCProvider>
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
-            <Route path="login" element={<Login />} />
-            <Route path="signup" element={<Navigate to="/login" replace />} />
+            {/* Public auth routes */}
+            <Route path="app/login" element={<Login />} />
+            <Route path="app/signup" element={<Navigate to="/app/login" replace />} />
             <Route
-              path="onboarding/create-org"
-              element={<Navigate to="/login" replace />}
+              path="app/onboarding/create-org"
+              element={<Navigate to="/app/login" replace />}
             />
-            <Route path="invite/:invitationId" element={<InvitePage />} />
+            <Route path="app/invite/:invitationId" element={<InvitePage />} />
             <Route
-              path="no-access"
+              path="app/no-access"
               element={
                 <ProtectedRoute>
                   <NoAccess />
@@ -53,7 +70,17 @@ createRoot(document.getElementById("root")!).render(
               }
             />
 
-            {/* App routes (auth + org required) */}
+            {/* Legacy auth path redirects */}
+            <Route path="login" element={<Navigate to="/app/login" replace />} />
+            <Route path="signup" element={<Navigate to="/app/login" replace />} />
+            <Route
+              path="onboarding/create-org"
+              element={<Navigate to="/app/login" replace />}
+            />
+            <Route path="invite/:invitationId" element={<LegacyInviteRedirect />} />
+            <Route path="no-access" element={<LegacyNoAccessRedirect />} />
+
+            {/* Protected app routes (auth + org required) */}
             <Route
               element={
                 <ProtectedRoute requireOrg>

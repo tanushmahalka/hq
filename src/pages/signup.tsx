@@ -33,7 +33,7 @@ export default function Signup() {
       return;
     }
 
-    navigate("/onboarding/create-org");
+    navigate("/app/onboarding/create-org");
   }
 
   return (
@@ -110,7 +110,7 @@ export default function Signup() {
 
           <p className="mt-6 text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link to="/login" className="text-primary hover:underline">
+            <Link to="/app/login" className="text-primary hover:underline">
               Sign in
             </Link>
           </p>

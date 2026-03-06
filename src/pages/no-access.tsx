@@ -76,7 +76,7 @@ export default function NoAccess() {
                     </p>
                   </div>
                   <Button asChild size="sm">
-                    <Link to={`/invite/${invite.id}`}>Open invite</Link>
+                    <Link to={`/app/invite/${invite.id}`}>Open invite</Link>
                   </Button>
                 </div>
               ))}
@@ -85,7 +85,7 @@ export default function NoAccess() {
 
           <div className="flex justify-end">
             <Button asChild variant="outline">
-              <Link to="/login">Back to login</Link>
+              <Link to="/app/login">Back to login</Link>
             </Button>
           </div>
         </CardContent>

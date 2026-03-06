@@ -76,13 +76,17 @@ export function ProtectedRoute({
   }
 
   if (!session) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/app/login" replace />;
   }
 
   if (requireOrg && !session.session.activeOrganizationId) {
     return (
       <Navigate
-        to={hasOrgMembership ? "/no-access?reason=no-active-org" : "/no-access?reason=no-membership"}
+        to={
+          hasOrgMembership
+            ? "/app/no-access?reason=no-active-org"
+            : "/app/no-access?reason=no-membership"
+        }
         replace
       />
     );
