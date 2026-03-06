@@ -40,7 +40,7 @@ export default function Login() {
 
     if (activeOrganizationId) {
       setLoading(false);
-      navigate(redirectTo || "/");
+      navigate(redirectTo || "/app");
     } else {
       setLoading(false);
       navigate(redirectTo || "/no-access");

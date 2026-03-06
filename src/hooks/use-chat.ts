@@ -160,7 +160,6 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
   useEffect(() => {
     if (!client || !connected) return;
     let stale = false;
-    setLoading(true);
     client
       .request<{ messages?: Array<unknown> }>("chat.history", {
         sessionKey,
@@ -182,6 +181,23 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
     return () => {
       stale = true;
     };
+  }, [client, connected, sessionKey]);
+
+  const reloadHistory = useCallback(() => {
+    if (!client || !connected) return;
+    const id = ++fetchIdRef.current;
+    client
+      .request<{ messages?: Array<unknown> }>("chat.history", {
+        sessionKey,
+        limit: 200,
+      })
+      .then((res) => {
+        if (fetchIdRef.current !== id) return;
+        const raw = res.messages ?? [];
+        setMessages(parseMessages(raw));
+        setRawMessages(parseRawMessages(raw));
+      })
+      .catch(() => {});
   }, [client, connected, sessionKey]);
 
   // Subscribe to gateway chat events
@@ -234,25 +250,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
           break;
       }
     });
-  }, [subscribe, sessionKey]);
-
-  // Reload history after a run completes — only latest fetch wins
-  function reloadHistory() {
-    if (!client || !connected) return;
-    const id = ++fetchIdRef.current;
-    client
-      .request<{ messages?: Array<unknown> }>("chat.history", {
-        sessionKey,
-        limit: 200,
-      })
-      .then((res) => {
-        if (fetchIdRef.current !== id) return;
-        const raw = res.messages ?? [];
-        setMessages(parseMessages(raw));
-        setRawMessages(parseRawMessages(raw));
-      })
-      .catch(() => {});
-  }
+  }, [reloadHistory, sessionKey, subscribe]);
 
   // Send a message
   const sendMessage = useCallback(

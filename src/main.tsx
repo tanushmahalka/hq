@@ -57,6 +57,17 @@ createRoot(document.getElementById("root")!).render(
             <Route
               element={
                 <ProtectedRoute requireOrg>
+                  <Navigate to="/app" replace />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/" element={<Navigate to="/app" replace />} />
+            </Route>
+
+            <Route
+              path="app"
+              element={
+                <ProtectedRoute requireOrg>
                   <GatewayProvider url={GATEWAY_URL} token={GATEWAY_TOKEN}>
                     <Layout />
                   </GatewayProvider>

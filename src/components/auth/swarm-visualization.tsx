@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 const BAR_COUNT = 20;
 const TICK_MS = 500;
@@ -211,16 +211,14 @@ function MockAgentCard({
   active: boolean;
   index: number;
 }) {
-  const heightsRef = useRef<number[]>([]);
-  if (heightsRef.current.length === 0) {
+  const heights = useMemo(() => {
     const rng = seededRandom(index * 3571);
-    heightsRef.current = Array.from({ length: BAR_COUNT }, () => 55 + rng() * 45);
-  }
-  const idleRef = useRef<number[]>([]);
-  if (idleRef.current.length === 0) {
+    return Array.from({ length: BAR_COUNT }, () => 55 + rng() * 45);
+  }, [index]);
+  const idleHeights = useMemo(() => {
     const rng = seededRandom(index * 9311);
-    idleRef.current = Array.from({ length: BAR_COUNT }, () => 6 + rng() * 14);
-  }
+    return Array.from({ length: BAR_COUNT }, () => 6 + rng() * 14);
+  }, [index]);
 
   return (
     <div
@@ -274,8 +272,8 @@ function MockAgentCard({
             className="flex-1 rounded-[1px] transition-all duration-300"
             style={{
               height: value > 0
-                ? `${heightsRef.current[i]}%`
-                : `${idleRef.current[i]}%`,
+                ? `${heights[i]}%`
+                : `${idleHeights[i]}%`,
               backgroundColor: value > 0
                 ? "oklch(0.65 0.18 280)"
                 : "rgba(255, 255, 255, 0.04)",

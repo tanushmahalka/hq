@@ -12,6 +12,7 @@ import {
   type EventFrame,
   type HelloOk,
 } from "@/lib/gateway-client";
+import { useSession } from "@/lib/auth-client";
 
 export type Agent = {
   id: string;
@@ -46,9 +47,11 @@ export function GatewayProvider({
   token: string;
   children: ReactNode;
 }) {
+  const { data: session, isPending: sessionPending } = useSession();
   const [connected, setConnected] = useState(false);
   const [snapshot, setSnapshot] = useState<unknown | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [client, setClient] = useState<GatewayClient | null>(null);
   const clientRef = useRef<GatewayClient | null>(null);
 
   // Event subscribers — components register handlers for real-time events
@@ -62,6 +65,10 @@ export function GatewayProvider({
   }, []);
 
   useEffect(() => {
+    if (sessionPending || !session?.session.activeOrganizationId) {
+      return;
+    }
+
     const client = new GatewayClient({
       url,
       token,
@@ -87,17 +94,19 @@ export function GatewayProvider({
     });
 
     clientRef.current = client;
+    setClient(client);
     client.start();
 
     return () => {
       client.stop();
       clientRef.current = null;
+      setClient(null);
     };
-  }, [url, token]);
+  }, [session?.session.activeOrganizationId, sessionPending, token, url]);
 
   return (
     <GatewayContext.Provider
-      value={{ client: clientRef.current, connected, snapshot, agents, subscribe }}
+      value={{ client, connected, snapshot, agents, subscribe }}
     >
       {children}
     </GatewayContext.Provider>

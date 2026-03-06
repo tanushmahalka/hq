@@ -108,7 +108,7 @@ export function TopNav() {
         )}
       />
       <header className="h-14 border-b px-12 flex items-center">
-        <Link to="/" className="flex items-center gap-2.5">
+        <Link to="/app" className="flex items-center gap-2.5">
           <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-[oklch(0.65_0.18_280)] to-[oklch(0.68_0.15_245)] text-white shadow-sm">
             <Bot className="size-4" />
           </div>
@@ -183,7 +183,7 @@ export function TopNav() {
                   </DropdownMenuItem>
                 )}
                 {canManageSettings && (
-                  <DropdownMenuItem onClick={() => navigate("/settings/team")}>
+                  <DropdownMenuItem onClick={() => navigate("/app/settings/team")}>
                     <Settings className="mr-2 size-4" />
                     Settings
                   </DropdownMenuItem>

@@ -89,7 +89,7 @@ export function ProtectedRoute({
   }
 
   if (requireAdmin && (session.user.role !== "admin" || !isAdminView)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   return <>{children}</>;

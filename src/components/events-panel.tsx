@@ -256,6 +256,7 @@ export function EventsPanel({ onClose }: { onClose: () => void }) {
   const { subscribe } = useGateway();
   const [entries, setEntries] = useState<EventEntry[]>([]);
   const [paused, setPaused] = useState(false);
+  const [bufferedCount, setBufferedCount] = useState(0);
   const [filter, setFilter] = useState("");
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [showConsole, setShowConsole] = useState(false);
@@ -288,6 +289,7 @@ export function EventsPanel({ onClose }: { onClose: () => void }) {
         if (bufferRef.current.length > MAX_ENTRIES) {
           bufferRef.current = bufferRef.current.slice(-MAX_ENTRIES);
         }
+        setBufferedCount(bufferRef.current.length);
         return;
       }
 
@@ -300,6 +302,7 @@ export function EventsPanel({ onClose }: { onClose: () => void }) {
     if (!paused && bufferRef.current.length > 0) {
       setEntries((prev) => [...prev, ...bufferRef.current].slice(-MAX_ENTRIES));
       bufferRef.current = [];
+      setBufferedCount(0);
     }
   }, [paused]);
 
@@ -317,6 +320,7 @@ export function EventsPanel({ onClose }: { onClose: () => void }) {
   const clear = useCallback(() => {
     setEntries([]);
     bufferRef.current = [];
+    setBufferedCount(0);
     setExpandedIdx(null);
   }, []);
 
@@ -396,7 +400,7 @@ export function EventsPanel({ onClose }: { onClose: () => void }) {
       {/* Paused indicator */}
       {paused && (
         <div className="px-4 py-1 text-[10px] text-amber-400/60 bg-amber-400/[0.03] border-b border-border/10 shrink-0 font-mono">
-          paused — {bufferRef.current.length} buffered
+          paused — {bufferedCount} buffered
         </div>
       )}
 

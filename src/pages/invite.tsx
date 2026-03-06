@@ -60,7 +60,7 @@ export default function InvitePage() {
       await ensureActiveOrganization();
       await refetch();
       await refreshAuthState();
-      navigate("/");
+      navigate("/app");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to accept invitation");
     } finally {

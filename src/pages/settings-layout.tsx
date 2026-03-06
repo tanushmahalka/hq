@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const settingsNavItems = [
   {
-    to: "/settings/team",
+    to: "/app/settings/team",
     label: "Team",
     description: "Invites and members",
     icon: Users,
@@ -28,7 +28,7 @@ export default function SettingsLayout() {
     <div className="flex h-full flex-col p-12">
       <div className="mb-8">
         <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">
+          <Link to="/app" className="hover:text-foreground">
             HQ
           </Link>
           <ChevronRight className="size-4" />
