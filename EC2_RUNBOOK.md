@@ -186,7 +186,7 @@ source /opt/hq/.dev.vars
 set +a
 pnpm run bootstrap:hq
 # OR
-node --experimental-strip-types ./scripts/bootstrap-hq.ts
+node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/bootstrap-hq.ts
 ```
 
 After bootstrap:
