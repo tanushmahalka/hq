@@ -4,11 +4,7 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization as organizationPlugin, admin } from "better-auth/plugins";
-import {
-  member as memberTable,
-  organization as organizationTable,
-  user as userTable,
-} from "../shared/auth-schema.ts";
+import * as authSchema from "../shared/auth-schema.ts";
 
 function getEnv(name: string) {
   const value = process.env[name];
@@ -31,11 +27,7 @@ async function main() {
   const sql = neon(databaseUrl);
   const db = drizzle({
     client: sql,
-    schema: {
-      user: userTable,
-      member: memberTable,
-      organization: organizationTable,
-    },
+    schema: authSchema,
   });
   const auth = betterAuth({
     database: drizzleAdapter(db, { provider: "pg" }),
@@ -58,7 +50,7 @@ async function main() {
   });
 
   let adminUser = await db.query.user.findFirst({
-    where: eq(userTable.email, adminEmail),
+    where: eq(authSchema.user.email, adminEmail),
   });
 
   if (!adminUser) {
@@ -77,7 +69,7 @@ async function main() {
   }
 
   let organization = await db.query.organization.findFirst({
-    where: eq(organizationTable.slug, orgSlug),
+    where: eq(authSchema.organization.slug, orgSlug),
   });
 
   if (!organization) {
@@ -103,8 +95,8 @@ async function main() {
 
   const existingMembership = await db.query.member.findFirst({
     where: and(
-      eq(memberTable.userId, adminUser.id),
-      eq(memberTable.organizationId, organization.id)
+      eq(authSchema.member.userId, adminUser.id),
+      eq(authSchema.member.organizationId, organization.id)
     ),
   });
 

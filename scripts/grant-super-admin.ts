@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization as organizationPlugin, admin } from "better-auth/plugins";
-import { user as userTable } from "../shared/auth-schema.ts";
+import * as authSchema from "../shared/auth-schema.ts";
 
 function getRequiredEnv(name: string) {
   const value = process.env[name];
@@ -25,7 +25,7 @@ async function main() {
   const sql = neon(databaseUrl);
   const db = drizzle({
     client: sql,
-    schema: { user: userTable },
+    schema: authSchema,
   });
   const auth = betterAuth({
     database: drizzleAdapter(db, { provider: "pg" }),
@@ -48,7 +48,7 @@ async function main() {
   });
 
   let user = await db.query.user.findFirst({
-    where: eq(userTable.email, email),
+    where: eq(authSchema.user.email, email),
   });
 
   if (!user) {
@@ -74,9 +74,9 @@ async function main() {
 
   if (user.role !== "admin") {
     await db
-      .update(userTable)
+      .update(authSchema.user)
       .set({ role: "admin" })
-      .where(eq(userTable.id, user.id));
+      .where(eq(authSchema.user.id, user.id));
     console.log(`Promoted ${email} to super-admin`);
     return;
   }
