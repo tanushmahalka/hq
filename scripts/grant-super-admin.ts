@@ -3,7 +3,7 @@ import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { organization, admin } from "better-auth/plugins";
+import { organization as organizationPlugin, admin } from "better-auth/plugins";
 import { user as userTable } from "../shared/auth-schema.ts";
 
 function getRequiredEnv(name: string) {
@@ -39,7 +39,7 @@ async function main() {
     ],
     emailAndPassword: { enabled: true },
     plugins: [
-      organization({
+      organizationPlugin({
         allowUserToCreateOrganization: false,
         creatorRole: "admin",
       }),
