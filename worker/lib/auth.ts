@@ -2,7 +2,6 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization, admin } from "better-auth/plugins";
 import { and, eq, gt } from "drizzle-orm";
-import { APIError } from "better-call";
 import {
   invitation as invitationTable,
   user as userTable,
@@ -74,9 +73,7 @@ export function createAuth(db: Database, config: AuthConfig) {
             });
 
             if (!pendingInvite) {
-              throw new APIError("FORBIDDEN", {
-                message: "Account creation requires a valid invitation.",
-              });
+              throw new Error("Account creation requires a valid invitation.");
             }
           },
           after: async (user) => {
