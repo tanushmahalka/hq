@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
-import { createDb } from "../worker/db/client";
-import { createAuth } from "../worker/lib/auth";
-import { user as userTable } from "../shared/auth-schema";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { organization, admin } from "better-auth/plugins";
+import { user as userTable } from "../shared/auth-schema.ts";
 
 function getRequiredEnv(name: string) {
   const value = process.env[name];
@@ -19,12 +22,29 @@ async function main() {
   const name = process.env.SUPER_ADMIN_NAME;
   const password = process.env.SUPER_ADMIN_PASSWORD;
 
-  const db = createDb(databaseUrl);
-  const auth = createAuth(db, {
+  const sql = neon(databaseUrl);
+  const db = drizzle({
+    client: sql,
+    schema: { user: userTable },
+  });
+  const auth = betterAuth({
+    database: drizzleAdapter(db, { provider: "pg" }),
     secret,
     baseURL,
-    superAdminEmails: process.env.SUPER_ADMIN_EMAILS ?? process.env.ADMIN_EMAILS,
-    allowedOrigins: process.env.ALLOWED_ORIGINS,
+    trustedOrigins: [
+      baseURL,
+      ...(process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
+        : []),
+    ],
+    emailAndPassword: { enabled: true },
+    plugins: [
+      organization({
+        allowUserToCreateOrganization: false,
+        creatorRole: "admin",
+      }),
+      admin({ defaultRole: "user" }),
+    ],
   });
 
   let user = await db.query.user.findFirst({
