@@ -17,6 +17,8 @@ import Db from "./pages/db";
 import Login from "./pages/login";
 import InvitePage from "./pages/invite";
 import NoAccess from "./pages/no-access";
+import SettingsHome from "./pages/settings-home";
+import SettingsLayout from "./pages/settings-layout";
 import TeamPage from "./pages/team";
 import customPages from "./pages/custom/registry";
 
@@ -63,7 +65,10 @@ createRoot(document.getElementById("root")!).render(
                 <Route index element={<Dashboard />} />
                 <Route path="tasks" element={<Tasks />} />
                 <Route path="missions" element={<Missions />} />
-                <Route path="team" element={<TeamPage />} />
+                <Route path="settings" element={<SettingsLayout />}>
+                  <Route index element={<SettingsHome />} />
+                  <Route path="team" element={<TeamPage />} />
+                </Route>
                 <Route
                   path="agents"
                   element={

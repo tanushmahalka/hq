@@ -8,7 +8,7 @@ import {
   Eye,
   EyeOff,
   MessageSquare,
-  Users,
+  Settings,
 } from "lucide-react";
 import { DynamicIcon } from "lucide-react/dynamic";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -83,6 +83,7 @@ export function TopNav() {
   const { toggleChat } = useMessengerPanel();
   const anyAgentActive = useAnyAgentActive();
   const activeMemberRole = useActiveMemberRole(Boolean(session?.session.activeOrganizationId));
+  const canManageSettings = activeMemberRole.data?.role === "admin";
 
   function getInitials(name: string) {
     return name
@@ -118,14 +119,6 @@ export function TopNav() {
           {baseNavLinks.map((link) => (
             <NavLink key={link.to} {...link} currentPath={location.pathname} />
           ))}
-          {activeMemberRole.data?.role === "admin" && (
-            <NavLink
-              to="/team"
-              label="Team"
-              icon={Users}
-              currentPath={location.pathname}
-            />
-          )}
           {customPages.map((page) => (
             <NavLink
               key={page.id}
@@ -187,6 +180,12 @@ export function TopNav() {
                       <Eye className="mr-2 size-4" />
                     )}
                     {isAdminView ? "View as User" : "View as Admin"}
+                  </DropdownMenuItem>
+                )}
+                {canManageSettings && (
+                  <DropdownMenuItem onClick={() => navigate("/settings/team")}>
+                    <Settings className="mr-2 size-4" />
+                    Settings
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={handleSignOut}>
