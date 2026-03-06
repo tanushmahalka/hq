@@ -119,7 +119,7 @@ export function TopNav() {
           {baseNavLinks.map((link) => (
             <NavLink key={link.to} {...link} currentPath={location.pathname} />
           ))}
-          {customPages.map((page) => (
+          {customPages.filter((page) => page.id !== "example").map((page) => (
             <NavLink
               key={page.id}
               to={`/custom/${page.id}`}
