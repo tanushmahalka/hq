@@ -7,3 +7,22 @@ export const authClient = createAuthClient({
 });
 
 export const { useSession, signIn, signUp, signOut } = authClient;
+
+export async function ensureActiveOrganization() {
+  const sessionResult = await authClient.getSession();
+  if (sessionResult.data?.session.activeOrganizationId) {
+    return sessionResult.data.session.activeOrganizationId;
+  }
+
+  const { data: organizations } = await authClient.organization.list();
+  if (!organizations || organizations.length === 0) {
+    return null;
+  }
+
+  await authClient.organization.setActive({
+    organizationId: organizations[0].id,
+  });
+
+  const refreshedSession = await authClient.getSession();
+  return refreshedSession.data?.session.activeOrganizationId ?? organizations[0].id;
+}

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Building2, Mail, UserPlus } from "lucide-react";
-import { authClient, useSession } from "@/lib/auth-client";
+import { authClient, ensureActiveOrganization, useSession } from "@/lib/auth-client";
 import { acceptInvitation, getPublicInvitation } from "@/lib/auth-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +57,7 @@ export default function InvitePage() {
 
     try {
       await acceptInvitation(invite.id);
+      await ensureActiveOrganization();
       await refetch();
       await refreshAuthState();
       navigate("/");

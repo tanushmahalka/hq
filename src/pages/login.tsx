@@ -4,7 +4,7 @@ import { Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient, useSession } from "@/lib/auth-client";
+import { ensureActiveOrganization, useSession } from "@/lib/auth-client";
 import { SwarmVisualization } from "@/components/auth/swarm-visualization";
 
 export default function Login() {
@@ -35,17 +35,13 @@ export default function Login() {
     const redirectTo = searchParams.get("redirectTo");
     await refetch();
 
-    // Check if user already has orgs — activate the first one
-    const { data: orgs } = await authClient.organization.list();
-    if (orgs && orgs.length > 0) {
-      await authClient.organization.setActive({
-        organizationId: orgs[0].id,
-      });
-      await refetch();
+    const activeOrganizationId = await ensureActiveOrganization();
+    await refetch();
+
+    if (activeOrganizationId) {
       setLoading(false);
       navigate(redirectTo || "/");
     } else {
-      await refetch();
       setLoading(false);
       navigate(redirectTo || "/no-access");
     }
