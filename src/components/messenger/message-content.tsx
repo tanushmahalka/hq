@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Code, ExternalLink, FileText, Globe } from "lucide-react";
+import { Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,67 +17,7 @@ import {
 
 type Segment =
   | { type: "text"; content: string }
-  | { type: "json"; content: string }
-  | { type: "link"; url: string; label: string };
-
-/* ── URL regex: matches http/https URLs ── */
-const URL_RE =
-  /https?:\/\/[^\s<>)"'\]]+/g;
-
-/* ── Known domain icons ── */
-const DOMAIN_ICONS: Record<string, string> = {
-  "docs.google.com": "📄",
-  "drive.google.com": "📁",
-  "sheets.google.com": "📊",
-  "slides.google.com": "📽️",
-  "github.com": "🐙",
-  "figma.com": "🎨",
-  "notion.so": "📝",
-  "linear.app": "📋",
-  "slack.com": "💬",
-  "youtube.com": "▶️",
-  "youtu.be": "▶️",
-};
-
-function getDomainIcon(hostname: string): string | null {
-  for (const [domain, icon] of Object.entries(DOMAIN_ICONS)) {
-    if (hostname === domain || hostname.endsWith("." + domain)) return icon;
-  }
-  return null;
-}
-
-function friendlyLabel(url: string): string {
-  try {
-    const u = new URL(url);
-    const host = u.hostname.replace(/^www\./, "");
-
-    // Google Docs
-    if (host === "docs.google.com") {
-      const match = u.pathname.match(/\/document\/d\/([^/]+)/);
-      if (match) return "Google Document";
-      if (u.pathname.includes("/spreadsheets/")) return "Google Sheet";
-      if (u.pathname.includes("/presentation/")) return "Google Slides";
-      return "Google Docs";
-    }
-    if (host === "drive.google.com") return "Google Drive";
-    if (host === "sheets.google.com") return "Google Sheet";
-    if (host === "slides.google.com") return "Google Slides";
-
-    // GitHub
-    if (host === "github.com") {
-      const parts = u.pathname.split("/").filter(Boolean);
-      if (parts.length >= 2) return `${parts[0]}/${parts[1]}`;
-      return "GitHub";
-    }
-
-    // Fallback: show domain + first path segment
-    const firstPath = u.pathname.split("/").filter(Boolean)[0];
-    if (firstPath) return `${host}/${firstPath}`;
-    return host;
-  } catch {
-    return url.slice(0, 40);
-  }
-}
+  | { type: "json"; content: string };
 
 /* ── JSON extraction ── */
 
@@ -113,7 +53,7 @@ function tryParseJson(text: string): string | null {
   }
 }
 
-/** Parse text into text, JSON, and link segments. */
+/** Parse text into text and JSON segments. */
 function parseSegments(text: string): Segment[] {
   // Fast path: entire text is JSON
   const trimmed = text.trim();
@@ -144,41 +84,24 @@ function parseSegments(text: string): Segment[] {
     }
   }
 
-  // Second pass: split remaining text into text + link segments
-  function pushTextAndLinks(str: string) {
+  // Second pass: preserve remaining text so markdown can render plain links.
+  function pushText(str: string) {
     if (!str) return;
-    let lastIdx = 0;
-    const re = new RegExp(URL_RE.source, "g");
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(str)) !== null) {
-      if (match.index > lastIdx) {
-        segments.push({ type: "text", content: str.slice(lastIdx, match.index) });
-      }
-      const url = match[0].replace(/[.,;:!?)]+$/, ""); // strip trailing punctuation
-      segments.push({
-        type: "link",
-        url,
-        label: friendlyLabel(url),
-      });
-      lastIdx = match.index + url.length;
-    }
-    if (lastIdx < str.length) {
-      segments.push({ type: "text", content: str.slice(lastIdx) });
-    }
+    segments.push({ type: "text", content: str });
   }
 
   if (jsonRanges.length === 0) {
-    pushTextAndLinks(text);
+    pushText(text);
   } else {
     for (let i = 0; i < jsonRanges.length; i++) {
       const range = jsonRanges[i];
       const before = text.slice(cursor, range.start);
-      pushTextAndLinks(before);
+      pushText(before);
       segments.push({ type: "json", content: range.formatted });
       cursor = range.end;
     }
     const remaining = text.slice(cursor);
-    pushTextAndLinks(remaining);
+    pushText(remaining);
   }
 
   return segments;
@@ -202,60 +125,30 @@ export function MessageContent({ text }: { text: string }) {
           }
           return <JsonButton key={i} content={seg.content} />;
         }
-        if (seg.type === "link") {
-          return <LinkCard key={i} url={seg.url} label={seg.label} />;
-        }
         return (
           <div
             key={i}
             className="prose prose-sm dark:prose-invert max-w-none text-inherit break-words prose-headings:text-inherit prose-strong:text-inherit prose-a:text-inherit prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-pre:my-1 prose-pre:overflow-x-auto prose-li:my-0 prose-table:my-2 [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full [&_pre]:whitespace-pre-wrap [&_code]:break-all"
           >
-            <Markdown remarkPlugins={[remarkGfm]}>{seg.content}</Markdown>
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: (props) => (
+                  <a
+                    {...props}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2"
+                  />
+                ),
+              }}
+            >
+              {seg.content}
+            </Markdown>
           </div>
         );
       })}
     </div>
-  );
-}
-
-/* ── Link embed card ── */
-function LinkCard({ url, label }: { url: string; label: string }) {
-  let hostname = "";
-  let icon: string | null = null;
-  try {
-    const u = new URL(url);
-    hostname = u.hostname.replace(/^www\./, "");
-    icon = getDomainIcon(hostname);
-  } catch {
-    hostname = url.slice(0, 30);
-  }
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-3 rounded-lg border border-border/40 bg-card/80 hover:bg-muted/40 px-3 py-2.5 my-1.5 transition-colors group no-underline"
-    >
-      <div className="size-9 rounded-md bg-muted/60 flex items-center justify-center shrink-0">
-        {icon ? (
-          <span className="text-base">{icon}</span>
-        ) : hostname.includes("google") ? (
-          <FileText className="size-4 text-muted-foreground/60" />
-        ) : (
-          <Globe className="size-4 text-muted-foreground/60" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-foreground truncate">
-          {label}
-        </div>
-        <div className="text-[11px] text-muted-foreground/40 font-mono truncate">
-          {hostname}
-        </div>
-      </div>
-      <ExternalLink className="size-3.5 text-muted-foreground/25 group-hover:text-muted-foreground/50 shrink-0 transition-colors" />
-    </a>
   );
 }
 
