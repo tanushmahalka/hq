@@ -101,7 +101,7 @@ export async function callLocalGatewayMethod<T>(params: {
             minProtocol: 3,
             maxProtocol: 3,
             client: {
-              id: "hq-approvals-plugin",
+              id: "gateway-client",
               version: "1.0",
               platform: "node",
               mode: "backend",
