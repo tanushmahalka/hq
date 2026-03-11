@@ -1,0 +1,10 @@
+{
+  "name": "@psx/hq-approvals",
+  "version": "0.1.0",
+  "description": "OpenClaw workspace plugin for generic human approvals used by HQ",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

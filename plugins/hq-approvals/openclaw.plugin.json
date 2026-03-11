@@ -1,0 +1,30 @@
+{
+  "id": "hq-approvals",
+  "name": "HQ Approvals",
+  "description": "Generic human approval workflow for HQ-backed operators.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "hooksToken": {
+        "type": "string",
+        "description": "Bearer token accepted by /hooks/approval/resolve. Defaults to OPENCLAW_HOOKS_TOKEN."
+      },
+      "gatewayToken": {
+        "type": "string",
+        "description": "Optional token for the plugin's local websocket gateway calls. Defaults to gateway.auth.token."
+      }
+    },
+    "required": []
+  },
+  "uiHints": {
+    "hooksToken": {
+      "label": "Hooks Token",
+      "sensitive": true
+    },
+    "gatewayToken": {
+      "label": "Gateway Token",
+      "sensitive": true
+    }
+  }
+}
