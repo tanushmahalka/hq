@@ -1,9 +1,21 @@
-import { Calendar, CircleAlert, Link2, Star, User } from "lucide-react";
+import { Calendar, CircleAlert, Link2, ShieldAlert, Star, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useTaskActive } from "@/hooks/use-task-active";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { TaskStatusDropdown } from "./task-status-dropdown";
 import type { TaskStatus } from "@shared/types";
+import type { BoardApprovalSummary } from "@/hooks/use-approvals";
+
+function formatApprovalTimestamp(timestamp: number): string {
+  return new Date(timestamp).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
 
 interface TaskCardProps {
   task: {
@@ -12,15 +24,16 @@ interface TaskCardProps {
     description: string | null;
     status: TaskStatus;
     assignee: string | null;
-    dueDate: Date | null;
+    dueDate: Date | string | null;
     urgent: boolean;
     important: boolean;
     campaignId?: string | null;
   };
   onClick: () => void;
+  approvalSummary?: BoardApprovalSummary;
 }
 
-export function TaskCard({ task, onClick }: TaskCardProps) {
+export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
   const utils = trpc.useUtils();
   const active = useTaskActive(task.id);
   const notifyTask = useTaskNotify();
@@ -40,11 +53,14 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
   const hasPriority = task.urgent || task.important;
   const isDoing = task.status === "doing";
+  const isWaitingOnApproval = Boolean(approvalSummary);
 
   return (
     <div
       className={`group relative cursor-pointer overflow-hidden rounded-xl border bg-card p-4 swarm-card ${
-        isDoing
+        isWaitingOnApproval
+          ? "border-amber-500/25 bg-amber-500/10 hover:border-amber-500/35"
+          : isDoing
           ? "border-[var(--swarm-violet)]/30 bg-[var(--swarm-violet-dim)]"
           : "border-border hover:border-border dark:border-border/60 dark:hover:border-border"
       }`}
@@ -95,6 +111,26 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           {task.description}
         </p>
       )}
+
+      {approvalSummary ? (
+        <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+              <ShieldAlert className="size-3.5" />
+              Waiting for approval
+            </span>
+            <Badge variant="secondary" className="bg-amber-500/15 text-[10px] text-amber-800 dark:text-amber-200">
+              {approvalSummary.count} pending
+            </Badge>
+          </div>
+          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+            {approvalSummary.latestApproval.request.title}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground/70">
+            Latest request {formatApprovalTimestamp(approvalSummary.latestCreatedAtMs)}
+          </p>
+        </div>
+      ) : null}
 
       {/* Campaign link */}
       {task.campaignId && (

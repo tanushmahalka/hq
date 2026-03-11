@@ -1,24 +1,23 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AutomationsColumn } from "./automations-column";
 import { KanbanColumn } from "./kanban-column";
 import { TaskCreateDialog } from "./task-create-dialog";
 import { TaskDetailSheet } from "./task-detail-sheet";
+import { StandaloneApprovalSheet } from "./standalone-approval-sheet";
 import { TASK_STATUSES, type TaskStatus } from "@shared/types";
-import { trpc } from "@/lib/trpc";
+import { useApprovals } from "@/hooks/use-approvals";
+import { useTaskBoardItems } from "@/hooks/use-task-board-items";
 
 export function KanbanBoard() {
   const [createStatus, setCreateStatus] = useState<TaskStatus | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-
-  const { data: tasks, isLoading } = trpc.task.list.useQuery();
-
-  const tasksByStatus = TASK_STATUSES.reduce(
-    (acc, status) => {
-      acc[status] = (tasks ?? []).filter((t) => t.status === status);
-      return acc;
-    },
-    {} as Record<TaskStatus, NonNullable<typeof tasks>>
+  const [selectedApprovalId, setSelectedApprovalId] = useState<string | null>(null);
+  const { approvals } = useApprovals();
+  const { itemsByStatus, isLoading } = useTaskBoardItems();
+  const selectedApproval = useMemo(
+    () => approvals.find((approval) => approval.id === selectedApprovalId) ?? null,
+    [approvals, selectedApprovalId],
   );
 
   return (
@@ -46,8 +45,9 @@ export function KanbanBoard() {
               <KanbanColumn
                 key={status}
                 status={status}
-                tasks={tasksByStatus[status]}
+                items={itemsByStatus[status]}
                 onTaskClick={setSelectedTaskId}
+                onApprovalClick={setSelectedApprovalId}
                 onAdd={() => setCreateStatus(status)}
               />
             ))}
@@ -63,6 +63,10 @@ export function KanbanBoard() {
       <TaskDetailSheet
         taskId={selectedTaskId}
         onClose={() => setSelectedTaskId(null)}
+      />
+      <StandaloneApprovalSheet
+        approval={selectedApproval}
+        onClose={() => setSelectedApprovalId(null)}
       />
     </div>
   );
