@@ -247,7 +247,7 @@ function CronSessionList({
   expandedSession: string | null;
   onToggleSession: (key: string) => void;
 }) {
-  const { sessions, stream, isStreaming, loading, error } = useCronSessions(cronId);
+  const { sessions, stream, streamSessionKey, isStreaming, loading, error } = useCronSessions(cronId);
   const { agents } = useGateway();
   const agentEmoji = agents[0]?.identity?.emoji;
 
@@ -309,14 +309,18 @@ function CronSessionList({
                       </p>
                     )}
                     <SessionMessageList messages={session.messages} agentEmoji={agentEmoji} />
-                    {isStreaming && expandedSession === session.key && stream && (
+                    {isStreaming && expandedSession === session.key && streamSessionKey === session.key && (
                       <div className="flex gap-2.5">
                         <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
                           <span className="text-[9px]">{agentEmoji ?? "🤖"}</span>
                         </div>
-                        <div className="flex-1 min-w-0 text-sm text-muted-foreground leading-relaxed">
-                          <MessageContent text={stream} />
-                          <span className="inline-block w-0.5 h-3.5 ml-0.5 bg-foreground/40 animate-pulse" />
+                        <div className="flex-1 min-w-0 space-y-1.5 pt-1">
+                          <LoaderFive text="Thinking..." />
+                          {stream ? (
+                            <div className="text-sm text-muted-foreground leading-relaxed">
+                              <MessageContent text={stream} />
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     )}

@@ -1,13 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useGateway } from "./use-gateway";
 import type { EventFrame } from "@/lib/gateway-client";
-import { parseRawMessages, extractText, type RawMessage } from "./use-chat";
+import {
+  parseRawMessages,
+  extractText,
+  parseRawMessage,
+  buildAssistantTextMessage,
+  type RawMessage,
+} from "./use-chat";
 
 type ChatEventPayload = {
   runId: string;
   sessionKey: string;
   state: "delta" | "final" | "aborted" | "error";
-  message?: { content?: Array<{ type: string; text?: string }> };
+  message?: unknown;
   errorMessage?: string;
 };
 
@@ -27,6 +33,34 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
 
   const sessionKeysRef = useRef(new Set<string>());
   const fetchIdRef = useRef(0);
+  const streamRef = useRef<string | null>(null);
+
+  const appendAssistantMessage = useCallback(
+    (sessionKey: string, message: unknown, fallbackText?: string) => {
+      const parsed = parseRawMessage(message);
+      const fallback = fallbackText?.trim() ?? "";
+      const next =
+        parsed?.role === "assistant"
+          ? {
+              ...parsed,
+              sessionKey,
+              timestamp: parsed.timestamp || Date.now(),
+            }
+          : (() => {
+              const built = buildAssistantTextMessage(fallback);
+              return built ? { ...built, sessionKey } : null;
+            })();
+
+      if (!next) {
+        return;
+      }
+
+      setMessages((prev) =>
+        [...prev, next].sort((a, b) => a.timestamp - b.timestamp),
+      );
+    },
+    [],
+  );
 
   const loadAll = useCallback(async () => {
     if (!client || !connected) return;
@@ -161,26 +195,41 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
         case "delta": {
           const text = extractText(payload.message);
           if (typeof text === "string") {
-            setStream((prev) =>
-              !prev || text.length >= prev.length ? text : prev,
-            );
+            setStream((prev) => {
+              const resolved = !prev || text.length >= prev.length ? text : prev;
+              streamRef.current = resolved;
+              return resolved;
+            });
           }
           break;
         }
         case "final":
+          appendAssistantMessage(
+            payload.sessionKey,
+            payload.message,
+            streamRef.current ?? undefined,
+          );
+          streamRef.current = null;
           setStream(null);
           loadAll();
           break;
         case "aborted":
+          appendAssistantMessage(
+            payload.sessionKey,
+            payload.message,
+            streamRef.current ?? undefined,
+          );
+          streamRef.current = null;
           setStream(null);
           break;
         case "error":
+          streamRef.current = null;
           setStream(null);
           setError(payload.errorMessage ?? "chat error");
           break;
       }
     });
-  }, [subscribe, taskId, loadAll]);
+  }, [appendAssistantMessage, subscribe, taskId, loadAll]);
 
   // Send message to the primary task session (or fallback)
   const sendMessage = useCallback(
@@ -204,6 +253,7 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
           timestamp: Date.now(),
         },
       ]);
+      streamRef.current = "";
       setStream("");
       setError(null);
 
@@ -215,6 +265,7 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
           idempotencyKey: crypto.randomUUID(),
         });
       } catch (err) {
+        streamRef.current = null;
         setStream(null);
         setError(String(err));
       }

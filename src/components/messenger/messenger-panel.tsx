@@ -8,6 +8,7 @@ import { useMessengerPanel } from "@/hooks/use-messenger-panel";
 import { ChatSendProvider } from "@/hooks/use-chat-send";
 import { UXMessageList } from "@/components/chat/session-blocks";
 import { MessageContent } from "./message-content";
+import { LoaderFive } from "@/components/ui/loader";
 import { parseAgentName } from "@/lib/mentions";
 import { useAgentActivity } from "@/hooks/use-agent-activity";
 import {
@@ -188,17 +189,13 @@ function ChatContent({ agentId }: { agentId: string }) {
 
           {isStreaming && (
             <div className="px-4 py-1.5">
-              <div className="max-w-[90%]">
+              <div className="max-w-[90%] space-y-1.5">
+                <LoaderFive text="Thinking..." />
                 {stream ? (
                   <div className="text-sm text-foreground/90 leading-relaxed">
                     <MessageContent text={stream} />
-                    <span className="inline-block w-0.5 h-3.5 ml-0.5 bg-[var(--swarm-violet)] animate-pulse rounded-full" />
                   </div>
-                ) : (
-                  <span className="text-xs text-muted-foreground/40">
-                    Thinking...
-                  </span>
-                )}
+                ) : null}
               </div>
             </div>
           )}
@@ -212,7 +209,28 @@ function ChatContent({ agentId }: { agentId: string }) {
       </ChatSendProvider>
 
       {/* Input — clean, border-top separator */}
-      <div className="border-t border-border/50 shrink-0">
+      <div className="relative border-t border-border/50 shrink-0">
+        {isStreaming && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
+            <div
+              className="h-full w-full animate-pulse-soft"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 18%, color-mix(in oklab, var(--swarm-violet) 92%, white 8%) 50%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 82%, transparent 100%)",
+                boxShadow: "0 0 12px color-mix(in oklab, var(--swarm-violet) 65%, transparent)",
+              }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent 0%, var(--swarm-violet) 50%, transparent 100%)",
+                opacity: 0.9,
+                animation: "swarm-shimmer 2s ease-in-out infinite",
+              }}
+            />
+          </div>
+        )}
         <form
           onSubmit={handleSubmit}
           className="relative flex items-end"

@@ -40,7 +40,7 @@ type ChatEventPayload = {
   runId: string;
   sessionKey: string;
   state: "delta" | "final" | "aborted" | "error";
-  message?: { content?: Array<{ type: string; text?: string }> };
+  message?: unknown;
   errorMessage?: string;
 };
 
@@ -68,7 +68,8 @@ function isHiddenApprovalContinuation(raw: unknown): boolean {
 
 export function extractText(message: unknown): string {
   if (!message || typeof message !== "object") return "";
-  const msg = message as { content?: unknown };
+  const msg = message as { content?: unknown; text?: unknown };
+  if (typeof msg.text === "string") return msg.text;
   if (!Array.isArray(msg.content)) return "";
   return msg.content
     .filter(
@@ -79,6 +80,22 @@ export function extractText(message: unknown): string {
     )
     .map((block: unknown) => (block as { text?: string }).text ?? "")
     .join("");
+}
+
+export function parseRawMessage(raw: unknown): RawMessage | null {
+  return parseRawMessages([raw])[0] ?? null;
+}
+
+export function buildAssistantTextMessage(
+  text: string,
+  timestamp = Date.now()
+): RawMessage | null {
+  if (!text.trim()) return null;
+  return {
+    role: "assistant",
+    blocks: [{ type: "text", text }],
+    timestamp,
+  };
 }
 
 export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
@@ -158,10 +175,8 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Track whether we're awaiting a response (between send and final)
-  const awaitingRef = useRef(false);
-  // Capture the server-assigned runId from the first delta event
   const runIdRef = useRef<string | null>(null);
+  const streamRef = useRef<string | null>(null);
 
   // Monotonically increasing fetch ID — only the latest fetch can write to state
   const fetchIdRef = useRef(0);
@@ -228,6 +243,33 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       .catch(() => {});
   }, [client, connected, sessionKey]);
 
+  const appendAssistantMessage = useCallback((message: unknown, fallbackText?: string) => {
+    const parsed = parseRawMessage(message);
+    const fallback = fallbackText?.trim() ?? "";
+    const nextRaw =
+      parsed?.role === "assistant"
+        ? {
+            ...parsed,
+            timestamp: parsed.timestamp || Date.now(),
+          }
+        : buildAssistantTextMessage(fallback);
+
+    if (!nextRaw) {
+      return;
+    }
+
+    const nextText = extractText(message) || fallback;
+    setRawMessages((prev) => [...prev, nextRaw]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: nextText,
+        timestamp: nextRaw.timestamp,
+      },
+    ]);
+  }, []);
+
   // Subscribe to gateway chat events
   useEffect(() => {
     return subscribe((evt: EventFrame) => {
@@ -236,10 +278,11 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       if (!payload || payload.sessionKey !== sessionKey) return;
 
       // If we know our runId, ignore events from other runs
-      // but still handle their "final" to reload history
+      // but still surface their completed messages.
       const knownRunId = runIdRef.current;
       if (knownRunId && payload.runId && payload.runId !== knownRunId) {
         if (payload.state === "final") {
+          appendAssistantMessage(payload.message);
           reloadHistory();
         }
         return;
@@ -247,38 +290,47 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
 
       switch (payload.state) {
         case "delta": {
-          // Capture server-assigned runId from the first delta
+          clearSessionPending(sessionKey);
           if (payload.runId && !runIdRef.current) {
             runIdRef.current = payload.runId;
           }
           const next = extractText(payload.message);
           if (typeof next === "string") {
-            setStream((prev) =>
-              !prev || next.length >= prev.length ? next : prev
-            );
+            setStream((prev) => {
+              const resolved =
+                !prev || next.length >= prev.length ? next : prev;
+              streamRef.current = resolved;
+              return resolved;
+            });
           }
           break;
         }
-        case "final":
+        case "final": {
+          clearSessionPending(sessionKey);
+          appendAssistantMessage(payload.message, streamRef.current ?? undefined);
+          streamRef.current = null;
           setStream(null);
           runIdRef.current = null;
-          awaitingRef.current = false;
           reloadHistory();
           break;
+        }
         case "aborted":
+          clearSessionPending(sessionKey);
+          appendAssistantMessage(payload.message, streamRef.current ?? undefined);
+          streamRef.current = null;
           setStream(null);
           runIdRef.current = null;
-          awaitingRef.current = false;
           break;
         case "error":
+          clearSessionPending(sessionKey);
+          streamRef.current = null;
           setStream(null);
           runIdRef.current = null;
-          awaitingRef.current = false;
           setError(payload.errorMessage ?? "chat error");
           break;
       }
     });
-  }, [reloadHistory, sessionKey, subscribe]);
+  }, [appendAssistantMessage, reloadHistory, sessionKey, subscribe]);
 
   // Send a message
   const sendMessage = useCallback(
@@ -294,24 +346,23 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
         ...prev,
         { role: "user", blocks: [{ type: "text", text }], timestamp: now },
       ]);
-      // Reset runId — will be captured from first delta event
-      runIdRef.current = null;
-      awaitingRef.current = true;
+      const runId = crypto.randomUUID();
+      runIdRef.current = runId;
+      streamRef.current = "";
       setStream("");
       setError(null);
       markSessionPending(sessionKey);
 
-      const idempotencyKey = crypto.randomUUID();
       try {
         await client.request("chat.send", {
           sessionKey,
           message: text,
           deliver: false,
-          idempotencyKey,
+          idempotencyKey: runId,
         });
       } catch (err) {
         runIdRef.current = null;
-        awaitingRef.current = false;
+        streamRef.current = null;
         setStream(null);
         setError(String(err));
         clearSessionPending(sessionKey);

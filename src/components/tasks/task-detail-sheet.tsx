@@ -744,16 +744,14 @@ function SessionChat({
               <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
                 <span className="text-[9px]">{agentEmoji ?? "🤖"}</span>
               </div>
-              {stream ? (
-                <div className="flex-1 min-w-0 text-sm text-muted-foreground leading-relaxed">
-                  <MessageContent text={stream} />
-                  <span className="inline-block w-0.5 h-3.5 ml-0.5 bg-foreground/40 animate-pulse" />
-                </div>
-              ) : (
-                <div className="flex items-center pt-1">
-                  <LoaderFive text="Thinking..." />
-                </div>
-              )}
+              <div className="flex-1 min-w-0 space-y-1.5 pt-1">
+                <LoaderFive text="Thinking..." />
+                {stream ? (
+                  <div className="text-sm text-muted-foreground leading-relaxed">
+                    <MessageContent text={stream} />
+                  </div>
+                ) : null}
+              </div>
             </div>
           )}
 
@@ -767,6 +765,27 @@ function SessionChat({
           onSubmit={handleSubmit}
           className="relative border-t bg-muted/30 shrink-0"
         >
+          {isStreaming && (
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
+              <div
+                className="h-full w-full animate-pulse-soft"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 18%, color-mix(in oklab, var(--swarm-violet) 92%, white 8%) 50%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 82%, transparent 100%)",
+                  boxShadow: "0 0 12px color-mix(in oklab, var(--swarm-violet) 65%, transparent)",
+                }}
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent 0%, var(--swarm-violet) 50%, transparent 100%)",
+                  opacity: 0.9,
+                  animation: "swarm-shimmer 2s ease-in-out infinite",
+                }}
+              />
+            </div>
+          )}
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}

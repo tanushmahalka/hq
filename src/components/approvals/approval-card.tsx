@@ -29,6 +29,7 @@ export function ApprovalCard({
   const [feedback, setFeedback] = useState("");
   const resolving = isResolving(approval.id);
   const taskId = parseTaskIdFromApprovalSession(approval.request.sessionKey);
+  const hasFeedback = feedback.trim().length > 0;
 
   const handleResolve = async (decision: "approve" | "deny") => {
     try {
@@ -96,10 +97,10 @@ export function ApprovalCard({
           onClick={() => void handleResolve("deny")}
           disabled={resolving}
         >
-          Deny
+          {hasFeedback ? "Deny with Feedback" : "Deny"}
         </Button>
         <Button onClick={() => void handleResolve("approve")} disabled={resolving}>
-          Approve
+          {hasFeedback ? "Allow with Feedback" : "Allow"}
         </Button>
       </CardFooter>
     </Card>

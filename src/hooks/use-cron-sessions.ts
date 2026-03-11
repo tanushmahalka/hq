@@ -1,13 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useGateway } from "./use-gateway";
 import type { EventFrame } from "@/lib/gateway-client";
-import { parseRawMessages, extractText, type RawMessage } from "./use-chat";
+import {
+  parseRawMessages,
+  extractText,
+  parseRawMessage,
+  buildAssistantTextMessage,
+  type RawMessage,
+} from "./use-chat";
 
 type ChatEventPayload = {
   runId: string;
   sessionKey: string;
   state: "delta" | "final" | "aborted" | "error";
-  message?: { content?: Array<{ type: string; text?: string }> };
+  message?: unknown;
   errorMessage?: string;
 };
 
@@ -27,9 +33,47 @@ export function useCronSessions(cronId: string | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stream, setStream] = useState<string | null>(null);
+  const [streamSessionKey, setStreamSessionKey] = useState<string | null>(null);
 
   const sessionKeysRef = useRef(new Set<string>());
   const fetchIdRef = useRef(0);
+  const streamRef = useRef<string | null>(null);
+
+  const appendAssistantMessage = useCallback(
+    (sessionKey: string, message: unknown, fallbackText?: string) => {
+      const parsed = parseRawMessage(message);
+      const fallback = fallbackText?.trim() ?? "";
+      const next =
+        parsed?.role === "assistant"
+          ? {
+              ...parsed,
+              sessionKey,
+              timestamp: parsed.timestamp || Date.now(),
+            }
+          : (() => {
+              const built = buildAssistantTextMessage(fallback);
+              return built ? { ...built, sessionKey } : null;
+            })();
+
+      if (!next) {
+        return;
+      }
+
+      setSessions((prev) =>
+        prev.map((session) =>
+          session.key === sessionKey
+            ? {
+                ...session,
+                messages: [...session.messages, next].sort(
+                  (a, b) => a.timestamp - b.timestamp,
+                ),
+              }
+            : session,
+        ),
+      );
+    },
+    [],
+  );
 
   const loadAll = useCallback(async () => {
     if (!client || !connected || !cronId) return;
@@ -119,28 +163,48 @@ export function useCronSessions(cronId: string | null) {
         case "delta": {
           const text = extractText(payload.message);
           if (typeof text === "string") {
-            setStream((prev) =>
-              !prev || text.length >= prev.length ? text : prev,
-            );
+            setStreamSessionKey(payload.sessionKey);
+            setStream((prev) => {
+              const resolved =
+                !prev || text.length >= prev.length ? text : prev;
+              streamRef.current = resolved;
+              return resolved;
+            });
           }
           break;
         }
         case "final":
+          appendAssistantMessage(
+            payload.sessionKey,
+            payload.message,
+            streamRef.current ?? undefined,
+          );
+          setStreamSessionKey(null);
+          streamRef.current = null;
           setStream(null);
           loadAll();
           break;
         case "aborted":
+          appendAssistantMessage(
+            payload.sessionKey,
+            payload.message,
+            streamRef.current ?? undefined,
+          );
+          setStreamSessionKey(null);
+          streamRef.current = null;
           setStream(null);
           break;
         case "error":
+          setStreamSessionKey(null);
+          streamRef.current = null;
           setStream(null);
           setError(payload.errorMessage ?? "chat error");
           break;
       }
     });
-  }, [subscribe, cronId, loadAll]);
+  }, [appendAssistantMessage, subscribe, cronId, loadAll]);
 
   const isStreaming = stream !== null;
 
-  return { sessions, stream, isStreaming, loading, error };
+  return { sessions, stream, streamSessionKey, isStreaming, loading, error };
 }
