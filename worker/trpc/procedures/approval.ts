@@ -30,7 +30,9 @@ export const approvalRouter = router({
       }
 
       const resolvedBy = ctx.user?.name?.trim() || ctx.user?.email?.trim() || "hq user";
-      const response = await fetch(`${ctx.hooksUrl}/hooks/approval/resolve`, {
+      const response = await fetch(
+        `${ctx.hooksUrl}/plugins/hq-approvals/approval/resolve`,
+        {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -42,7 +44,8 @@ export const approvalRouter = router({
           feedback: input.feedback?.trim() || null,
           resolvedBy,
         }),
-      });
+        },
+      );
 
       const payload = (await response.json().catch(() => null)) as
         | { ok?: boolean; error?: string; approval?: unknown }

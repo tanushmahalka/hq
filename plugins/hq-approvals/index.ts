@@ -303,7 +303,7 @@ const plugin = {
     });
 
     api.registerHttpRoute({
-      path: "/hooks/approval/resolve",
+      path: "/plugins/hq-approvals/approval/resolve",
       auth: "plugin",
       handler: async (req, res) => {
         if ((req.method ?? "GET").toUpperCase() !== "POST") {
