@@ -13,6 +13,21 @@ require_cmd() {
   fi
 }
 
+pick_hq_installer() {
+  if command -v bun >/dev/null 2>&1; then
+    echo "bun"
+    return
+  fi
+
+  if command -v pnpm >/dev/null 2>&1; then
+    echo "pnpm"
+    return
+  fi
+
+  echo "Missing required command: bun or pnpm" >&2
+  exit 1
+}
+
 ensure_clean_repo() {
   local repo_dir="$1"
   local repo_name="$2"
@@ -39,8 +54,10 @@ pull_repo() {
 
 main() {
   require_cmd git
-  require_cmd bun
   require_cmd pnpm
+
+  local hq_installer
+  hq_installer="$(pick_hq_installer)"
 
   ensure_clean_repo "$HQ_DIR" "hq"
   ensure_clean_repo "$OPENCLAW_DIR" "openclaw"
@@ -48,8 +65,8 @@ main() {
   pull_repo "$HQ_DIR" "hq"
   pull_repo "$OPENCLAW_DIR" "openclaw"
 
-  echo "==> Reinstalling hq dependencies"
-  (cd "$HQ_DIR" && bun install)
+  echo "==> Reinstalling hq dependencies with $hq_installer"
+  (cd "$HQ_DIR" && "$hq_installer" install)
 
   echo "==> Reinstalling openclaw dependencies"
   (cd "$OPENCLAW_DIR" && pnpm install)
@@ -67,7 +84,7 @@ Reinstall complete.
 Recommended follow-up:
   cd "$OPENCLAW_DIR" && pnpm openclaw doctor
   cd "$OPENCLAW_DIR" && pnpm openclaw health
-  cd "$HQ_DIR" && bun dev
+  cd "$HQ_DIR" && npm run dev
 EOF
 }
 
