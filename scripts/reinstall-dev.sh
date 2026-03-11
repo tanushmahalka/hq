@@ -32,7 +32,7 @@ ensure_clean_repo() {
   local repo_dir="$1"
   local repo_name="$2"
 
-  if [[ ! -d "$repo_dir/.git" ]]; then
+  if ! git -C "$repo_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "$repo_name is not a git checkout: $repo_dir" >&2
     exit 1
   fi

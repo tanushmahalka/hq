@@ -10,12 +10,12 @@ The ultimate goal is to be a centralized headquarters for businesses where they 
 
 HQ has two halves that run independently:
 
-1. **Frontend** — React SPA served by Vite, connects to the OpenClaw gateway over WebSocket for real-time agent communication.
-2. **Worker** — Cloudflare Worker (Hono + tRPC) that owns the database (Drizzle ORM) and exposes task/comment CRUD over HTTP (`/api/trpc/*`).
+1. **Frontend** — React SPA built by Vite and served from `dist/`.
+2. **Backend** — Hono + tRPC Node server that owns the database (Drizzle ORM) and exposes task/comment CRUD over HTTP (`/api/trpc/*`).
 
 ```
 Browser (HQ)  ──wss──▶  Tailscale proxy (443)  ──▶  OpenClaw Gateway (18789)
-              ──http──▶  Cloudflare Worker (/api/trpc/*)  ──▶  Database
+              ──http──▶  HQ Node server (/api/trpc/*)  ──▶  Database
 ```
 
 ### Gateway Connection
@@ -40,7 +40,7 @@ The OpenClaw gateway must have these configured for HQ to connect:
 gateway:
   controlUi:
     allowedOrigins:
-      - "http://localhost:5173"   # Vite dev server origin
+      - "http://localhost:5174"   # HQ local dev origin
     allowInsecureAuth: true       # Required when HQ runs on http:// (not https://)
 ```
 
@@ -56,7 +56,7 @@ Without `allowInsecureAuth`, the gateway rejects control-ui connections from non
 - **Icons**: Lucide React
 - **Font**: Geist
 - **Package manager**: Bun
-- **Backend**: Hono + tRPC on Cloudflare Workers
+- **Backend**: Hono + tRPC on Node
 - **ORM**: Drizzle
 - **Toasts**: Sonner
 
@@ -98,7 +98,8 @@ hq/
 │       ├── theme-toggle.tsx        # Theme switcher button
 │       └── ui/                     # shadcn/ui primitives (button, input, sheet, etc.)
 ├── worker/
-│   ├── index.ts                    # Hono app entry — cors, health, tRPC adapter
+│   ├── app.ts                      # Shared Hono app factory
+│   ├── index.ts                    # Compatibility re-export for backend app
 │   ├── lib/
 │   │   └── notify-hook.ts         # POST to OpenClaw /hooks/tasks endpoint
 │   ├── db/
@@ -110,6 +111,8 @@ hq/
 │       └── procedures/
 │           ├── task.ts            # Task CRUD (list, get, create, update, delete)
 │           └── comment.ts         # Comment add/delete on tasks
+├── server/
+│   └── index.ts                    # Node server entry — serves API + built SPA
 ├── shared/
 │   ├── schema.ts                  # Drizzle schema (tasks, comments tables)
 │   ├── types.ts                   # TASK_STATUSES, STATUS_LABELS, TaskStatus
@@ -171,9 +174,9 @@ Manages the slide-out messenger panel state. Toggle hotkey: `⌘K`. Persists sel
 
 ## Task Notification Flow
 
-Task and comment mutations notify agents via HTTP POST from the Cloudflare Worker to OpenClaw's hook mapping system:
+Task and comment mutations notify agents via HTTP POST from the HQ backend to OpenClaw's hook mapping system:
 
-1. **Worker** — `worker/lib/notify-hook.ts` POSTs to `{OPENCLAW_HOOKS_URL}/hooks/tasks` with task fields as body
+1. **Backend** — `worker/lib/notify-hook.ts` POSTs to `{OPENCLAW_HOOKS_URL}/hooks/tasks` with task fields as body
 2. **Hook mapping** — OpenClaw config maps the POST body fields to session key and message templates (e.g. `sessionKey: "task:{{taskId}}"`, `messageTemplate: "Task #{{taskId}} created: {{title}}"`)
 3. **Actions**: `created`, `updated`, `deleted` (from `task.ts`), `commented`, `comment_deleted` (from `comment.ts`)
 4. All calls are fire-and-forget via `ctx.waitUntil()` — mutations return immediately
@@ -183,14 +186,15 @@ Task and comment mutations notify agents via HTTP POST from the Cloudflare Worke
 
 When the gateway streams `chat` events for a task's session, the task card shows a 1px animated gradient sweep across its top edge (`shimmer-edge` keyframe in `index.css`). This indicates the agent is actively working on the task. Managed by `useTaskActive(taskId)`.
 
-## Worker (Cloudflare)
+## Backend Server
 
-The worker is a standalone Hono app at `worker/index.ts`:
+The backend app lives in `worker/app.ts`, and the Node runtime entry lives in `server/index.ts`:
 - CORS enabled on `/api/*`
 - Health check at `/api/health`
 - tRPC router mounted at `/api/trpc/*`
 - Context provides `db` (Drizzle), `hooksUrl`, `hooksToken`, and `waitUntil`
 - Env requires `DATABASE_URL`, `OPENCLAW_HOOKS_URL`, `OPENCLAW_HOOKS_TOKEN`
+- Production serves the built SPA from `dist/` in the same process
 
 ### tRPC Procedures
 
@@ -208,9 +212,9 @@ The worker is a standalone Hono app at `worker/index.ts`:
 |---|---|---|
 | `VITE_GATEWAY_URL` | WebSocket URL for the OpenClaw gateway | `ws://localhost:18789` |
 | `VITE_GATEWAY_TOKEN` | Auth token for gateway connection | `""` |
-| `DATABASE_URL` | Database connection string (worker) | — |
-| `OPENCLAW_HOOKS_URL` | OpenClaw gateway base URL for hooks (worker) | — |
-| `OPENCLAW_HOOKS_TOKEN` | Bearer token for hook endpoint auth (worker) | — |
+| `DATABASE_URL` | Database connection string (backend) | — |
+| `OPENCLAW_HOOKS_URL` | OpenClaw gateway base URL for hooks (backend) | — |
+| `OPENCLAW_HOOKS_TOKEN` | Bearer token for hook endpoint auth (backend) | — |
 
 **Important**: When connecting through Tailscale, use port 443 (omit port from URL) since Tailscale proxies HTTPS on 443 to the gateway's actual port 18789.
 
@@ -246,7 +250,16 @@ Real-time events streamed from the gateway:
 ```bash
 cd hq
 bun install
-bun dev        # starts Vite dev server on http://localhost:5173
+bun run dev
+```
+
+This starts Vite on `http://localhost:5174` and the backend API on `http://127.0.0.1:8787`.
+
+For production:
+
+```bash
+bun run build
+bun run start
 ```
 
 Make sure the OpenClaw gateway is running and accessible. Set `VITE_GATEWAY_URL` and `VITE_GATEWAY_TOKEN` in `.env`.

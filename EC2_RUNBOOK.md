@@ -224,7 +224,15 @@ pnpm openclaw config set plugins.entries.hq-missions.config.hqApiToken "<AGENT_A
 pnpm openclaw gateway restart || sudo systemctl restart openclaw-gateway
 ```
 
-## 8) Run HQ as systemd service
+## 8) Build HQ and run it as a systemd service
+
+Build the frontend and bundled Node server first:
+
+```bash
+cd /opt/hq
+pnpm install
+pnpm run build
+```
 
 Create `/etc/systemd/system/hq.service`:
 
@@ -238,7 +246,10 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/opt/hq
 EnvironmentFile=/opt/hq/.dev.vars
-ExecStart=/usr/bin/pnpm dev -- --host 127.0.0.1 --port 5174
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=5174
+ExecStart=/usr/bin/node /opt/hq/dist-server/server/index.js
 Restart=always
 RestartSec=5
 
@@ -246,10 +257,10 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-If `pnpm` is not at `/usr/bin/pnpm`, replace `ExecStart` with:
+If `node` is not at `/usr/bin/node`, replace `ExecStart` with:
 
 ```bash
-which pnpm
+which node
 ```
 
 Enable:
@@ -401,8 +412,10 @@ Expected:
   - Retry with `--jobs 1` and `GIT_SSH_COMMAND='ssh -o ControlMaster=no -o ControlPath=none'`.
 - `pnpm openclaw gateway install` may fail with `systemctl is-enabled unavailable` even when service exists:
   - Check `pnpm openclaw gateway status`; if running, continue.
-- `hq.service` crash with `Could not resolve "@better-auth/drizzle-adapter"`:
-  - Run `pnpm install` on latest repo (dependency is now in `package.json`).
+- `hq.service` crash because `dist-server/server/index.js` is missing:
+  - Run `pnpm install`
+  - Run `pnpm run build`
+  - Restart `hq`
 - HQ websocket `NOT_PAIRED / DEVICE_IDENTITY_REQUIRED`:
   - Set `VITE_GATEWAY_URL=ws://localhost:18789`
   - Set `VITE_GATEWAY_TOKEN` to gateway token from `~/.openclaw/openclaw.json`

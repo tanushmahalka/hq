@@ -1,73 +1,47 @@
-# React + TypeScript + Vite
+# HQ
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+HQ is the PSX control UI for managing agents, tasks, missions, and OpenClaw gateway activity.
 
-Currently, two official plugins are available:
+## Runtime model
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Frontend: React SPA built by Vite into `dist/`
+- Backend: Hono + tRPC Node server bundled into `dist-server/server/index.js`
+- Production: one Node process serves both `/api/*` and the built SPA
 
-## React Compiler
+## Local development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+bun install
+bun run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+That starts:
+- Vite on `http://127.0.0.1:5174`
+- The backend API on `http://127.0.0.1:8787`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Vite proxies `/api/*` to the backend automatically.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Production build
+
+```bash
+bun run build
+bun run start
 ```
+
+The production server expects the built frontend in `dist/` and serves it from the same process as the API.
+
+## Required environment
+
+- `DATABASE_URL`
+- `BETTER_AUTH_SECRET`
+- `BETTER_AUTH_URL`
+
+Commonly used optional variables:
+- `ALLOWED_ORIGINS`
+- `OPENCLAW_HOOKS_URL`
+- `OPENCLAW_HOOKS_TOKEN`
+- `AGENT_API_TOKEN`
+- `VITE_GATEWAY_URL`
+- `VITE_GATEWAY_TOKEN`
+
+See [EC2_RUNBOOK.md](/Users/tanushmahalka/Desktop/Programs/psx/hq/EC2_RUNBOOK.md) for the EC2 deployment flow.
