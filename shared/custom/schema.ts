@@ -12,7 +12,7 @@ import {
   MISSION_STATUSES,
   OBJECTIVE_STATUSES,
   CAMPAIGN_STATUSES,
-} from "./types";
+} from "./types.ts";
 
 // -- Enums --
 

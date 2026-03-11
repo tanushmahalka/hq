@@ -1,4 +1,4 @@
-import { getPool } from "../db/local-pg";
+import { getPool } from "../db/local-pg.ts";
 
 export async function listTables(dbUrl: string) {
   const pool = getPool(dbUrl);

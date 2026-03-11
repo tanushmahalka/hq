@@ -11,6 +11,8 @@ type ChatEventPayload = {
   state: "delta" | "final" | "aborted" | "error";
 };
 
+const ACTIVE_STALE_MS = 10_000;
+
 function useClock() {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -23,6 +25,7 @@ function useClock() {
 function useActiveAgentCount() {
   const { subscribe } = useGateway();
   const activeRef = useRef(new Set<string>());
+  const lastDeltaAtRef = useRef(new Map<string, number>());
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -37,16 +40,37 @@ function useActiveAgentCount() {
 
       if (payload.state === "delta") {
         activeRef.current.add(agentId);
+        lastDeltaAtRef.current.set(agentId, Date.now());
       } else if (
         payload.state === "final" ||
         payload.state === "aborted" ||
         payload.state === "error"
       ) {
         activeRef.current.delete(agentId);
+        lastDeltaAtRef.current.delete(agentId);
       }
       setCount(activeRef.current.size);
     });
   }, [subscribe]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      let changed = false;
+      for (const agentId of activeRef.current) {
+        const lastDeltaAt = lastDeltaAtRef.current.get(agentId) ?? 0;
+        if (lastDeltaAt > 0 && now - lastDeltaAt > ACTIVE_STALE_MS) {
+          activeRef.current.delete(agentId);
+          lastDeltaAtRef.current.delete(agentId);
+          changed = true;
+        }
+      }
+      if (changed) {
+        setCount(activeRef.current.size);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return count;
 }

@@ -1,4 +1,4 @@
-import type { Context } from "../trpc/context";
+import type { Context } from "../trpc/context.ts";
 
 interface HookPayload {
   action: string;

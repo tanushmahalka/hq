@@ -44,6 +44,11 @@ type ChatEventPayload = {
   errorMessage?: string;
 };
 
+type FinalEventPayload = {
+  state?: string;
+  message?: unknown;
+};
+
 const DATE_PREFIX_RE =
   /^\[(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(?:\s+\w+)?\]\s*/;
 const HIDDEN_APPROVAL_CONTINUATION_MARKER =
@@ -96,6 +101,21 @@ export function buildAssistantTextMessage(
     blocks: [{ type: "text", text }],
     timestamp,
   };
+}
+
+export function shouldReloadHistoryForFinalEvent(
+  payload?: FinalEventPayload
+): boolean {
+  if (!payload || payload.state !== "final") {
+    return false;
+  }
+  if (!payload.message || typeof payload.message !== "object") {
+    return true;
+  }
+  const message = payload.message as { role?: unknown };
+  const role =
+    typeof message.role === "string" ? message.role.toLowerCase() : "";
+  return Boolean(role && role !== "assistant");
 }
 
 export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
@@ -177,6 +197,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
 
   const runIdRef = useRef<string | null>(null);
   const streamRef = useRef<string | null>(null);
+  const streamStartedAtRef = useRef<number | null>(null);
 
   // Monotonically increasing fetch ID — only the latest fetch can write to state
   const fetchIdRef = useRef(0);
@@ -199,6 +220,36 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
     });
   }
 
+  const clearStreaming = useCallback(() => {
+    clearSessionPending(sessionKey);
+    streamRef.current = null;
+    streamStartedAtRef.current = null;
+    runIdRef.current = null;
+    setStream(null);
+  }, [sessionKey]);
+
+  const applyHistory = useCallback(
+    (raw: Array<unknown>) => {
+      const parsedMessages = parseMessages(raw);
+      const parsedRawMessages = parseRawMessages(raw);
+
+      setMessages(parsedMessages);
+      setRawMessages(parsedRawMessages);
+
+      const streamStartedAt = streamStartedAtRef.current;
+      if (
+        streamStartedAt !== null &&
+        parsedRawMessages.some(
+          (message) =>
+            message.role === "assistant" && message.timestamp >= streamStartedAt
+        )
+      ) {
+        clearStreaming();
+      }
+    },
+    [clearStreaming]
+  );
+
   // Load history once when connected — uses cleanup flag to ignore stale responses
   useEffect(() => {
     if (!client || !connected) return;
@@ -210,9 +261,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       })
       .then((res) => {
         if (stale) return;
-        const raw = res.messages ?? [];
-        setMessages(parseMessages(raw));
-        setRawMessages(parseRawMessages(raw));
+        applyHistory(res.messages ?? []);
       })
       .catch((err) => {
         if (stale) return;
@@ -224,7 +273,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
     return () => {
       stale = true;
     };
-  }, [client, connected, sessionKey]);
+  }, [applyHistory, client, connected, sessionKey]);
 
   const reloadHistory = useCallback(() => {
     if (!client || !connected) return;
@@ -236,12 +285,10 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       })
       .then((res) => {
         if (fetchIdRef.current !== id) return;
-        const raw = res.messages ?? [];
-        setMessages(parseMessages(raw));
-        setRawMessages(parseRawMessages(raw));
+        applyHistory(res.messages ?? []);
       })
       .catch(() => {});
-  }, [client, connected, sessionKey]);
+  }, [applyHistory, client, connected, sessionKey]);
 
   const appendAssistantMessage = useCallback((message: unknown, fallbackText?: string) => {
     const parsed = parseRawMessage(message);
@@ -294,6 +341,9 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
           if (payload.runId && !runIdRef.current) {
             runIdRef.current = payload.runId;
           }
+          if (streamStartedAtRef.current === null) {
+            streamStartedAtRef.current = Date.now();
+          }
           const next = extractText(payload.message);
           if (typeof next === "string") {
             setStream((prev) => {
@@ -306,31 +356,30 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
           break;
         }
         case "final": {
-          clearSessionPending(sessionKey);
           appendAssistantMessage(payload.message, streamRef.current ?? undefined);
-          streamRef.current = null;
-          setStream(null);
-          runIdRef.current = null;
+          clearStreaming();
           reloadHistory();
           break;
         }
         case "aborted":
-          clearSessionPending(sessionKey);
           appendAssistantMessage(payload.message, streamRef.current ?? undefined);
-          streamRef.current = null;
-          setStream(null);
-          runIdRef.current = null;
+          clearStreaming();
           break;
         case "error":
-          clearSessionPending(sessionKey);
-          streamRef.current = null;
-          setStream(null);
-          runIdRef.current = null;
+          clearStreaming();
           setError(payload.errorMessage ?? "chat error");
           break;
       }
     });
-  }, [appendAssistantMessage, reloadHistory, sessionKey, subscribe]);
+  }, [appendAssistantMessage, clearStreaming, reloadHistory, sessionKey, subscribe]);
+
+  useEffect(() => {
+    if (stream === null) return;
+    const interval = window.setInterval(() => {
+      reloadHistory();
+    }, 1500);
+    return () => window.clearInterval(interval);
+  }, [reloadHistory, stream]);
 
   // Send a message
   const sendMessage = useCallback(
@@ -349,6 +398,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       const runId = crypto.randomUUID();
       runIdRef.current = runId;
       streamRef.current = "";
+      streamStartedAtRef.current = now;
       setStream("");
       setError(null);
       markSessionPending(sessionKey);
@@ -361,14 +411,11 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
           idempotencyKey: runId,
         });
       } catch (err) {
-        runIdRef.current = null;
-        streamRef.current = null;
-        setStream(null);
+        clearStreaming();
         setError(String(err));
-        clearSessionPending(sessionKey);
       }
     },
-    [client, connected, sessionKey]
+    [clearStreaming, client, connected, sessionKey]
   );
 
   const isStreaming = stream !== null;

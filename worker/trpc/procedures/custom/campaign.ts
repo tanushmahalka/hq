@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { campaigns, objectives, missions } from "../../../../shared/custom/schema";
-import { CAMPAIGN_STATUSES } from "../../../../shared/custom/types";
-import { router, orgProcedure } from "../../init";
-import { notifyAgent } from "../../../lib/notify-agent";
+import { campaigns, objectives, missions } from "../../../../shared/custom/schema.ts";
+import { CAMPAIGN_STATUSES } from "../../../../shared/custom/types.ts";
+import { router, orgProcedure } from "../../init.ts";
+import { notifyAgent } from "../../../lib/notify-agent.ts";
 
 export const campaignRouter = router({
   list: orgProcedure

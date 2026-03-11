@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
-import { tasks } from "../../../shared/schema";
-import { TASK_STATUSES } from "../../../shared/types";
-import { router, orgProcedure } from "../init";
-import { generateTaskSlug } from "../../../shared/slug";
-import { notifyAgent } from "../../lib/notify-agent";
+import { tasks } from "../../../shared/schema.ts";
+import { TASK_STATUSES } from "../../../shared/types.ts";
+import { router, orgProcedure } from "../init.ts";
+import { generateTaskSlug } from "../../../shared/slug.ts";
+import { notifyAgent } from "../../lib/notify-agent.ts";
 import {
   fetchMissionChain,
   formatMissionContext,
-} from "../../lib/mission-chain";
+} from "../../lib/mission-chain.ts";
 
 export const taskRouter = router({
   list: orgProcedure

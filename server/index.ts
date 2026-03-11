@@ -2,8 +2,8 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { createApp } from "../worker/app";
-import type { Env } from "../worker/trpc/context";
+import { createApp } from "../worker/app.ts";
+import type { Env } from "../worker/trpc/context.ts";
 
 type RequiredEnvKey = "DATABASE_URL" | "BETTER_AUTH_SECRET" | "BETTER_AUTH_URL";
 

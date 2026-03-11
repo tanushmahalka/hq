@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { objectives, missions } from "../../../../shared/custom/schema";
-import { OBJECTIVE_STATUSES } from "../../../../shared/custom/types";
-import { router, orgProcedure } from "../../init";
-import { notifyAgent } from "../../../lib/notify-agent";
+import { objectives, missions } from "../../../../shared/custom/schema.ts";
+import { OBJECTIVE_STATUSES } from "../../../../shared/custom/types.ts";
+import { router, orgProcedure } from "../../init.ts";
+import { notifyAgent } from "../../../lib/notify-agent.ts";
 
 export const objectiveRouter = router({
   list: orgProcedure

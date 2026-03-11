@@ -2,14 +2,14 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { eq } from "drizzle-orm";
-import { appRouter } from "./trpc/router";
-import { createContext, createAuthInstance, type Env } from "./trpc/context";
-import { createDb } from "./db/client";
+import { appRouter } from "./trpc/router.ts";
+import { createContext, createAuthInstance, type Env } from "./trpc/context.ts";
+import { createDb } from "./db/client.ts";
 import {
   invitation as invitationTable,
   organization as organizationTable,
   user as userTable,
-} from "../shared/auth-schema";
+} from "../shared/auth-schema.ts";
 
 interface AppOptions {
   env: Env;

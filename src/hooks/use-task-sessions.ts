@@ -34,6 +34,8 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
   const sessionKeysRef = useRef(new Set<string>());
   const fetchIdRef = useRef(0);
   const streamRef = useRef<string | null>(null);
+  const streamStartedAtRef = useRef<number | null>(null);
+  const streamSessionKeyRef = useRef<string | null>(null);
 
   const appendAssistantMessage = useCallback(
     (sessionKey: string, message: unknown, fallbackText?: string) => {
@@ -62,11 +64,20 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
     [],
   );
 
-  const loadAll = useCallback(async () => {
+  const clearStreaming = useCallback(() => {
+    streamRef.current = null;
+    streamStartedAtRef.current = null;
+    streamSessionKeyRef.current = null;
+    setStream(null);
+  }, []);
+
+  const loadAll = useCallback(async (options?: { background?: boolean }) => {
     if (!client || !connected) return;
 
     const id = ++fetchIdRef.current;
-    setLoading(true);
+    if (!options?.background) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -158,13 +169,28 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
 
       allMsgs.sort((a, b) => a.timestamp - b.timestamp);
       setMessages(allMsgs);
+
+      const streamStartedAt = streamStartedAtRef.current;
+      const streamSessionKey = streamSessionKeyRef.current;
+      if (
+        streamStartedAt !== null &&
+        streamSessionKey &&
+        allMsgs.some(
+          (message) =>
+            message.sessionKey === streamSessionKey &&
+            message.role === "assistant" &&
+            message.timestamp >= streamStartedAt
+        )
+      ) {
+        clearStreaming();
+      }
     } catch (err) {
       if (fetchIdRef.current !== id) return;
       setError(String(err));
     } finally {
-      if (fetchIdRef.current === id) setLoading(false);
+      if (fetchIdRef.current === id && !options?.background) setLoading(false);
     }
-  }, [client, connected, taskId]);
+  }, [clearStreaming, client, connected, taskId]);
 
   // Initial load and reload on reconnect
   useEffect(() => {
@@ -193,6 +219,10 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
 
       switch (payload.state) {
         case "delta": {
+          streamSessionKeyRef.current = payload.sessionKey;
+          if (streamStartedAtRef.current === null) {
+            streamStartedAtRef.current = Date.now();
+          }
           const text = extractText(payload.message);
           if (typeof text === "string") {
             setStream((prev) => {
@@ -209,9 +239,8 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
             payload.message,
             streamRef.current ?? undefined,
           );
-          streamRef.current = null;
-          setStream(null);
-          loadAll();
+          clearStreaming();
+          void loadAll({ background: true });
           break;
         case "aborted":
           appendAssistantMessage(
@@ -219,17 +248,23 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
             payload.message,
             streamRef.current ?? undefined,
           );
-          streamRef.current = null;
-          setStream(null);
+          clearStreaming();
           break;
         case "error":
-          streamRef.current = null;
-          setStream(null);
+          clearStreaming();
           setError(payload.errorMessage ?? "chat error");
           break;
       }
     });
-  }, [appendAssistantMessage, subscribe, taskId, loadAll]);
+  }, [appendAssistantMessage, clearStreaming, subscribe, taskId, loadAll]);
+
+  useEffect(() => {
+    if (stream === null) return;
+    const interval = window.setInterval(() => {
+      void loadAll({ background: true });
+    }, 1500);
+    return () => window.clearInterval(interval);
+  }, [loadAll, stream]);
 
   // Send message to the primary task session (or fallback)
   const sendMessage = useCallback(
@@ -253,6 +288,9 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
           timestamp: Date.now(),
         },
       ]);
+      const startedAt = Date.now();
+      streamStartedAtRef.current = startedAt;
+      streamSessionKeyRef.current = primaryKey;
       streamRef.current = "";
       setStream("");
       setError(null);
@@ -265,12 +303,11 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
           idempotencyKey: crypto.randomUUID(),
         });
       } catch (err) {
-        streamRef.current = null;
-        setStream(null);
+        clearStreaming();
         setError(String(err));
       }
     },
-    [client, connected, taskId, fallbackAgentId],
+    [clearStreaming, client, connected, taskId, fallbackAgentId],
   );
 
   const isStreaming = stream !== null;

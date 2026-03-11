@@ -1,12 +1,12 @@
-import { router, mergeRouters } from "./init";
-import { approvalRouter } from "./procedures/approval";
-import { taskRouter } from "./procedures/task";
-import { commentRouter } from "./procedures/comment";
-import { dbRouter } from "./procedures/db";
-import { exampleRouter } from "./procedures/custom/example";
-import { missionRouter } from "./procedures/custom/mission";
-import { objectiveRouter } from "./procedures/custom/objective";
-import { campaignRouter } from "./procedures/custom/campaign";
+import { router, mergeRouters } from "./init.ts";
+import { approvalRouter } from "./procedures/approval.ts";
+import { taskRouter } from "./procedures/task.ts";
+import { commentRouter } from "./procedures/comment.ts";
+import { dbRouter } from "./procedures/db.ts";
+import { exampleRouter } from "./procedures/custom/example.ts";
+import { missionRouter } from "./procedures/custom/mission.ts";
+import { objectiveRouter } from "./procedures/custom/objective.ts";
+import { campaignRouter } from "./procedures/custom/campaign.ts";
 
 export const appRouter = router({
   approval: approvalRouter,

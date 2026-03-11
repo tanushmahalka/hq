@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { taskComments, tasks } from "../../../shared/schema";
-import { router, authedProcedure } from "../init";
-import { extractMentions, notifyMentionedAgents } from "../../lib/mentions";
+import { taskComments, tasks } from "../../../shared/schema.ts";
+import { router, authedProcedure } from "../init.ts";
+import { extractMentions, notifyMentionedAgents } from "../../lib/mentions.ts";
 
 export const commentRouter = router({
   add: authedProcedure

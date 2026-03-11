@@ -7,7 +7,7 @@ import {
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { TASK_STATUSES } from "./types";
+import { TASK_STATUSES } from "./types.ts";
 
 export const taskStatusEnum = pgEnum("task_status", TASK_STATUSES);
 

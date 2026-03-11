@@ -7,6 +7,8 @@ type ChatEventPayload = {
   state: "delta" | "final" | "aborted" | "error";
 };
 
+const ACTIVE_STALE_MS = 10_000;
+
 // Global pending sessions — tracks sessions where a message was sent but
 // no delta has arrived yet (the "waiting for agent" phase).
 const pendingSessions = new Set<string>();
@@ -45,6 +47,7 @@ export function useAnyAgentActive(): boolean {
   const { subscribe } = useGateway();
   const [streaming, setStreaming] = useState(false);
   const sessionsRef = useRef(new Set<string>());
+  const lastDeltaAtRef = useRef(new Map<string, number>());
 
   const pendingCount = useSyncExternalStore(subscribeToPending, getPendingCount);
 
@@ -62,6 +65,7 @@ export function useAnyAgentActive(): boolean {
           pendingSessions.delete(payload.sessionKey);
           emitChange();
           sessions.add(payload.sessionKey);
+          lastDeltaAtRef.current.set(payload.sessionKey, Date.now());
           setStreaming(true);
           break;
         case "final":
@@ -70,11 +74,35 @@ export function useAnyAgentActive(): boolean {
           pendingSessions.delete(payload.sessionKey);
           emitChange();
           sessions.delete(payload.sessionKey);
+          lastDeltaAtRef.current.delete(payload.sessionKey);
           if (sessions.size === 0) setStreaming(false);
           break;
       }
     });
   }, [subscribe]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const sessions = sessionsRef.current;
+      let changed = false;
+
+      for (const sessionKey of [...sessions]) {
+        const lastDeltaAt = lastDeltaAtRef.current.get(sessionKey) ?? 0;
+        if (lastDeltaAt > 0 && now - lastDeltaAt > ACTIVE_STALE_MS) {
+          sessions.delete(sessionKey);
+          lastDeltaAtRef.current.delete(sessionKey);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        setStreaming(sessions.size > 0);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return streaming || pendingCount > 0;
 }

@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, authedProcedure, adminProcedure } from "../init";
-import { listTables, getTableData, executeSQL } from "../../lib/agent-db";
-import { getPool } from "../../db/local-pg";
-import { agentDatabases } from "../../../shared/schema";
+import { router, authedProcedure, adminProcedure } from "../init.ts";
+import { listTables, getTableData, executeSQL } from "../../lib/agent-db.ts";
+import { getPool } from "../../db/local-pg.ts";
+import { agentDatabases } from "../../../shared/schema.ts";
 
 export const dbRouter = router({
   agents: adminProcedure.query(({ ctx }) => {

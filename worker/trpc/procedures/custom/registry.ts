@@ -1,8 +1,8 @@
-import type { CustomRouterEntry } from "./types";
-import { exampleRouter } from "./example";
-import { missionRouter } from "./mission";
-import { objectiveRouter } from "./objective";
-import { campaignRouter } from "./campaign";
+import type { CustomRouterEntry } from "./types.ts";
+import { exampleRouter } from "./example.ts";
+import { missionRouter } from "./mission.ts";
+import { objectiveRouter } from "./objective.ts";
+import { campaignRouter } from "./campaign.ts";
 
 const customRouters: CustomRouterEntry[] = [
   { key: "example", router: exampleRouter },

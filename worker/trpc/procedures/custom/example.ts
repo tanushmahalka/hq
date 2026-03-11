@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, orgProcedure } from "../../init";
+import { router, orgProcedure } from "../../init.ts";
 
 export const exampleRouter = router({
   hello: orgProcedure

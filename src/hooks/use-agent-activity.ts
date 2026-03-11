@@ -9,6 +9,7 @@ type ChatEventPayload = {
 
 const BAR_COUNT = 24;
 const DECAY_INTERVAL = 600; // ms between bar shifts
+const ACTIVE_STALE_MS = 10_000;
 
 /**
  * Tracks real-time gateway activity for a specific agent.
@@ -24,6 +25,17 @@ export function useAgentActivity(agentId: string) {
     new Array(BAR_COUNT).fill(0)
   );
   const [active, setActive] = useState(false);
+  const clearActiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleInactive = () => {
+    if (clearActiveTimerRef.current) {
+      clearTimeout(clearActiveTimerRef.current);
+    }
+    clearActiveTimerRef.current = setTimeout(() => {
+      setActive(false);
+      clearActiveTimerRef.current = null;
+    }, ACTIVE_STALE_MS);
+  };
 
   // Subscribe to gateway events for this agent
   useEffect(() => {
@@ -42,11 +54,16 @@ export function useAgentActivity(agentId: string) {
 
       if (payload.state === "delta") {
         setActive(true);
+        scheduleInactive();
       } else if (
         payload.state === "final" ||
         payload.state === "aborted" ||
         payload.state === "error"
       ) {
+        if (clearActiveTimerRef.current) {
+          clearTimeout(clearActiveTimerRef.current);
+          clearActiveTimerRef.current = null;
+        }
         setActive(false);
       }
     });
@@ -64,6 +81,14 @@ export function useAgentActivity(agentId: string) {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (clearActiveTimerRef.current) {
+        clearTimeout(clearActiveTimerRef.current);
+      }
+    };
+  }, []);
+
   return { bars, active };
 }
 
@@ -75,7 +100,10 @@ export function useAgentActivity(agentId: string) {
 export function useAllAgentActivity() {
   const { subscribe, agents } = useGateway();
   const dataRef = useRef(
-    new Map<string, { bars: number[]; currentSlot: number; active: boolean }>()
+    new Map<
+      string,
+      { bars: number[]; currentSlot: number; active: boolean; lastDeltaAt: number }
+    >()
   );
   const [snapshot, setSnapshot] = useState<
     Map<string, { bars: number[]; active: boolean }>
@@ -89,6 +117,7 @@ export function useAllAgentActivity() {
           bars: new Array(BAR_COUNT).fill(0),
           currentSlot: 0,
           active: false,
+          lastDeltaAt: 0,
         });
       }
     }
@@ -111,6 +140,7 @@ export function useAllAgentActivity() {
           bars: new Array(BAR_COUNT).fill(0),
           currentSlot: 0,
           active: false,
+          lastDeltaAt: 0,
         };
         dataRef.current.set(agentId, data);
       }
@@ -119,12 +149,14 @@ export function useAllAgentActivity() {
 
       if (payload.state === "delta") {
         data.active = true;
+        data.lastDeltaAt = Date.now();
       } else if (
         payload.state === "final" ||
         payload.state === "aborted" ||
         payload.state === "error"
       ) {
         data.active = false;
+        data.lastDeltaAt = 0;
       }
     });
   }, [subscribe]);
@@ -138,6 +170,13 @@ export function useAllAgentActivity() {
       >();
 
       for (const [id, data] of dataRef.current) {
+        if (
+          data.active &&
+          data.lastDeltaAt > 0 &&
+          Date.now() - data.lastDeltaAt > ACTIVE_STALE_MS
+        ) {
+          data.active = false;
+        }
         data.bars = [...data.bars.slice(1), data.currentSlot];
         data.currentSlot = 0;
         newSnapshot.set(id, { bars: [...data.bars], active: data.active });

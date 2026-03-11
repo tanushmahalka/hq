@@ -38,6 +38,7 @@ export function useCronSessions(cronId: string | null) {
   const sessionKeysRef = useRef(new Set<string>());
   const fetchIdRef = useRef(0);
   const streamRef = useRef<string | null>(null);
+  const streamStartedAtRef = useRef<number | null>(null);
 
   const appendAssistantMessage = useCallback(
     (sessionKey: string, message: unknown, fallbackText?: string) => {
@@ -75,11 +76,20 @@ export function useCronSessions(cronId: string | null) {
     [],
   );
 
-  const loadAll = useCallback(async () => {
+  const clearStreaming = useCallback(() => {
+    streamRef.current = null;
+    streamStartedAtRef.current = null;
+    setStreamSessionKey(null);
+    setStream(null);
+  }, []);
+
+  const loadAll = useCallback(async (options?: { background?: boolean }) => {
     if (!client || !connected || !cronId) return;
 
     const id = ++fetchIdRef.current;
-    setLoading(true);
+    if (!options?.background) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -128,13 +138,31 @@ export function useCronSessions(cronId: string | null) {
       });
 
       setSessions(results);
+
+      const streamStartedAt = streamStartedAtRef.current;
+      const activeSessionKey = streamSessionKey;
+      if (
+        streamStartedAt !== null &&
+        activeSessionKey &&
+        results.some(
+          (session) =>
+            session.key === activeSessionKey &&
+            session.messages.some(
+              (message) =>
+                message.role === "assistant" &&
+                message.timestamp >= streamStartedAt
+            )
+        )
+      ) {
+        clearStreaming();
+      }
     } catch (err) {
       if (fetchIdRef.current !== id) return;
       setError(String(err));
     } finally {
-      if (fetchIdRef.current === id) setLoading(false);
+      if (fetchIdRef.current === id && !options?.background) setLoading(false);
     }
-  }, [client, connected, cronId]);
+  }, [clearStreaming, client, connected, cronId, streamSessionKey]);
 
   useEffect(() => {
     loadAll();
@@ -161,6 +189,9 @@ export function useCronSessions(cronId: string | null) {
 
       switch (payload.state) {
         case "delta": {
+          if (streamStartedAtRef.current === null) {
+            streamStartedAtRef.current = Date.now();
+          }
           const text = extractText(payload.message);
           if (typeof text === "string") {
             setStreamSessionKey(payload.sessionKey);
@@ -179,10 +210,8 @@ export function useCronSessions(cronId: string | null) {
             payload.message,
             streamRef.current ?? undefined,
           );
-          setStreamSessionKey(null);
-          streamRef.current = null;
-          setStream(null);
-          loadAll();
+          clearStreaming();
+          void loadAll({ background: true });
           break;
         case "aborted":
           appendAssistantMessage(
@@ -190,19 +219,23 @@ export function useCronSessions(cronId: string | null) {
             payload.message,
             streamRef.current ?? undefined,
           );
-          setStreamSessionKey(null);
-          streamRef.current = null;
-          setStream(null);
+          clearStreaming();
           break;
         case "error":
-          setStreamSessionKey(null);
-          streamRef.current = null;
-          setStream(null);
+          clearStreaming();
           setError(payload.errorMessage ?? "chat error");
           break;
       }
     });
-  }, [appendAssistantMessage, subscribe, cronId, loadAll]);
+  }, [appendAssistantMessage, clearStreaming, subscribe, cronId, loadAll]);
+
+  useEffect(() => {
+    if (stream === null) return;
+    const interval = window.setInterval(() => {
+      void loadAll({ background: true });
+    }, 1500);
+    return () => window.clearInterval(interval);
+  }, [loadAll, stream]);
 
   const isStreaming = stream !== null;
 

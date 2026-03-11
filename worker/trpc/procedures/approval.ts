@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, orgProcedure } from "../init";
+import { router, orgProcedure } from "../init.ts";
 
 function resolveErrorCode(status: number): "NOT_FOUND" | "BAD_REQUEST" | "INTERNAL_SERVER_ERROR" {
   if (status === 404) {
