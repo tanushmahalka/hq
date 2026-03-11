@@ -10,6 +10,7 @@ import {
 } from "react-router";
 import { ThemeProvider } from "@/components/theme-provider";
 import { GatewayProvider } from "@/hooks/use-gateway";
+import { ApprovalProvider } from "@/hooks/approval-provider";
 import { TRPCProvider } from "@/hooks/use-trpc";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { CustomPageErrorBoundary } from "@/components/custom-page-error-boundary";
@@ -96,7 +97,9 @@ createRoot(document.getElementById("root")!).render(
               element={
                 <ProtectedRoute requireOrg>
                   <GatewayProvider url={GATEWAY_URL} token={GATEWAY_TOKEN}>
-                    <Layout />
+                    <ApprovalProvider>
+                      <Layout />
+                    </ApprovalProvider>
                   </GatewayProvider>
                 </ProtectedRoute>
               }

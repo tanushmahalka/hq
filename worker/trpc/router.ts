@@ -1,4 +1,5 @@
 import { router, mergeRouters } from "./init";
+import { approvalRouter } from "./procedures/approval";
 import { taskRouter } from "./procedures/task";
 import { commentRouter } from "./procedures/comment";
 import { dbRouter } from "./procedures/db";
@@ -8,6 +9,7 @@ import { objectiveRouter } from "./procedures/custom/objective";
 import { campaignRouter } from "./procedures/custom/campaign";
 
 export const appRouter = router({
+  approval: approvalRouter,
   task: mergeRouters(
     taskRouter,
     router({ comment: commentRouter })

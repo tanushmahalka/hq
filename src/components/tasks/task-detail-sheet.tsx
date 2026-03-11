@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ApprovalCard } from "@/components/approvals/approval-card";
 import {
   Clock,
   Sparkles,
@@ -35,6 +36,7 @@ import {
 } from "lucide-react";
 import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
 import { trpc } from "@/lib/trpc";
+import { useApprovals } from "@/hooks/use-approvals";
 import { useTaskSessions } from "@/hooks/use-task-sessions";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { useGateway } from "@/hooks/use-gateway";
@@ -691,10 +693,17 @@ function SessionChat({
   agentEmoji?: string;
   connected: boolean;
 }) {
-  const { messages, stream, isStreaming, loading, error, sendMessage } =
+  const { approvals } = useApprovals();
+  const { messages, sessionKeys, stream, isStreaming, loading, error, sendMessage } =
     useTaskSessions(taskId, fallbackAgentId);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sessionApprovals = approvals.filter((approval) => {
+    return (
+      approval.request.sessionKey.includes(`:task:${taskId}`) ||
+      sessionKeys.includes(approval.request.sessionKey)
+    );
+  });
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
@@ -712,6 +721,10 @@ function SessionChat({
       <div className="flex flex-col h-full">
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+          {sessionApprovals.map((approval) => (
+            <ApprovalCard key={approval.id} approval={approval} />
+          ))}
+
           {loading && (
             <div className="flex items-center justify-center py-8">
               <LoaderFive text="Thinking..." />

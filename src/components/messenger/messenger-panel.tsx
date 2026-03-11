@@ -1,5 +1,7 @@
+import { ApprovalCard } from "@/components/approvals/approval-card";
 import { useRef, useEffect, useState, type FormEvent } from "react";
 import { X, ArrowUp, ChevronDown } from "lucide-react";
+import { useApprovals } from "@/hooks/use-approvals";
 import { useChat } from "@/hooks/use-chat";
 import { useGateway } from "@/hooks/use-gateway";
 import { useMessengerPanel } from "@/hooks/use-messenger-panel";
@@ -127,10 +129,15 @@ function ActiveShimmer({ agentId }: { agentId: string }) {
 function ChatContent({ agentId }: { agentId: string }) {
   const { connected } = useGateway();
   const { agents } = useGateway();
+  const { approvals } = useApprovals();
   const { rawMessages, stream, isStreaming, loading, error, sendMessage } =
     useChat(agentId);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sessionKey = `agent:${agentId}:webchat`;
+  const sessionApprovals = approvals.filter(
+    (approval) => approval.request.sessionKey === sessionKey,
+  );
 
   const agent = agents.find((a) => a.id === agentId);
   const raw = agent?.identity?.name ?? agent?.name ?? agentId;
@@ -155,6 +162,14 @@ function ChatContent({ agentId }: { agentId: string }) {
           ref={scrollRef}
           className="flex-1 overflow-y-auto scrollbar-hide"
         >
+          {sessionApprovals.length > 0 && (
+            <div className="space-y-3 px-4 pt-4">
+              {sessionApprovals.map((approval) => (
+                <ApprovalCard key={approval.id} approval={approval} />
+              ))}
+            </div>
+          )}
+
           {loading && (
             <div className="flex items-center justify-center py-12">
               <span className="text-xs text-muted-foreground/40">

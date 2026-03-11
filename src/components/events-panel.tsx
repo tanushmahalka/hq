@@ -19,6 +19,8 @@ const EVENT_COLORS: Record<string, string> = {
   tick: "text-muted-foreground/30",
   health: "text-[var(--swarm-blue,oklch(0.68_0.15_245))]",
   cron: "text-amber-400",
+  "approval.requested": "text-red-400",
+  "approval.resolved": "text-[var(--swarm-mint,oklch(0.75_0.14_165))]",
   "exec.approval.requested": "text-red-400",
   "exec.approval.resolved": "text-[var(--swarm-mint,oklch(0.75_0.14_165))]",
 };
@@ -28,6 +30,7 @@ const RPC_METHODS = [
   "agents.list", "agent", "agent.identity.get", "agent.wait",
   "agents.files.list", "agents.files.get", "agents.files.set",
   "chat.send", "chat.history", "chat.abort",
+  "approval.request", "approval.list", "approval.resolve",
   "sessions.list", "sessions.preview", "sessions.patch", "sessions.reset", "sessions.delete", "sessions.compact",
   "config.get", "config.set", "config.apply", "config.patch", "config.schema",
   "cron.list", "cron.add", "cron.update", "cron.remove", "cron.run",

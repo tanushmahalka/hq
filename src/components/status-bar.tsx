@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useGateway } from "@/hooks/use-gateway";
+import { useApprovals } from "@/hooks/use-approvals";
 import { trpc } from "@/lib/trpc";
 import type { EventFrame } from "@/lib/gateway-client";
-import { Circle, CheckCircle2, Users, Zap, Terminal, Radio } from "lucide-react";
+import { Circle, CheckCircle2, Users, Zap, Terminal, Radio, CircleAlert } from "lucide-react";
 import { AdminOnly } from "@/components/auth/admin-only";
 
 type ChatEventPayload = {
@@ -62,6 +63,7 @@ export function StatusBar({
   onToggleEvents: () => void;
 }) {
   const { agents, connected } = useGateway();
+  const { pendingCount, approvalsOpen, toggleApprovals } = useApprovals();
   const { data: tasks } = trpc.task.list.useQuery(undefined, {
     refetchInterval: 30_000,
   });
@@ -104,6 +106,19 @@ export function StatusBar({
 
         <div className="h-3 w-px bg-border/30" />
       </AdminOnly>
+
+      <button
+        onClick={toggleApprovals}
+        className={`flex items-center gap-1.5 transition-colors hover:text-foreground ${
+          approvalsOpen ? "text-foreground" : ""
+        }`}
+      >
+        <CircleAlert className="size-3" />
+        <span className="font-mono tabular-nums">{pendingCount}</span>
+        <span>approvals</span>
+      </button>
+
+      <div className="h-3 w-px bg-border/30" />
 
       {/* Connection */}
       <div className="flex items-center gap-1.5">

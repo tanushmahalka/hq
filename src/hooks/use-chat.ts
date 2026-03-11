@@ -44,6 +44,28 @@ type ChatEventPayload = {
   errorMessage?: string;
 };
 
+const DATE_PREFIX_RE =
+  /^\[(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(?:\s+\w+)?\]\s*/;
+const HIDDEN_APPROVAL_CONTINUATION_MARKER =
+  "[[openclaw_hidden_approval_continuation]]";
+
+function isHiddenApprovalContinuation(raw: unknown): boolean {
+  const msg = raw as {
+    role?: string;
+    content?: Array<Record<string, unknown>>;
+  };
+  if (msg.role !== "user" || !Array.isArray(msg.content)) {
+    return false;
+  }
+  const text = msg.content
+    .filter((block) => block.type === "text")
+    .map((block) => String(block.text ?? ""))
+    .join("")
+    .replace(DATE_PREFIX_RE, "")
+    .trim();
+  return text.startsWith(HIDDEN_APPROVAL_CONTINUATION_MARKER);
+}
+
 export function extractText(message: unknown): string {
   if (!message || typeof message !== "object") return "";
   const msg = message as { content?: unknown };
@@ -60,7 +82,10 @@ export function extractText(message: unknown): string {
 }
 
 export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
-  return raw.map((m: unknown) => {
+  return raw.flatMap((m: unknown) => {
+    if (isHiddenApprovalContinuation(m)) {
+      return [];
+    }
     const msg = m as {
       role?: string;
       content?: Array<Record<string, unknown>>;
@@ -119,7 +144,7 @@ export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
       }
     }
 
-    return { role, blocks, timestamp: msg.timestamp ?? 0 };
+    return [{ role, blocks, timestamp: msg.timestamp ?? 0 }];
   });
 }
 
@@ -142,17 +167,20 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
   const fetchIdRef = useRef(0);
 
   function parseMessages(raw: Array<unknown>): ChatMessage[] {
-    return raw.map((m: unknown) => {
+    return raw.flatMap((m: unknown) => {
+      if (isHiddenApprovalContinuation(m)) {
+        return [];
+      }
       const msg = m as {
         role?: string;
         content?: unknown;
         timestamp?: number;
       };
-      return {
+      return [{
         role: (msg.role as "user" | "assistant") ?? "assistant",
         content: extractText(m),
         timestamp: msg.timestamp ?? 0,
-      };
+      }];
     });
   }
 

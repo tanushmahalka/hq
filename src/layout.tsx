@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Outlet } from "react-router";
+import { ApprovalsPanel } from "@/components/approvals/approvals-panel";
 import { TopNav } from "@/components/top-nav";
 import { StatusBar } from "@/components/status-bar";
 import { LogsPanel } from "@/components/logs-panel";
 import { EventsPanel } from "@/components/events-panel";
 import { ChatPanel } from "@/components/messenger/messenger-panel";
+import { useApprovals } from "@/hooks/use-approvals";
 import {
   MessengerPanelProvider,
   useMessengerPanel,
@@ -20,6 +22,7 @@ export default function Layout() {
 
 function LayoutInner() {
   const { chatOpen } = useMessengerPanel();
+  const { approvalsOpen, setApprovalsOpen } = useApprovals();
   const [logsOpen, setLogsOpen] = useState(false);
   const [eventsOpen, setEventsOpen] = useState(false);
 
@@ -38,6 +41,7 @@ function LayoutInner() {
           <ChatPanel />
         </div>
       </div>
+      {approvalsOpen && <ApprovalsPanel onClose={() => setApprovalsOpen(false)} />}
       {logsOpen && <LogsPanel onClose={() => setLogsOpen(false)} />}
       {eventsOpen && <EventsPanel onClose={() => setEventsOpen(false)} />}
       <StatusBar
