@@ -54,15 +54,23 @@ const DATE_PREFIX_RE =
 const HIDDEN_APPROVAL_CONTINUATION_MARKER =
   "[[openclaw_hidden_approval_continuation]]";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 function isHiddenApprovalContinuation(raw: unknown): boolean {
+  if (!isRecord(raw)) {
+    return false;
+  }
   const msg = raw as {
     role?: string;
-    content?: Array<Record<string, unknown>>;
+    content?: unknown;
   };
   if (msg.role !== "user" || !Array.isArray(msg.content)) {
     return false;
   }
   const text = msg.content
+    .filter((block): block is Record<string, unknown> => isRecord(block))
     .filter((block) => block.type === "text")
     .map((block) => String(block.text ?? ""))
     .join("")
@@ -120,12 +128,15 @@ export function shouldReloadHistoryForFinalEvent(
 
 export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
   return raw.flatMap((m: unknown) => {
+    if (!isRecord(m)) {
+      return [];
+    }
     if (isHiddenApprovalContinuation(m)) {
       return [];
     }
     const msg = m as {
       role?: string;
-      content?: Array<Record<string, unknown>>;
+      content?: unknown;
       timestamp?: number;
       toolCallId?: string;
       toolName?: string;
@@ -143,7 +154,8 @@ export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
     const blocks: ContentBlock[] = [];
 
     if (role === "toolResult") {
-      const text = (msg.content ?? [])
+      const text = (Array.isArray(msg.content) ? msg.content : [])
+        .filter((b): b is Record<string, unknown> => isRecord(b))
         .filter((b) => b.type === "text")
         .map((b) => (b.text as string) ?? "")
         .join("");
@@ -156,7 +168,10 @@ export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
         isError: msg.isError,
       });
     } else {
-      for (const block of msg.content ?? []) {
+      for (const block of Array.isArray(msg.content) ? msg.content : []) {
+        if (!isRecord(block)) {
+          continue;
+        }
         switch (block.type) {
           case "text":
             if (block.text)
@@ -204,6 +219,9 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
 
   function parseMessages(raw: Array<unknown>): ChatMessage[] {
     return raw.flatMap((m: unknown) => {
+      if (!isRecord(m)) {
+        return [];
+      }
       if (isHiddenApprovalContinuation(m)) {
         return [];
       }
