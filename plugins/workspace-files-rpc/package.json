@@ -1,0 +1,11 @@
+{
+  "name": "@psx/workspace-files-rpc",
+  "version": "0.1.0",
+  "description": "OpenClaw workspace plugin that exposes safe workspace file reads over gateway RPC",
+  "type": "module",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

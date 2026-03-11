@@ -1,0 +1,30 @@
+{
+  "id": "workspace-files-rpc",
+  "name": "Workspace Files RPC",
+  "description": "Adds a gateway RPC method for safely reading arbitrary workspace-relative files.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "defaultMaxBytes": {
+        "type": "integer",
+        "minimum": 1024,
+        "description": "Default read limit in bytes when the caller does not pass maxBytes."
+      },
+      "hardMaxBytes": {
+        "type": "integer",
+        "minimum": 1024,
+        "description": "Maximum allowed maxBytes value for workspace-files.read."
+      }
+    },
+    "required": []
+  },
+  "uiHints": {
+    "defaultMaxBytes": {
+      "label": "Default Max Bytes"
+    },
+    "hardMaxBytes": {
+      "label": "Hard Max Bytes"
+    }
+  }
+}
