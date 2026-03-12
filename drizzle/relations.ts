@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { contacts, callTasks, teamMembers, callLogs, accounts, accountEnrichments, jobs, scrapeRuns, accountEvents } from "./schema";
+import { contacts, callTasks, teamMembers, callLogs, accounts, accountEnrichments, jobs, scrapeRuns, accountEvents } from "./schema/index.ts";
 
 export const callTasksRelations = relations(callTasks, ({one, many}) => ({
 	contact: one(contacts, {
