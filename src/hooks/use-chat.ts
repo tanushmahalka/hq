@@ -1,12 +1,35 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type SetStateAction,
+} from "react";
 import { useGateway } from "./use-gateway";
 import type { EventFrame } from "@/lib/gateway-client";
 import { markSessionPending, clearSessionPending } from "./use-any-agent-active";
+
+export type PendingImageAttachment = {
+  id: string;
+  dataUrl: string;
+  mimeType: string;
+  fileName?: string;
+};
+
+export type SendOutcome = "sent" | "queued" | "error" | "ignored";
+
+export type QueuedChatMessage = {
+  id: string;
+  text: string;
+  attachments: PendingImageAttachment[];
+  createdAt: number;
+};
 
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
+  localId?: string;
 };
 
 // Rich types for raw session messages (preserves all block types)
@@ -26,6 +49,12 @@ export type ContentBlock =
       exitCode?: number;
       durationMs?: number;
       isError?: boolean;
+    }
+  | {
+      type: "image";
+      url?: string;
+      dataUrl?: string;
+      mimeType?: string;
     };
 
 export type RawMessage = {
@@ -34,6 +63,8 @@ export type RawMessage = {
   timestamp: number;
   /** Session key this message belongs to (set by multi-session hooks). */
   sessionKey?: string;
+  /** Client-side ID used for optimistic local rollback. */
+  localId?: string;
 };
 
 type ChatEventPayload = {
@@ -49,13 +80,180 @@ type FinalEventPayload = {
   message?: unknown;
 };
 
+type ApiImageAttachment = {
+  type: "image";
+  mimeType: string;
+  content: string;
+};
+
 const DATE_PREFIX_RE =
   /^\[(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(?:\s+\w+)?\]\s*/;
 const HIDDEN_APPROVAL_CONTINUATION_MARKER =
   "[[openclaw_hidden_approval_continuation]]";
+const SILENT_REPLY_PATTERN = /^\s*NO_REPLY\s*$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function isSilentReplyText(text: string): boolean {
+  return SILENT_REPLY_PATTERN.test(text);
+}
+
+function extractTextFromContent(content: unknown): string {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (!Array.isArray(content)) {
+    return "";
+  }
+  return content
+    .filter(
+      (block: unknown) =>
+        typeof block === "object" &&
+        block !== null &&
+        (block as { type: string }).type === "text"
+    )
+    .map((block: unknown) => String((block as { text?: unknown }).text ?? ""))
+    .join("");
+}
+
+function dataUrlToBase64(
+  dataUrl: string
+): { content: string; mimeType: string } | null {
+  const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+  if (!match) {
+    return null;
+  }
+  return { mimeType: match[1], content: match[2] };
+}
+
+function imageDataUrlFromParts(
+  mimeType: string,
+  content: string
+): string | null {
+  if (!mimeType || !content) {
+    return null;
+  }
+  return `data:${mimeType};base64,${content}`;
+}
+
+function parseImageBlock(
+  raw: Record<string, unknown>
+): Extract<ContentBlock, { type: "image" }> | null {
+  const source = isRecord(raw.source) ? raw.source : null;
+  const blockMimeType =
+    typeof raw.mimeType === "string"
+      ? raw.mimeType
+      : typeof raw.media_type === "string"
+      ? raw.media_type
+      : undefined;
+
+  if (source) {
+    if (source.type === "base64" && typeof source.data === "string") {
+      const mimeType =
+        typeof source.media_type === "string"
+          ? source.media_type
+          : typeof source.mimeType === "string"
+          ? source.mimeType
+          : blockMimeType ?? "image/png";
+      const dataUrl = imageDataUrlFromParts(mimeType, source.data);
+      if (!dataUrl) {
+        return null;
+      }
+      return {
+        type: "image",
+        dataUrl,
+        mimeType,
+      };
+    }
+
+    if (source.type === "url" && typeof source.url === "string") {
+      return {
+        type: "image",
+        url: source.url,
+        mimeType:
+          typeof source.mimeType === "string" ? source.mimeType : blockMimeType,
+      };
+    }
+  }
+
+  if (typeof raw.dataUrl === "string") {
+    return {
+      type: "image",
+      dataUrl: raw.dataUrl,
+      mimeType: blockMimeType,
+    };
+  }
+
+  if (typeof raw.url === "string") {
+    return {
+      type: "image",
+      url: raw.url,
+      mimeType: blockMimeType,
+    };
+  }
+
+  return null;
+}
+
+function normalizePendingAttachments(
+  attachments?: PendingImageAttachment[]
+): PendingImageAttachment[] {
+  if (!attachments?.length) {
+    return [];
+  }
+
+  return attachments.filter((attachment) => {
+    const parsed = dataUrlToBase64(attachment.dataUrl);
+    return Boolean(
+      attachment.mimeType.startsWith("image/") &&
+        attachment.dataUrl &&
+        parsed?.content &&
+        parsed.mimeType
+    );
+  });
+}
+
+function serializeAttachments(
+  attachments: PendingImageAttachment[]
+): ApiImageAttachment[] | undefined {
+  const serialized = attachments
+    .map((attachment) => {
+      const parsed = dataUrlToBase64(attachment.dataUrl);
+      if (!parsed) {
+        return null;
+      }
+      return {
+        type: "image" as const,
+        mimeType: parsed.mimeType,
+        content: parsed.content,
+      };
+    })
+    .filter((attachment): attachment is ApiImageAttachment => attachment !== null);
+
+  return serialized.length > 0 ? serialized : undefined;
+}
+
+function buildOptimisticUserMessage(
+  text: string,
+  attachments: PendingImageAttachment[],
+  timestamp: number,
+  localId: string
+): RawMessage {
+  return {
+    role: "user",
+    blocks: [
+      ...(text.trim() ? [{ type: "text", text } satisfies ContentBlock] : []),
+      ...attachments.map((attachment) => ({
+        type: "image" as const,
+        dataUrl: attachment.dataUrl,
+        mimeType: attachment.mimeType,
+      })),
+    ],
+    timestamp,
+    localId,
+  };
 }
 
 function isHiddenApprovalContinuation(raw: unknown): boolean {
@@ -69,11 +267,7 @@ function isHiddenApprovalContinuation(raw: unknown): boolean {
   if (msg.role !== "user" || !Array.isArray(msg.content)) {
     return false;
   }
-  const text = msg.content
-    .filter((block): block is Record<string, unknown> => isRecord(block))
-    .filter((block) => block.type === "text")
-    .map((block) => String(block.text ?? ""))
-    .join("")
+  const text = extractTextFromContent(msg.content)
     .replace(DATE_PREFIX_RE, "")
     .trim();
   return text.startsWith(HIDDEN_APPROVAL_CONTINUATION_MARKER);
@@ -83,16 +277,19 @@ export function extractText(message: unknown): string {
   if (!message || typeof message !== "object") return "";
   const msg = message as { content?: unknown; text?: unknown };
   if (typeof msg.text === "string") return msg.text;
-  if (!Array.isArray(msg.content)) return "";
-  return msg.content
-    .filter(
-      (block: unknown) =>
-        typeof block === "object" &&
-        block !== null &&
-        (block as { type: string }).type === "text"
-    )
-    .map((block: unknown) => (block as { text?: string }).text ?? "")
-    .join("");
+  return extractTextFromContent(msg.content);
+}
+
+export function isAssistantSilentReplyMessage(message: unknown): boolean {
+  if (!isRecord(message)) {
+    return false;
+  }
+  const role =
+    typeof message.role === "string" ? message.role.toLowerCase() : "";
+  if (role !== "assistant") {
+    return false;
+  }
+  return isSilentReplyText(extractText(message));
 }
 
 export function parseRawMessage(raw: unknown): RawMessage | null {
@@ -103,7 +300,7 @@ export function buildAssistantTextMessage(
   text: string,
   timestamp = Date.now()
 ): RawMessage | null {
-  if (!text.trim()) return null;
+  if (!text.trim() || isSilentReplyText(text)) return null;
   return {
     role: "assistant",
     blocks: [{ type: "text", text }],
@@ -131,7 +328,7 @@ export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
     if (!isRecord(m)) {
       return [];
     }
-    if (isHiddenApprovalContinuation(m)) {
+    if (isHiddenApprovalContinuation(m) || isAssistantSilentReplyMessage(m)) {
       return [];
     }
     const msg = m as {
@@ -157,7 +354,7 @@ export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
       const text = (Array.isArray(msg.content) ? msg.content : [])
         .filter((b): b is Record<string, unknown> => isRecord(b))
         .filter((b) => b.type === "text")
-        .map((b) => (b.text as string) ?? "")
+        .map((b) => String(b.text ?? ""))
         .join("");
       blocks.push({
         type: "toolResult",
@@ -175,13 +372,13 @@ export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
         switch (block.type) {
           case "text":
             if (block.text)
-              blocks.push({ type: "text", text: block.text as string });
+              blocks.push({ type: "text", text: String(block.text) });
             break;
           case "thinking":
             if (block.thinking)
               blocks.push({
                 type: "thinking",
-                thinking: block.thinking as string,
+                thinking: String(block.thinking),
               });
             break;
           case "toolCall":
@@ -192,6 +389,13 @@ export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
               arguments: (block.arguments as Record<string, unknown>) ?? {},
             });
             break;
+          case "image": {
+            const parsed = parseImageBlock(block);
+            if (parsed) {
+              blocks.push(parsed);
+            }
+            break;
+          }
         }
       }
     }
@@ -209,20 +413,35 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
   const [stream, setStream] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [queue, setQueue] = useState<QueuedChatMessage[]>([]);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
 
   const runIdRef = useRef<string | null>(null);
   const streamRef = useRef<string | null>(null);
   const streamStartedAtRef = useRef<number | null>(null);
+  const queueRef = useRef<QueuedChatMessage[]>([]);
 
   // Monotonically increasing fetch ID — only the latest fetch can write to state
   const fetchIdRef = useRef(0);
 
+  const setQueueState = useCallback((updater: SetStateAction<QueuedChatMessage[]>) => {
+    setQueue((prev) => {
+      const next =
+        typeof updater === "function"
+          ? (updater as (value: QueuedChatMessage[]) => QueuedChatMessage[])(prev)
+          : updater;
+      queueRef.current = next;
+      return next;
+    });
+  }, []);
+
   function parseMessages(raw: Array<unknown>): ChatMessage[] {
     return raw.flatMap((m: unknown) => {
-      if (!isRecord(m)) {
-        return [];
-      }
-      if (isHiddenApprovalContinuation(m)) {
+      if (
+        !isRecord(m) ||
+        isHiddenApprovalContinuation(m) ||
+        isAssistantSilentReplyMessage(m)
+      ) {
         return [];
       }
       const msg = m as {
@@ -230,11 +449,15 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
         content?: unknown;
         timestamp?: number;
       };
-      return [{
-        role: (msg.role as "user" | "assistant") ?? "assistant",
-        content: extractText(m),
-        timestamp: msg.timestamp ?? 0,
-      }];
+      const role =
+        msg.role === "user" ? ("user" as const) : ("assistant" as const);
+      return [
+        {
+          role,
+          content: extractText(m),
+          timestamp: msg.timestamp ?? 0,
+        },
+      ];
     });
   }
 
@@ -243,8 +466,14 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
     streamRef.current = null;
     streamStartedAtRef.current = null;
     runIdRef.current = null;
+    setActiveRunId(null);
     setStream(null);
   }, [sessionKey]);
+
+  const rollbackOptimisticMessage = useCallback((localId: string) => {
+    setRawMessages((prev) => prev.filter((message) => message.localId !== localId));
+    setMessages((prev) => prev.filter((message) => message.localId !== localId));
+  }, []);
 
   const applyHistory = useCallback(
     (raw: Array<unknown>) => {
@@ -308,32 +537,118 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       .catch(() => {});
   }, [applyHistory, client, connected, sessionKey]);
 
-  const appendAssistantMessage = useCallback((message: unknown, fallbackText?: string) => {
-    const parsed = parseRawMessage(message);
-    const fallback = fallbackText?.trim() ?? "";
-    const nextRaw =
-      parsed?.role === "assistant"
-        ? {
-            ...parsed,
-            timestamp: parsed.timestamp || Date.now(),
-          }
-        : buildAssistantTextMessage(fallback);
+  const appendAssistantMessage = useCallback(
+    (message: unknown, fallbackText?: string) => {
+      if (isAssistantSilentReplyMessage(message)) {
+        return;
+      }
 
-    if (!nextRaw) {
+      const parsed = parseRawMessage(message);
+      const fallback = fallbackText?.trim() ?? "";
+      const nextRaw =
+        parsed?.role === "assistant"
+          ? {
+              ...parsed,
+              timestamp: parsed.timestamp || Date.now(),
+            }
+          : buildAssistantTextMessage(fallback);
+
+      if (!nextRaw) {
+        return;
+      }
+
+      const nextText = extractText(message) || fallback;
+      setRawMessages((prev) => [...prev, nextRaw]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: nextText,
+          timestamp: nextRaw.timestamp,
+        },
+      ]);
+    },
+    []
+  );
+
+  const sendImmediate = useCallback(
+    async (
+      text: string,
+      attachments: PendingImageAttachment[]
+    ): Promise<SendOutcome> => {
+      if (!client || !connected) {
+        return "ignored";
+      }
+
+      const trimmed = text.trim();
+      const normalizedAttachments = normalizePendingAttachments(attachments);
+      const serializedAttachments = serializeAttachments(normalizedAttachments);
+      if (!trimmed && !serializedAttachments?.length) {
+        return "ignored";
+      }
+
+      const now = Date.now();
+      const localId = crypto.randomUUID();
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          content:
+            trimmed ||
+            `Image${normalizedAttachments.length > 1 ? "s" : ""} (${normalizedAttachments.length})`,
+          timestamp: now,
+          localId,
+        },
+      ]);
+      setRawMessages((prev) => [
+        ...prev,
+        buildOptimisticUserMessage(trimmed, normalizedAttachments, now, localId),
+      ]);
+
+      const runId = crypto.randomUUID();
+      runIdRef.current = runId;
+      setActiveRunId(runId);
+      streamRef.current = "";
+      streamStartedAtRef.current = now;
+      setStream("");
+      setError(null);
+      markSessionPending(sessionKey);
+
+      try {
+        await client.request("chat.send", {
+          sessionKey,
+          message: trimmed,
+          deliver: false,
+          idempotencyKey: runId,
+          attachments: serializedAttachments,
+        });
+        return "sent";
+      } catch (err) {
+        clearStreaming();
+        rollbackOptimisticMessage(localId);
+        setError(String(err));
+        return "error";
+      }
+    },
+    [clearStreaming, client, connected, rollbackOptimisticMessage, sessionKey]
+  );
+
+  const flushNextQueuedMessage = useCallback(async () => {
+    if (!client || !connected || runIdRef.current || streamRef.current !== null) {
       return;
     }
 
-    const nextText = extractText(message) || fallback;
-    setRawMessages((prev) => [...prev, nextRaw]);
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: nextText,
-        timestamp: nextRaw.timestamp,
-      },
-    ]);
-  }, []);
+    const next = queueRef.current[0];
+    if (!next) {
+      return;
+    }
+
+    setQueueState((prev) => prev.slice(1));
+    const outcome = await sendImmediate(next.text, next.attachments);
+    if (outcome !== "sent") {
+      setQueueState((prev) => [next, ...prev]);
+    }
+  }, [client, connected, sendImmediate, setQueueState]);
 
   // Subscribe to gateway chat events
   useEffect(() => {
@@ -358,15 +673,15 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
           clearSessionPending(sessionKey);
           if (payload.runId && !runIdRef.current) {
             runIdRef.current = payload.runId;
+            setActiveRunId(payload.runId);
           }
           if (streamStartedAtRef.current === null) {
             streamStartedAtRef.current = Date.now();
           }
           const next = extractText(payload.message);
-          if (typeof next === "string") {
+          if (typeof next === "string" && !isSilentReplyText(next)) {
             setStream((prev) => {
-              const resolved =
-                !prev || next.length >= prev.length ? next : prev;
+              const resolved = !prev || next.length >= prev.length ? next : prev;
               streamRef.current = resolved;
               return resolved;
             });
@@ -377,19 +692,29 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
           appendAssistantMessage(payload.message, streamRef.current ?? undefined);
           clearStreaming();
           reloadHistory();
+          void flushNextQueuedMessage();
           break;
         }
         case "aborted":
           appendAssistantMessage(payload.message, streamRef.current ?? undefined);
           clearStreaming();
+          void flushNextQueuedMessage();
           break;
         case "error":
           clearStreaming();
           setError(payload.errorMessage ?? "chat error");
+          void flushNextQueuedMessage();
           break;
       }
     });
-  }, [appendAssistantMessage, clearStreaming, reloadHistory, sessionKey, subscribe]);
+  }, [
+    appendAssistantMessage,
+    clearStreaming,
+    flushNextQueuedMessage,
+    reloadHistory,
+    sessionKey,
+    subscribe,
+  ]);
 
   useEffect(() => {
     if (stream === null) return;
@@ -399,44 +724,78 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
     return () => window.clearInterval(interval);
   }, [reloadHistory, stream]);
 
-  // Send a message
   const sendMessage = useCallback(
-    async (text: string) => {
-      if (!client || !connected || !text.trim()) return;
-
-      const now = Date.now();
-      setMessages((prev) => [
-        ...prev,
-        { role: "user", content: text, timestamp: now },
-      ]);
-      setRawMessages((prev) => [
-        ...prev,
-        { role: "user", blocks: [{ type: "text", text }], timestamp: now },
-      ]);
-      const runId = crypto.randomUUID();
-      runIdRef.current = runId;
-      streamRef.current = "";
-      streamStartedAtRef.current = now;
-      setStream("");
-      setError(null);
-      markSessionPending(sessionKey);
-
-      try {
-        await client.request("chat.send", {
-          sessionKey,
-          message: text,
-          deliver: false,
-          idempotencyKey: runId,
-        });
-      } catch (err) {
-        clearStreaming();
-        setError(String(err));
+    async (
+      text: string,
+      attachments: PendingImageAttachment[] = []
+    ): Promise<SendOutcome> => {
+      const normalizedAttachments = normalizePendingAttachments(attachments);
+      if (!client || !connected) {
+        return "ignored";
       }
+      if (!text.trim() && normalizedAttachments.length === 0) {
+        return "ignored";
+      }
+
+      if (runIdRef.current || streamRef.current !== null) {
+        setQueueState((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            text: text.trim(),
+            attachments: normalizedAttachments,
+            createdAt: Date.now(),
+          },
+        ]);
+        return "queued";
+      }
+
+      return sendImmediate(text, normalizedAttachments);
     },
-    [clearStreaming, client, connected, sessionKey]
+    [client, connected, sendImmediate, setQueueState]
+  );
+
+  const abortRun = useCallback(async (): Promise<boolean> => {
+    if (!client || !connected || (runIdRef.current === null && streamRef.current === null)) {
+      return false;
+    }
+    try {
+      await client.request(
+        "chat.abort",
+        runIdRef.current
+          ? { sessionKey, runId: runIdRef.current }
+          : { sessionKey }
+      );
+      return true;
+    } catch (err) {
+      setError(String(err));
+      return false;
+    }
+  }, [client, connected, sessionKey]);
+
+  const removeQueuedMessage = useCallback(
+    (id: string) => {
+      setQueueState((prev) => prev.filter((message) => message.id !== id));
+    },
+    [setQueueState]
   );
 
   const isStreaming = stream !== null;
+  const isBusy = activeRunId !== null || isStreaming;
+  const canAbort = isBusy;
 
-  return { messages, rawMessages, stream, isStreaming, loading, error, sendMessage };
+  return {
+    messages,
+    rawMessages,
+    stream,
+    isBusy,
+    isStreaming,
+    loading,
+    error,
+    sendMessage,
+    queue,
+    canAbort,
+    abortRun,
+    removeQueuedMessage,
+  };
 }

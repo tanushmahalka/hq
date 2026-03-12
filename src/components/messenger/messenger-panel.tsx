@@ -1,14 +1,26 @@
 import { ApprovalCard } from "@/components/approvals/approval-card";
-import { useRef, useEffect, useState, type FormEvent } from "react";
-import { X, ArrowUp, ChevronDown } from "lucide-react";
+import {
+  useRef,
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type FormEvent,
+} from "react";
+import { X, ArrowUp, ChevronDown, Paperclip, Square } from "lucide-react";
 import { useApprovals } from "@/hooks/use-approvals";
-import { useChat } from "@/hooks/use-chat";
+import {
+  useChat,
+  type PendingImageAttachment,
+  type QueuedChatMessage,
+} from "@/hooks/use-chat";
 import { useGateway } from "@/hooks/use-gateway";
 import { useMessengerPanel } from "@/hooks/use-messenger-panel";
 import { ChatSendProvider } from "@/hooks/use-chat-send";
 import { UXMessageList } from "@/components/chat/session-blocks";
 import { MessageContent } from "./message-content";
 import { LoaderFive } from "@/components/ui/loader";
+import { Button } from "@/components/ui/button";
 import { parseAgentName } from "@/lib/mentions";
 import { useAgentActivity } from "@/hooks/use-agent-activity";
 import {
@@ -18,6 +30,43 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
+function generateAttachmentId(): string {
+  return `attachment-${crypto.randomUUID()}`;
+}
+
+async function readFileAsAttachment(
+  file: File
+): Promise<PendingImageAttachment | null> {
+  if (!file.type.startsWith("image/")) {
+    return null;
+  }
+
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result ?? "")));
+    reader.addEventListener("error", () => reject(reader.error));
+    reader.readAsDataURL(file);
+  }).catch(() => "");
+
+  if (!dataUrl) {
+    return null;
+  }
+
+  return {
+    id: generateAttachmentId(),
+    dataUrl,
+    mimeType: file.type,
+    fileName: file.name,
+  };
+}
+
+function queueSummary(item: QueuedChatMessage): string {
+  if (item.text) {
+    return item.text.length > 72 ? `${item.text.slice(0, 72)}...` : item.text;
+  }
+  return `Image${item.attachments.length > 1 ? "s" : ""} (${item.attachments.length})`;
+}
 
 /* ── Chat Panel (slides in/out, 420px) ── */
 
@@ -131,8 +180,18 @@ function ChatContent({ agentId }: { agentId: string }) {
   const { connected } = useGateway();
   const { agents } = useGateway();
   const { approvals } = useApprovals();
-  const { rawMessages, stream, isStreaming, loading, error, sendMessage } =
-    useChat(agentId);
+  const {
+    rawMessages,
+    stream,
+    isBusy,
+    loading,
+    error,
+    sendMessage,
+    queue,
+    canAbort,
+    abortRun,
+    removeQueuedMessage,
+  } = useChat(agentId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sessionKey = `agent:${agentId}:webchat`;
   const sessionApprovals = approvals.filter(
@@ -171,7 +230,7 @@ function ChatContent({ agentId }: { agentId: string }) {
             </div>
           )}
 
-          {!loading && rawMessages.length === 0 && !isStreaming && (
+          {!loading && rawMessages.length === 0 && !isBusy && (
             <p className="text-xs text-muted-foreground/50 text-center py-12">
               Start a conversation
             </p>
@@ -179,7 +238,7 @@ function ChatContent({ agentId }: { agentId: string }) {
 
           <UXMessageList messages={rawMessages} />
 
-          {isStreaming && (
+          {isBusy && (
             <div className="px-4 py-1.5">
               <div className="max-w-[90%] space-y-1.5">
                 <LoaderFive text="Thinking..." />
@@ -204,39 +263,74 @@ function ChatContent({ agentId }: { agentId: string }) {
       <div className="relative border-t border-border/50 shrink-0">
         <MessengerComposer
           connected={connected}
-          isStreaming={isStreaming}
+          isBusy={isBusy}
+          canAbort={canAbort}
+          queue={queue}
           placeholder={connected ? `Message ${displayName}...` : "Connecting..."}
-          onSend={(text) => void sendMessage(text)}
+          onSend={(text, attachments) => sendMessage(text, attachments)}
+          onAbort={() => void abortRun()}
+          onRemoveQueuedMessage={removeQueuedMessage}
         />
       </div>
     </>
   );
 }
 
-function MessengerComposer({
+export function MessengerComposer({
   connected,
-  isStreaming,
+  isBusy,
+  canAbort,
+  queue,
   placeholder,
   onSend,
+  onAbort,
+  onRemoveQueuedMessage,
 }: {
   connected: boolean;
-  isStreaming: boolean;
+  isBusy: boolean;
+  canAbort: boolean;
+  queue: QueuedChatMessage[];
   placeholder: string;
-  onSend: (text: string) => void;
+  onSend: (
+    text: string,
+    attachments: PendingImageAttachment[]
+  ) => Promise<"sent" | "queued" | "error" | "ignored">;
+  onAbort: () => void;
+  onRemoveQueuedMessage: (id: string) => void;
 }) {
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<PendingImageAttachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const nextMessage = input.trim();
-    if (!nextMessage || isStreaming) return;
-    onSend(nextMessage);
-    setInput("");
+  const addFiles = async (files: FileList | File[]) => {
+    const nextAttachments = (
+      await Promise.all(Array.from(files).map((file) => readFileAsAttachment(file)))
+    ).filter((attachment): attachment is PendingImageAttachment => attachment !== null);
+
+    if (nextAttachments.length === 0) {
+      return;
+    }
+
+    setAttachments((prev) => [...prev, ...nextAttachments]);
   };
+
+  const handleSubmit = async (e?: FormEvent) => {
+    e?.preventDefault();
+    const outcome = await onSend(input, attachments);
+    if (outcome === "sent" || outcome === "queued") {
+      setInput("");
+      setAttachments([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const hasDraft = input.trim().length > 0 || attachments.length > 0;
 
   return (
     <>
-      {isStreaming && (
+      {isBusy && (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
           <div
             className="h-full w-full animate-pulse-soft"
@@ -257,18 +351,97 @@ function MessengerComposer({
           />
         </div>
       )}
+      {queue.length > 0 && (
+        <div className="border-b border-border/40 px-3 py-2 space-y-1.5">
+          <div className="text-[11px] text-muted-foreground/50 uppercase tracking-[0.12em]">
+            Queued ({queue.length})
+          </div>
+          <div className="space-y-1">
+            {queue.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-2 rounded-md border border-border/40 bg-muted/20 px-2.5 py-1.5"
+              >
+                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground/80">
+                  {queueSummary(item)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveQueuedMessage(item.id)}
+                  className="rounded p-0.5 text-muted-foreground/40 transition-colors hover:text-foreground"
+                  aria-label="Remove queued message"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {attachments.length > 0 && (
+        <div className="border-b border-border/40 px-3 py-2">
+          <div className="flex flex-wrap gap-2">
+            {attachments.map((attachment) => (
+              <div
+                key={attachment.id}
+                className="relative overflow-hidden rounded-md border border-border/40 bg-muted/20"
+              >
+                <img
+                  src={attachment.dataUrl}
+                  alt="Attachment preview"
+                  className="size-16 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAttachments((prev) =>
+                      prev.filter((item) => item.id !== attachment.id)
+                    )
+                  }
+                  className="absolute right-1 top-1 rounded-full bg-background/90 p-1 text-muted-foreground/70 shadow-sm transition-colors hover:text-foreground"
+                  aria-label="Remove attachment"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="relative flex items-end">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            if (e.target.files) {
+              void addFiles(e.target.files);
+            }
+          }}
+        />
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onPaste={(e: ClipboardEvent<HTMLTextAreaElement>) => {
+            const imageFiles = Array.from(e.clipboardData.files).filter((file) =>
+              file.type.startsWith("image/")
+            );
+            if (imageFiles.length === 0) {
+              return;
+            }
+            e.preventDefault();
+            void addFiles(imageFiles);
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              handleSubmit(e);
+              void handleSubmit();
             }
           }}
           placeholder={placeholder}
-          disabled={!connected || isStreaming}
+          disabled={!connected}
           rows={1}
           className="flex-1 bg-transparent px-4 py-3 pr-12 text-sm resize-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-30 max-h-32 leading-relaxed"
           style={{ minHeight: "44px" }}
@@ -278,13 +451,41 @@ function MessengerComposer({
             target.style.height = Math.min(target.scrollHeight, 128) + "px";
           }}
         />
-        <button
-          type="submit"
-          disabled={!connected || isStreaming || !input.trim()}
-          className="absolute right-3 bottom-2.5 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-20"
-        >
-          <ArrowUp className="size-3.5" />
-        </button>
+        <div className="absolute right-3 bottom-2.5 flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={!connected}
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="Attach images"
+          >
+            <Paperclip className="size-3.5" />
+          </Button>
+          {canAbort && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              disabled={!connected}
+              onClick={onAbort}
+              aria-label="Stop run"
+            >
+              <Square className="size-3" />
+            </Button>
+          )}
+          <Button
+            type="submit"
+            variant="ghost"
+            size="sm"
+            disabled={!connected || !hasDraft}
+            aria-label={isBusy ? "Queue message" : "Send message"}
+            title={isBusy ? "Queue message" : "Send message"}
+          >
+            <span>{isBusy ? "Queue" : "Send"}</span>
+            <ArrowUp className="size-3.5" />
+          </Button>
+        </div>
       </form>
     </>
   );

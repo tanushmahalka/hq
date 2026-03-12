@@ -23,6 +23,8 @@ import {
   TaskNotificationCard,
 } from "@/components/chat/task-notification-card";
 
+type ImageBlock = ContentBlock & { type: "image" };
+
 function formatTimestamp(ts: number): string {
   if (!ts) return "";
   const d = new Date(ts);
@@ -154,6 +156,48 @@ function isSubagentPreamble(text: string): boolean {
   return stripped.startsWith("[Subagent Context]");
 }
 
+function collectText(blocks: ContentBlock[]): string {
+  return blocks
+    .filter((block): block is ContentBlock & { type: "text" } => block.type === "text")
+    .map((block) => block.text)
+    .join("");
+}
+
+function collectImages(blocks: ContentBlock[]): ImageBlock[] {
+  return blocks.filter((block): block is ImageBlock => block.type === "image");
+}
+
+function ImageGrid({
+  images,
+  className = "",
+}: {
+  images: ImageBlock[];
+  className?: string;
+}) {
+  if (images.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={`mt-2 flex flex-wrap gap-2 ${className}`.trim()}>
+      {images.map((image, index) => {
+        const src = image.dataUrl ?? image.url;
+        if (!src) {
+          return null;
+        }
+        return (
+          <img
+            key={`${src}-${index}`}
+            src={src}
+            alt="Image attachment"
+            className="max-h-56 max-w-[220px] rounded-lg border border-border/40 object-cover shadow-sm"
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function SessionMessageRow({
   msg,
 }: {
@@ -163,15 +207,13 @@ export function SessionMessageRow({
   const { isAdminView } = useAdminView();
 
   if (msg.role === "user") {
-    const text = msg.blocks
-      .filter((b): b is ContentBlock & { type: "text" } => b.type === "text")
-      .map((b) => b.text)
-      .join("");
-    if (!text) return null;
+    const text = collectText(msg.blocks);
+    const images = collectImages(msg.blocks);
+    if (!text && images.length === 0) return null;
 
     if (!isAdminView) {
       // UX mode: try to render structured notifications as cards
-      const notification = parseNotification(text);
+      const notification = images.length === 0 ? parseNotification(text) : null;
       if (notification) {
         return (
           <div className="px-4 py-1.5">
@@ -206,7 +248,7 @@ export function SessionMessageRow({
       }
     }
 
-    return <UserMessage text={text} timestamp={msg.timestamp} />;
+    return <UserMessage text={text} images={images} timestamp={msg.timestamp} />;
   }
 
   if (msg.role === "toolResult") {
@@ -223,6 +265,16 @@ export function SessionMessageRow({
 
   // Non-admin: render assistant messages as a minimal timeline
   if (!isAdminView) {
+    if (collectImages(msg.blocks).length > 0) {
+      return (
+        <AssistantMessage
+          text={collectText(msg.blocks)}
+          images={collectImages(msg.blocks)}
+          timestamp={msg.timestamp}
+          isFirst
+        />
+      );
+    }
     return <AssistantTimeline blocks={msg.blocks} timestamp={msg.timestamp} />;
   }
 
@@ -260,7 +312,7 @@ export function SessionMessageRow({
           );
         }
         const { block, index } = item;
-        switch (block.type) {
+          switch (block.type) {
           case "thinking":
             return (
               <div key={index} className="px-4 py-0.5">
@@ -273,6 +325,12 @@ export function SessionMessageRow({
                 <ToolCallBlock name={block.name} args={block.arguments} />
               </div>
             );
+          case "image":
+            return (
+              <div key={index} className="px-4 py-0.5">
+                <ImageGrid images={[block]} className="mt-0" />
+              </div>
+            );
           default:
             return null;
         }
@@ -282,9 +340,17 @@ export function SessionMessageRow({
 }
 
 /* ── User message (left-aligned, comment-thread style) ── */
-function UserMessage({ text, timestamp }: { text: string; timestamp: number }) {
+function UserMessage({
+  text,
+  images,
+  timestamp,
+}: {
+  text: string;
+  images: ImageBlock[];
+  timestamp: number;
+}) {
   const { cleaned, contexts } = cleanMessageText(text);
-  if (!cleaned) return null;
+  if (!cleaned && images.length === 0) return null;
 
   return (
     <div className="px-4 py-1.5">
@@ -310,9 +376,14 @@ function UserMessage({ text, timestamp }: { text: string; timestamp: number }) {
           </div>
         )}
         <div className="rounded-lg bg-muted/40 px-3.5 py-2.5 border-l-2 border-foreground/10">
-          <div className="text-sm leading-relaxed">
-            <MessageContent text={cleaned} />
-          </div>
+          {cleaned && (
+            <div className="text-sm leading-relaxed">
+              <MessageContent text={cleaned} />
+            </div>
+          )}
+          {images.length > 0 && (
+            <ImageGrid images={images} className={cleaned ? "" : "mt-0"} />
+          )}
         </div>
       </div>
     </div>
@@ -322,25 +393,36 @@ function UserMessage({ text, timestamp }: { text: string; timestamp: number }) {
 /* ── Assistant message (left-aligned) ── */
 function AssistantMessage({
   text,
+  images = [],
   timestamp,
   isFirst,
 }: {
   text: string;
+  images?: ImageBlock[];
   timestamp: number;
   isFirst: boolean;
 }) {
   const { isAdminView } = useAdminView();
   const { cleaned, contexts } = cleanMessageText(text);
-  if (!cleaned) return null;
+  if (!cleaned && images.length === 0) return null;
 
-  const displayText = isAdminView ? cleaned : shortenSessionKeys(cleaned);
+  const displayText = cleaned
+    ? isAdminView
+      ? cleaned
+      : shortenSessionKeys(cleaned)
+    : "";
 
   return (
     <div className="px-4 py-1.5">
       <div className="max-w-[90%]">
-        <div className="text-sm text-foreground/90 leading-relaxed">
-          <MessageContent text={displayText} />
-        </div>
+        {displayText && (
+          <div className="text-sm text-foreground/90 leading-relaxed">
+            <MessageContent text={displayText} />
+          </div>
+        )}
+        {images.length > 0 && (
+          <ImageGrid images={images} className={displayText ? "" : "mt-0"} />
+        )}
         {isFirst && (timestamp > 0 || contexts.length > 0) && (
           <div className="flex items-center gap-1.5 mt-1">
             {timestamp > 0 && (
@@ -711,6 +793,12 @@ function buildUXBlocks(messages: RawMessage[]): UXBlock[] {
     }
 
     if (msg.role !== "assistant") {
+      blocks.push({ kind: "raw", msg });
+      continue;
+    }
+
+    if (collectImages(msg.blocks).length > 0) {
+      flushSteps();
       blocks.push({ kind: "raw", msg });
       continue;
     }

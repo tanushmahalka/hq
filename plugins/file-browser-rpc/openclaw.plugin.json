@@ -1,0 +1,53 @@
+{
+  "id": "file-browser-rpc",
+  "name": "File Browser RPC",
+  "description": "Read-only browsing and download RPC methods for a configured server directory.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "rootPath": {
+        "type": "string",
+        "description": "Absolute path to the directory that HQ should expose in the Files tab."
+      },
+      "label": {
+        "type": "string",
+        "description": "Label shown in HQ for the configured root directory."
+      },
+      "previewMaxBytes": {
+        "type": "integer",
+        "minimum": 1024,
+        "description": "Maximum file size allowed for inline previews."
+      },
+      "downloadMaxBytes": {
+        "type": "integer",
+        "minimum": 1024,
+        "description": "Maximum file or ZIP size allowed for downloads."
+      },
+      "hideDotfiles": {
+        "type": "boolean",
+        "description": "Hide dotfiles and dot-directories from listings and ZIP downloads."
+      }
+    },
+    "required": [
+      "rootPath"
+    ]
+  },
+  "uiHints": {
+    "rootPath": {
+      "label": "Root Path"
+    },
+    "label": {
+      "label": "Label"
+    },
+    "previewMaxBytes": {
+      "label": "Preview Max Bytes"
+    },
+    "downloadMaxBytes": {
+      "label": "Download Max Bytes"
+    },
+    "hideDotfiles": {
+      "label": "Hide Dotfiles"
+    }
+  }
+}

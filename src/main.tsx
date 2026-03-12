@@ -19,6 +19,7 @@ import "./index.css";
 import Layout from "./layout";
 import Dashboard from "./pages/dashboard";
 import Tasks from "./pages/tasks";
+import Agents from "./pages/agents";
 import Missions from "./pages/missions";
 import Files from "./pages/files";
 import Db from "./pages/db";
@@ -109,6 +110,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="tasks" element={<Tasks />} />
               <Route path="missions" element={<Missions />} />
               <Route path="seo" element={<Seo />} />
+              <Route path="files" element={<Files />} />
               <Route path="settings" element={<SettingsLayout />}>
                 <Route index element={<SettingsHome />} />
                 <Route path="team" element={<TeamPage />} />
@@ -117,15 +119,7 @@ createRoot(document.getElementById("root")!).render(
                 path="agents"
                 element={
                   <ProtectedRoute requireAdmin>
-                    <Files />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="files"
-                element={
-                  <ProtectedRoute requireAdmin>
-                    <Files />
+                    <Agents />
                   </ProtectedRoute>
                 }
               />

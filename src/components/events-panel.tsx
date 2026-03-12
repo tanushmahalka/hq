@@ -29,6 +29,7 @@ const RPC_METHODS = [
   "health", "status", "usage.status", "usage.cost",
   "agents.list", "agent", "agent.identity.get", "agent.wait",
   "agents.files.list", "agents.files.get", "agents.files.set",
+  "file-browser.list", "file-browser.read", "file-browser.download",
   "chat.send", "chat.history", "chat.abort",
   "approval.request", "approval.list", "approval.resolve",
   "sessions.list", "sessions.preview", "sessions.patch", "sessions.reset", "sessions.delete", "sessions.compact",

@@ -1,0 +1,14 @@
+{
+  "name": "@psx/file-browser-rpc",
+  "version": "0.1.0",
+  "description": "OpenClaw workspace plugin for browsing and downloading files from a configured root directory",
+  "type": "module",
+  "dependencies": {
+    "yazl": "^3.3.1"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

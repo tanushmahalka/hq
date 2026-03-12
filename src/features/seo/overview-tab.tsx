@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { PageVisibilityFilter, SeoCluster, SeoPage, SeoSite } from "./types";
+import type { SeoCluster, SeoPage, SeoSite } from "./types";
 import { FilterChip, InfoTile, InlineEmptyState } from "./shared";
 import {
   formatDate,
@@ -20,8 +20,6 @@ export function OverviewTab({
   selectedSite,
   filteredPages,
   filteredClusters,
-  selectedVisibility,
-  onVisibilityChange,
   selectedPageType,
   onPageTypeChange,
   pageTypeOptions,
@@ -41,8 +39,6 @@ export function OverviewTab({
   selectedSite: SeoSite | null;
   filteredPages: SeoPage[];
   filteredClusters: SeoCluster[];
-  selectedVisibility: PageVisibilityFilter;
-  onVisibilityChange: (value: PageVisibilityFilter) => void;
   selectedPageType: string;
   onPageTypeChange: (value: string) => void;
   pageTypeOptions: string[];
@@ -80,28 +76,6 @@ export function OverviewTab({
               />
               <div className="flex flex-wrap gap-2">
                 <FilterChip
-                  active={selectedVisibility === "all"}
-                  onClick={() => onVisibilityChange("all")}
-                  label="All visibility"
-                />
-                <FilterChip
-                  active={selectedVisibility === "searchable"}
-                  onClick={() => onVisibilityChange("searchable")}
-                  label="Can appear in search"
-                />
-                <FilterChip
-                  active={selectedVisibility === "hidden"}
-                  onClick={() => onVisibilityChange("hidden")}
-                  label="Hidden from search"
-                />
-                <FilterChip
-                  active={selectedVisibility === "attention"}
-                  onClick={() => onVisibilityChange("attention")}
-                  label="Needs attention"
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <FilterChip
                   active={selectedPageType === "all"}
                   onClick={() => onPageTypeChange("all")}
                   label="All page types"
@@ -121,7 +95,7 @@ export function OverviewTab({
             {filteredPages.length === 0 ? (
               <InlineEmptyState
                 title="No pages match these filters"
-                description="Try a broader search or switch back to all page types and visibility."
+                description="Try a broader search or switch back to all page types."
               />
             ) : (
               <div className="px-5 pb-5">

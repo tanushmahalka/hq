@@ -1,5 +1,4 @@
 export type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
-export type PageVisibilityFilter = "all" | "searchable" | "hidden" | "attention";
 export type SeoViewTab = "overview" | "competitors";
 
 export type SeoSite = {

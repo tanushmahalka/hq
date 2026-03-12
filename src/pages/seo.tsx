@@ -36,7 +36,6 @@ import {
   SummaryCard,
 } from "@/features/seo/shared";
 import type {
-  PageVisibilityFilter,
   SeoCluster,
   SeoCompetitor,
   SeoPage,
@@ -57,9 +56,6 @@ export default function Seo() {
   const [competitorSearch, setCompetitorSearch] = useState("");
   const [selectedPageType, setSelectedPageType] = useState("all");
   const [selectedIntent, setSelectedIntent] = useState("all");
-  const [selectedCompetitorType, setSelectedCompetitorType] = useState("all");
-  const [selectedVisibility, setSelectedVisibility] =
-    useState<PageVisibilityFilter>("all");
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
   const [selectedCompetitorId, setSelectedCompetitorId] = useState<string | null>(null);
@@ -100,21 +96,9 @@ export default function Seo() {
   const intentOptions = Array.from(
     new Set(siteClusters.map((cluster) => cluster.primaryIntent).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b));
-  const competitorTypeOptions = Array.from(
-    new Set(siteCompetitors.map((competitor) => competitor.competitorType).filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b));
-  const effectiveSelectedCompetitorType =
-    selectedCompetitorType === "all" ||
-    competitorTypeOptions.includes(selectedCompetitorType)
-      ? selectedCompetitorType
-      : "all";
-
-  const hasCompetitorFiltersApplied =
-    deferredCompetitorSearch.trim().length > 0 ||
-    effectiveSelectedCompetitorType !== "all";
+  const hasCompetitorFiltersApplied = deferredCompetitorSearch.trim().length > 0;
 
   const filteredPages = sitePages.filter((page) => {
-    const visibility = getVisibilityFilter(page.indexability, page.statusCode);
     const matchesSearch =
       deferredPageSearch.trim().length === 0 ||
       [
@@ -129,10 +113,8 @@ export default function Seo() {
         .includes(deferredPageSearch.trim().toLowerCase());
     const matchesType =
       selectedPageType === "all" || page.pageType === selectedPageType;
-    const matchesVisibility =
-      selectedVisibility === "all" || visibility === selectedVisibility;
 
-    return matchesSearch && matchesType && matchesVisibility;
+    return matchesSearch && matchesType;
   });
 
   const filteredClusters = siteClusters.filter((cluster) => {
@@ -153,25 +135,9 @@ export default function Seo() {
     return matchesSearch && matchesIntent;
   });
 
-  const filteredCompetitors = siteCompetitors.filter((competitor) => {
-    const matchesSearch =
-      deferredCompetitorSearch.trim().length === 0 ||
-      [
-        competitor.label,
-        competitor.competitorDomain,
-        competitor.competitorType,
-        competitor.notes ?? "",
-        competitor.topKeywords.map((keyword) => keyword.keyword).join(" "),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(deferredCompetitorSearch.trim().toLowerCase());
-    const matchesType =
-      effectiveSelectedCompetitorType === "all" ||
-      competitor.competitorType === effectiveSelectedCompetitorType;
-
-    return matchesSearch && matchesType;
-  });
+  const filteredCompetitors = siteCompetitors.filter((competitor) =>
+    matchesCompetitorFilters(competitor, deferredCompetitorSearch),
+  );
 
   const activePage = sitePages.find((page) => page.id === selectedPageId) ?? null;
   const activeCluster =
@@ -179,17 +145,8 @@ export default function Seo() {
     filteredClusters[0] ??
     null;
   const activeCompetitor =
-    filteredCompetitors.find((competitor) => competitor.id === selectedCompetitorId) ??
-    filteredCompetitors[0] ??
-    null;
+    filteredCompetitors.find((competitor) => competitor.id === selectedCompetitorId) ?? null;
 
-  const activeCompetitorCount = siteCompetitors.filter(
-    (competitor) => competitor.isActive,
-  ).length;
-  const competitorFootprintSnapshotCount = siteCompetitors.reduce(
-    (sum, competitor) => sum + competitor.footprintSnapshotCount,
-    0,
-  );
   const competitorLatestKeywordCount = siteCompetitors.reduce(
     (sum, competitor) => sum + competitor.latestKeywordCount,
     0,
@@ -303,18 +260,6 @@ export default function Seo() {
                       hint="Tracked domains for this site"
                     />
                     <SummaryCard
-                      icon={Target}
-                      label="Active"
-                      value={activeCompetitorCount}
-                      hint="Competitors currently in rotation"
-                    />
-                    <SummaryCard
-                      icon={Layers3}
-                      label="Footprint snapshots"
-                      value={competitorFootprintSnapshotCount}
-                      hint="Historical domain-level captures"
-                    />
-                    <SummaryCard
                       icon={BarChart3}
                       label="Latest ranked keywords"
                       value={competitorLatestKeywordCount}
@@ -346,8 +291,6 @@ export default function Seo() {
             selectedSite={selectedSite}
             filteredPages={filteredPages}
             filteredClusters={filteredClusters}
-            selectedVisibility={selectedVisibility}
-            onVisibilityChange={setSelectedVisibility}
             selectedPageType={selectedPageType}
             onPageTypeChange={setSelectedPageType}
             pageTypeOptions={pageTypeOptions}
@@ -371,15 +314,25 @@ export default function Seo() {
             competitors={filteredCompetitors}
             trendCompetitors={siteCompetitors}
             competitorSearch={competitorSearch}
-            onCompetitorSearchChange={setCompetitorSearch}
-            selectedCompetitorType={effectiveSelectedCompetitorType}
-            onCompetitorTypeChange={setSelectedCompetitorType}
-            competitorTypeOptions={competitorTypeOptions}
+            onCompetitorSearchChange={(value) => {
+              setCompetitorSearch(value);
+
+              const selectedCompetitor = siteCompetitors.find(
+                (competitor) => competitor.id === selectedCompetitorId,
+              );
+
+              if (
+                selectedCompetitor &&
+                !matchesCompetitorFilters(selectedCompetitor, value)
+              ) {
+                setSelectedCompetitorId(null);
+              }
+            }}
             totalCompetitorCount={siteCompetitors.length}
             hasActiveFilters={hasCompetitorFiltersApplied}
             onClearFilters={() => {
               setCompetitorSearch("");
-              setSelectedCompetitorType("all");
+              setSelectedCompetitorId(null);
             }}
             activeCompetitor={activeCompetitor}
             onSelectCompetitor={setSelectedCompetitorId}
@@ -437,14 +390,22 @@ export default function Seo() {
   );
 }
 
-function getVisibilityFilter(
-  indexability: string | null,
-  statusCode: number | null,
-): PageVisibilityFilter {
-  const normalized = indexability?.toLowerCase() ?? "";
-
-  if (statusCode !== null && statusCode >= 400) return "attention";
-  if (normalized.includes("noindex") || normalized.includes("blocked")) return "hidden";
-  if (normalized.includes("index")) return "searchable";
-  return "attention";
+function matchesCompetitorFilters(
+  competitor: SeoCompetitor,
+  search: string,
+) {
+  const normalizedSearch = search.trim().toLowerCase();
+  const matchesSearch =
+    normalizedSearch.length === 0 ||
+    [
+      competitor.label,
+      competitor.competitorDomain,
+      competitor.competitorType,
+      competitor.notes ?? "",
+      competitor.topKeywords.map((keyword) => keyword.keyword).join(" "),
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedSearch);
+  return matchesSearch;
 }

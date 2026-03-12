@@ -7,18 +7,8 @@ import type { SeoCompetitor, SeoCompetitorHistoryPoint, SeoSite } from "./types"
 import { InlineEmptyState } from "./shared";
 import { formatNumber } from "./utils";
 
-const SERIES_COLORS = [
-  "#2563eb",
-  "#f97316",
-  "#0f766e",
-  "#dc2626",
-  "#7c3aed",
-  "#0891b2",
-  "#ca8a04",
-  "#db2777",
-  "#4f46e5",
-  "#059669",
-] as const;
+const COMPETITOR_SERIES_COLOR = "#7c3aed";
+const PRIMARY_SERIES_COLOR = "#dc2626";
 
 const DISPLAY_SERIES_LIMIT = 6;
 
@@ -76,6 +66,7 @@ export function CompetitorTrends({
     ? [ownSeries, ...competitorSeries.slice(0, DISPLAY_SERIES_LIMIT - 1)]
     : competitorSeries.slice(0, DISPLAY_SERIES_LIMIT);
   const totalComparableSeries = competitorSeries.length + (ownSeries ? 1 : 0);
+  const xAxisData = getXAxisData(visibleSeries);
 
   if (visibleSeries.length === 0) {
     return (
@@ -124,7 +115,7 @@ export function CompetitorTrends({
             "linear-gradient(135deg, color-mix(in oklab, var(--swarm-blue-dim) 50%, transparent), color-mix(in oklab, var(--swarm-mint-dim) 45%, transparent))",
         }}
       />
-      <CardHeader className="relative border-b border-border/60">
+      <CardHeader className="relative border-b border-border/60 pb-5">
         <div className="flex flex-wrap gap-2">
           {METRIC_OPTIONS.map((option) => (
             <button
@@ -150,17 +141,17 @@ export function CompetitorTrends({
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="relative p-6">
-        <div className="overflow-hidden rounded-[1.6rem] border border-border/60 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-background)_92%,white)_0%,color-mix(in_oklab,var(--color-background)_98%,var(--swarm-blue-dim))_100%)] px-4 pt-4">
+      <CardContent className="relative p-0">
+        <div className="h-[430px] w-full overflow-hidden bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-background)_92%,white)_0%,color-mix(in_oklab,var(--color-background)_98%,var(--swarm-blue-dim))_100%)]">
           <LineChart
-            height={360}
+            height={430}
             hideLegend
-            margin={{ top: 24, right: 72, bottom: 40, left: 20 }}
+            margin={{ top: 0, right: 52, bottom: 26, left: 0 }}
             axisHighlight={{ x: "line" }}
             grid={{ horizontal: true }}
             xAxis={[
               {
-                data: getXAxisData(visibleSeries),
+                data: xAxisData,
                 scaleType: "time",
                 min: getTimeDomainBoundary(visibleSeries, "min"),
                 max: getTimeDomainBoundary(visibleSeries, "max"),
@@ -183,20 +174,14 @@ export function CompetitorTrends({
               },
             ]}
             series={visibleSeries.map((entry) => {
-              const valuesByTime = new Map(
-                entry.points.map((point) => [point.capturedAt.getTime(), point.value]),
-              );
-
               return {
                 id: entry.id,
                 label: entry.label,
                 color: entry.color,
-                curve: "linear" as const,
+                curve: "stepAfter" as const,
                 connectNulls: false,
-                data: getXAxisData(visibleSeries).map(
-                  (timestamp) => valuesByTime.get(timestamp.getTime()) ?? null,
-                ),
-                showMark: entry.isPrimary || entry.points.length === 1 || visibleSeries.length <= 4,
+                data: buildSteppedSeriesData(entry, xAxisData),
+                showMark: false,
                 highlightScope: { highlight: "series" as const, fade: "global" as const },
                 valueFormatter: (value: number | null) =>
                   value === null ? null : `${entry.label}: ${formatNumber(value)}`,
@@ -221,20 +206,17 @@ export function CompetitorTrends({
                 fontSize: 11,
               },
               [`& .${lineElementClasses.root}`]: {
-                strokeWidth: 2.4,
+                strokeWidth: 1.9,
               },
               [`& .${markElementClasses.root}`]: {
                 fill: "rgba(221, 214, 254, 0.95)",
                 stroke: "rgba(109, 40, 217, 0.95)",
                 strokeWidth: 2,
               },
-              '& [data-series="__self__"]': {
-                opacity: 1,
+              [`& .${lineElementClasses.series}-__self__`]: {
+                strokeWidth: 2.4,
               },
-              '& [data-series="__self__"].MuiLineElement-root': {
-                strokeWidth: 3.2,
-              },
-              '& [data-series="__self__"].MuiMarkElement-root': {
+              [`& .${markElementClasses.series}-__self__`]: {
                 fill: "rgba(216, 180, 254, 0.98)",
                 stroke: "rgba(88, 28, 135, 0.98)",
                 strokeWidth: 2.4,
@@ -263,7 +245,7 @@ function buildCompetitorSeries(
 ): MetricSeries[] {
   const series: MetricSeries[] = [];
 
-  competitors.forEach((competitor, index) => {
+  competitors.forEach((competitor) => {
     const points = getCompetitorTimeline(competitor)
       .map((point) => {
         const rawValue = point[metricKey];
@@ -287,7 +269,7 @@ function buildCompetitorSeries(
     series.push({
       id: competitor.id,
       label: competitor.label,
-      color: SERIES_COLORS[index % SERIES_COLORS.length],
+      color: COMPETITOR_SERIES_COLOR,
       latestValue: points[points.length - 1]?.value ?? 0,
       points,
       isPrimary: false,
@@ -328,21 +310,48 @@ function buildSiteSeries(
   return {
     id: "__self__",
     label: "You",
-    color: "#7c3aed",
+    color: PRIMARY_SERIES_COLOR,
     latestValue: points[points.length - 1]?.value ?? 0,
     points,
     isPrimary: true,
   };
 }
 
+function buildSteppedSeriesData(series: MetricSeries, xAxisData: Date[]) {
+  let nextPointIndex = 0;
+  let currentValue: number | null = null;
+
+  return xAxisData.map((timestamp) => {
+    while (
+      nextPointIndex < series.points.length &&
+      series.points[nextPointIndex]!.capturedAt.getTime() <= timestamp.getTime()
+    ) {
+      currentValue = series.points[nextPointIndex]!.value;
+      nextPointIndex += 1;
+    }
+
+    return currentValue;
+  });
+}
+
 function getXAxisData(series: MetricSeries[]) {
-  return Array.from(
+  const timestamps = Array.from(
     new Set(
       series.flatMap((entry) => entry.points.map((point) => point.capturedAt.getTime())),
     ),
-  )
-    .sort((a, b) => a - b)
-    .map((timestamp) => new Date(timestamp));
+  ).sort((a, b) => a - b);
+
+  if (timestamps.length === 0) {
+    return [];
+  }
+
+  const maxTimestamp = timestamps[timestamps.length - 1]!;
+  const previousTimestamp = timestamps[timestamps.length - 2] ?? maxTimestamp - 60_000;
+  const trailingGap = Math.max(maxTimestamp - previousTimestamp, 60_000);
+
+  return [...timestamps, maxTimestamp + trailingGap].map(
+    (timestamp) => new Date(timestamp),
+  );
 }
 
 function getTimeDomainBoundary(series: MetricSeries[], direction: "min" | "max") {

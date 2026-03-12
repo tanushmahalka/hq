@@ -25,6 +25,7 @@ type GatewayState = {
   connected: boolean;
   snapshot: unknown | null;
   agents: Agent[];
+  methods: string[];
 };
 
 type AgentsListResult = {
@@ -51,6 +52,7 @@ export function GatewayProvider({
   const [connected, setConnected] = useState(false);
   const [snapshot, setSnapshot] = useState<unknown | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [methods, setMethods] = useState<string[]>([]);
   const [client, setClient] = useState<GatewayClient | null>(null);
   const clientRef = useRef<GatewayClient | null>(null);
 
@@ -75,6 +77,7 @@ export function GatewayProvider({
       onHello: (hello: HelloOk) => {
         setConnected(true);
         setSnapshot(hello.snapshot ?? null);
+        setMethods(hello.features?.methods ?? []);
         client
           .request<AgentsListResult>("agents.list")
           .then((res) => {
@@ -90,6 +93,7 @@ export function GatewayProvider({
       },
       onClose: () => {
         setConnected(false);
+        setMethods([]);
       },
     });
 
@@ -106,7 +110,7 @@ export function GatewayProvider({
 
   return (
     <GatewayContext.Provider
-      value={{ client, connected, snapshot, agents, subscribe }}
+      value={{ client, connected, snapshot, agents, methods, subscribe }}
     >
       {children}
     </GatewayContext.Provider>

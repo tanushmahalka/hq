@@ -1,4 +1,6 @@
-import type { BadgeVariant, PageVisibilityFilter } from "./types";
+import type { BadgeVariant } from "./types";
+
+type PageVisibilityStatus = "searchable" | "hidden" | "attention";
 
 export function toTitleCase(value: string) {
   return value
@@ -120,7 +122,7 @@ export function getPageRole(
   };
 }
 
-export function getPageStatusDotClass(filter: PageVisibilityFilter) {
+export function getPageStatusDotClass(filter: PageVisibilityStatus) {
   if (filter === "searchable") return "bg-emerald-400";
   if (filter === "hidden") return "bg-slate-300";
   return "bg-amber-400";
@@ -141,7 +143,7 @@ export function getVisibilityStatus(
 ): {
   label: string;
   variant: BadgeVariant;
-  filter: PageVisibilityFilter;
+  filter: PageVisibilityStatus;
 } {
   const normalized = indexability?.toLowerCase() ?? "";
 
