@@ -3,6 +3,7 @@ import {
   Database,
   FolderOpen,
   ListTodo,
+  Search,
   Target,
   LogOut,
   Eye,
@@ -35,6 +36,7 @@ import customPages from "@/pages/custom/registry";
 const baseNavLinks = [
   { to: "/app/tasks", label: "Tasks", icon: ListTodo },
   { to: "/app/missions", label: "Missions", icon: Target },
+  { to: "/app/seo", label: "SEO", icon: Search },
 ] as const;
 
 const adminNavLinks = [

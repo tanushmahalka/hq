@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Database, Table2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,30 +9,19 @@ export default function Db() {
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
   const { data: agents, isLoading: loadingAgents } = trpc.db.agents.useQuery();
+  const effectiveSelectedAgent = selectedAgent ?? agents?.[0]?.id ?? null;
   const { data: tables, isLoading: loadingTables } = trpc.db.tables.useQuery(
-    { agentId: selectedAgent! },
-    { enabled: !!selectedAgent },
+    { agentId: effectiveSelectedAgent! },
+    { enabled: !!effectiveSelectedAgent },
   );
+  const effectiveSelectedTable =
+    selectedTable && tables?.includes(selectedTable)
+      ? selectedTable
+      : tables?.[0] ?? null;
   const { data: tableData, isLoading: loadingData } = trpc.db.table.useQuery(
-    { agentId: selectedAgent!, tableName: selectedTable! },
-    { enabled: !!selectedAgent && !!selectedTable },
+    { agentId: effectiveSelectedAgent!, tableName: effectiveSelectedTable! },
+    { enabled: !!effectiveSelectedAgent && !!effectiveSelectedTable },
   );
-
-  // Auto-select first agent
-  useEffect(() => {
-    if (agents && agents.length > 0 && !selectedAgent) {
-      setSelectedAgent(agents[0].id);
-    }
-  }, [agents, selectedAgent]);
-
-  // Auto-select first table when tables change
-  useEffect(() => {
-    if (tables && tables.length > 0) {
-      setSelectedTable(tables[0]);
-    } else {
-      setSelectedTable(null);
-    }
-  }, [tables]);
 
   return (
     <div className="flex h-full">
@@ -58,7 +47,7 @@ export default function Db() {
                 onClick={() => setSelectedAgent(agent.id)}
                 className={cn(
                   "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-left transition-colors capitalize",
-                  selectedAgent === agent.id
+                  effectiveSelectedAgent === agent.id
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
@@ -79,7 +68,7 @@ export default function Db() {
           </h2>
         </div>
         <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
-          {!selectedAgent ? (
+          {!effectiveSelectedAgent ? (
             <p className="text-xs text-muted-foreground p-3">Select an agent</p>
           ) : loadingTables ? (
             <div className="space-y-2 p-2">
@@ -96,7 +85,7 @@ export default function Db() {
                 onClick={() => setSelectedTable(table)}
                 className={cn(
                   "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-left transition-colors",
-                  selectedTable === table
+                  effectiveSelectedTable === table
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
@@ -113,7 +102,7 @@ export default function Db() {
       <div className="flex-1 flex flex-col min-w-0">
         <div className="px-4 py-2 border-b flex items-center gap-2">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            {selectedTable ?? "Data"}
+            {effectiveSelectedTable ?? "Data"}
           </h2>
           {tableData && (
             <span className="text-xs text-muted-foreground">
@@ -122,7 +111,7 @@ export default function Db() {
           )}
         </div>
         <div className="flex-1 overflow-auto">
-          {!selectedTable ? (
+          {!effectiveSelectedTable ? (
             <p className="text-sm text-muted-foreground p-4">Select a table to view its data</p>
           ) : loadingData ? (
             <div className="p-4 space-y-3">

@@ -59,6 +59,80 @@ export const pages = pgTable(
   ],
 );
 
+export const siteCompetitors = pgTable(
+  "site_competitors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    siteId: uuid("site_id")
+      .notNull()
+      .references(() => sites.id),
+    competitorDomain: text("competitor_domain").notNull(),
+    label: text("label").notNull(),
+    competitorType: text("competitor_type").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("site_competitors_site_domain_unique").on(table.siteId, table.competitorDomain),
+    index("idx_site_competitors_site_id").on(table.siteId),
+    index("idx_site_competitors_type").on(table.competitorType),
+  ],
+);
+
+export const competitorDomainFootprints = pgTable(
+  "competitor_domain_footprints",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    siteCompetitorId: uuid("site_competitor_id")
+      .notNull()
+      .references(() => siteCompetitors.id),
+    location: text("location").notNull(),
+    languageCode: text("language_code").notNull(),
+    estimatedOrganicTraffic: integer("estimated_organic_traffic"),
+    estimatedPaidTraffic: integer("estimated_paid_traffic"),
+    rankedKeywordsCount: integer("ranked_keywords_count"),
+    top3KeywordsCount: integer("top_3_keywords_count"),
+    top10KeywordsCount: integer("top_10_keywords_count"),
+    top100KeywordsCount: integer("top_100_keywords_count"),
+    visibilityScore: numeric("visibility_score", { precision: 10, scale: 2 }),
+    capturedAt: timestamp("captured_at", { mode: "date" }).notNull(),
+  },
+  (table) => [
+    index("idx_competitor_domain_footprints_competitor").on(table.siteCompetitorId),
+    index("idx_competitor_domain_footprints_captured_at").on(table.capturedAt),
+    index("idx_competitor_domain_footprints_location_language").on(table.location, table.languageCode),
+  ],
+);
+
+export const competitorRankedKeywords = pgTable(
+  "competitor_ranked_keywords",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    siteCompetitorId: uuid("site_competitor_id")
+      .notNull()
+      .references(() => siteCompetitors.id),
+    keyword: text("keyword").notNull(),
+    location: text("location").notNull(),
+    languageCode: text("language_code").notNull(),
+    rank: integer("rank").notNull(),
+    searchVolume: integer("search_volume").notNull(),
+    keywordDifficulty: numeric("keyword_difficulty", { precision: 5, scale: 2 }),
+    searchIntent: text("search_intent"),
+    rankingUrl: text("ranking_url").notNull(),
+    serpItemType: text("serp_item_type"),
+    estimatedTraffic: numeric("estimated_traffic", { precision: 12, scale: 2 }),
+    capturedAt: timestamp("captured_at", { mode: "date" }).notNull(),
+  },
+  (table) => [
+    index("idx_competitor_ranked_keywords_competitor").on(table.siteCompetitorId),
+    index("idx_competitor_ranked_keywords_keyword").on(table.keyword),
+    index("idx_competitor_ranked_keywords_rank").on(table.rank),
+    index("idx_competitor_ranked_keywords_captured_at").on(table.capturedAt),
+  ],
+);
+
 export const queryClusters = pgTable("query_clusters", {
   id: uuid("id").primaryKey().defaultRandom(),
   siteId: uuid("site_id")

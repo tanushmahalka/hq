@@ -133,7 +133,6 @@ function ChatContent({ agentId }: { agentId: string }) {
   const { approvals } = useApprovals();
   const { rawMessages, stream, isStreaming, loading, error, sendMessage } =
     useChat(agentId);
-  const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const sessionKey = `agent:${agentId}:webchat`;
   const sessionApprovals = approvals.filter(
@@ -147,13 +146,6 @@ function ChatContent({ agentId }: { agentId: string }) {
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [rawMessages, stream]);
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isStreaming) return;
-    void sendMessage(input);
-    setInput("");
-  };
 
   return (
     <>
@@ -210,63 +202,90 @@ function ChatContent({ agentId }: { agentId: string }) {
 
       {/* Input — clean, border-top separator */}
       <div className="relative border-t border-border/50 shrink-0">
-        {isStreaming && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
-            <div
-              className="h-full w-full animate-pulse-soft"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 18%, color-mix(in oklab, var(--swarm-violet) 92%, white 8%) 50%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 82%, transparent 100%)",
-                boxShadow: "0 0 12px color-mix(in oklab, var(--swarm-violet) 65%, transparent)",
-              }}
-            />
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent 0%, var(--swarm-violet) 50%, transparent 100%)",
-                opacity: 0.9,
-                animation: "swarm-shimmer 2s ease-in-out infinite",
-              }}
-            />
-          </div>
-        )}
-        <form
-          onSubmit={handleSubmit}
-          className="relative flex items-end"
-        >
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-            placeholder={
-              connected ? `Message ${displayName}...` : "Connecting..."
-            }
-            disabled={!connected || isStreaming}
-            rows={1}
-            className="flex-1 bg-transparent px-4 py-3 pr-12 text-sm resize-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-30 max-h-32 leading-relaxed"
-            style={{ minHeight: "44px" }}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = "44px";
-              target.style.height =
-                Math.min(target.scrollHeight, 128) + "px";
+        <MessengerComposer
+          connected={connected}
+          isStreaming={isStreaming}
+          placeholder={connected ? `Message ${displayName}...` : "Connecting..."}
+          onSend={(text) => void sendMessage(text)}
+        />
+      </div>
+    </>
+  );
+}
+
+function MessengerComposer({
+  connected,
+  isStreaming,
+  placeholder,
+  onSend,
+}: {
+  connected: boolean;
+  isStreaming: boolean;
+  placeholder: string;
+  onSend: (text: string) => void;
+}) {
+  const [input, setInput] = useState("");
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const nextMessage = input.trim();
+    if (!nextMessage || isStreaming) return;
+    onSend(nextMessage);
+    setInput("");
+  };
+
+  return (
+    <>
+      {isStreaming && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
+          <div
+            className="h-full w-full animate-pulse-soft"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 18%, color-mix(in oklab, var(--swarm-violet) 92%, white 8%) 50%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 82%, transparent 100%)",
+              boxShadow: "0 0 12px color-mix(in oklab, var(--swarm-violet) 65%, transparent)",
             }}
           />
-          <button
-            type="submit"
-            disabled={!connected || isStreaming || !input.trim()}
-            className="absolute right-3 bottom-2.5 size-7 rounded-md text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors disabled:opacity-20"
-          >
-            <ArrowUp className="size-3.5" />
-          </button>
-        </form>
-      </div>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent 0%, var(--swarm-violet) 50%, transparent 100%)",
+              opacity: 0.9,
+              animation: "swarm-shimmer 2s ease-in-out infinite",
+            }}
+          />
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="relative flex items-end">
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit(e);
+            }
+          }}
+          placeholder={placeholder}
+          disabled={!connected || isStreaming}
+          rows={1}
+          className="flex-1 bg-transparent px-4 py-3 pr-12 text-sm resize-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-30 max-h-32 leading-relaxed"
+          style={{ minHeight: "44px" }}
+          onInput={(e) => {
+            const target = e.target as HTMLTextAreaElement;
+            target.style.height = "44px";
+            target.style.height = Math.min(target.scrollHeight, 128) + "px";
+          }}
+        />
+        <button
+          type="submit"
+          disabled={!connected || isStreaming || !input.trim()}
+          className="absolute right-3 bottom-2.5 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-20"
+        >
+          <ArrowUp className="size-3.5" />
+        </button>
+      </form>
     </>
   );
 }
