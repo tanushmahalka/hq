@@ -9,6 +9,7 @@ const DEFAULT_DOWNLOAD_MAX_BYTES = 64 * 1024 * 1024;
 const MIN_MAX_BYTES = 1024;
 
 const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown"]);
+const TEXT_EXTENSIONS = new Set([".log", ".txt"]);
 const IMAGE_MIME_TYPES = new Map<string, string>([
   [".png", "image/png"],
   [".jpg", "image/jpeg"],
@@ -18,7 +19,7 @@ const IMAGE_MIME_TYPES = new Map<string, string>([
   [".svg", "image/svg+xml"],
 ]);
 
-type FileBrowserPreviewKind = "markdown" | "image" | null;
+type FileBrowserPreviewKind = "markdown" | "image" | "text" | null;
 
 type OpenClawConfig = Record<string, unknown>;
 
@@ -210,6 +211,12 @@ function classifyFile(name: string): {
     return {
       mimeType: "text/markdown",
       previewKind: "markdown",
+    };
+  }
+  if (TEXT_EXTENSIONS.has(extension)) {
+    return {
+      mimeType: "text/plain",
+      previewKind: "text",
     };
   }
   const imageMimeType = IMAGE_MIME_TYPES.get(extension);

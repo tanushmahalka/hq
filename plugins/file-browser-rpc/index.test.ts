@@ -126,9 +126,10 @@ describe("file-browser-rpc", () => {
     });
   });
 
-  it("reads markdown as utf8 and images as base64 with preview metadata", async () => {
+  it("reads markdown/text as utf8 and images as base64 with preview metadata", async () => {
     await withTempDir(async (rootDir) => {
       await fs.writeFile(path.join(rootDir, "note.md"), "# Title\n");
+      await fs.writeFile(path.join(rootDir, "server.log"), "started\nok\n");
       await fs.writeFile(path.join(rootDir, "preview.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 
       const handlers = createHandlers({ rootPath: rootDir });
@@ -144,6 +145,21 @@ describe("file-browser-rpc", () => {
           previewKind: "markdown",
           encoding: "utf8",
           content: "# Title\n",
+        },
+      });
+
+      const textResult = await callHandler(handlers.get("file-browser.read"), {
+        relativePath: "server.log",
+        encoding: "utf8",
+      });
+      expect(textResult.ok).toBe(true);
+      expect(textResult.payload).toMatchObject({
+        file: {
+          name: "server.log",
+          previewKind: "text",
+          mimeType: "text/plain",
+          encoding: "utf8",
+          content: "started\nok\n",
         },
       });
 

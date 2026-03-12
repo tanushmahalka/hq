@@ -125,7 +125,7 @@ describe("useChat", () => {
     ).toHaveLength(0);
   });
 
-  it("stays visibly busy for silent external runs so follow-ups do not look sendable", async () => {
+  it("does not queue follow-ups when there is no visible in-flight stream", async () => {
     const { result } = renderHook(() => useChat("agent-1"));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -138,16 +138,17 @@ describe("useChat", () => {
     });
 
     expect(result.current.isStreaming).toBe(false);
-    expect(result.current.isBusy).toBe(true);
-    expect(result.current.canAbort).toBe(true);
+    expect(result.current.isBusy).toBe(false);
+    expect(result.current.canAbort).toBe(false);
 
-    let queuedOutcome: Awaited<ReturnType<typeof result.current.sendMessage>> = "ignored";
+    let sendOutcome: Awaited<ReturnType<typeof result.current.sendMessage>> = "ignored";
     await act(async () => {
-      queuedOutcome = await result.current.sendMessage("follow-up");
+      sendOutcome = await result.current.sendMessage("follow-up");
     });
 
-    expect(queuedOutcome).toBe("queued");
-    expect(result.current.queue).toHaveLength(1);
+    expect(sendOutcome).toBe("sent");
+    expect(result.current.queue).toHaveLength(0);
+    expect(getChatSendCalls()).toHaveLength(1);
   });
 
   it("queues a follow-up message while busy and flushes it after final", async () => {

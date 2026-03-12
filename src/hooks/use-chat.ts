@@ -414,12 +414,14 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [queue, setQueue] = useState<QueuedChatMessage[]>([]);
+  const [sending, setSending] = useState(false);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
 
   const runIdRef = useRef<string | null>(null);
   const streamRef = useRef<string | null>(null);
   const streamStartedAtRef = useRef<number | null>(null);
   const queueRef = useRef<QueuedChatMessage[]>([]);
+  const sendingRef = useRef(false);
 
   // Monotonically increasing fetch ID — only the latest fetch can write to state
   const fetchIdRef = useRef(0);
@@ -433,6 +435,16 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       queueRef.current = next;
       return next;
     });
+  }, []);
+
+  const setSendingState = useCallback((value: boolean) => {
+    sendingRef.current = value;
+    setSending(value);
+  }, []);
+
+  const setActiveRunState = useCallback((value: string | null) => {
+    runIdRef.current = value;
+    setActiveRunId(value);
   }, []);
 
   function parseMessages(raw: Array<unknown>): ChatMessage[] {
@@ -465,10 +477,9 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
     clearSessionPending(sessionKey);
     streamRef.current = null;
     streamStartedAtRef.current = null;
-    runIdRef.current = null;
-    setActiveRunId(null);
+    setActiveRunState(null);
     setStream(null);
-  }, [sessionKey]);
+  }, [sessionKey, setActiveRunState]);
 
   const rollbackOptimisticMessage = useCallback((localId: string) => {
     setRawMessages((prev) => prev.filter((message) => message.localId !== localId));
@@ -606,11 +617,11 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       ]);
 
       const runId = crypto.randomUUID();
-      runIdRef.current = runId;
-      setActiveRunId(runId);
+      setActiveRunState(runId);
       streamRef.current = "";
       streamStartedAtRef.current = now;
       setStream("");
+      setSendingState(true);
       setError(null);
       markSessionPending(sessionKey);
 
@@ -628,13 +639,23 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
         rollbackOptimisticMessage(localId);
         setError(String(err));
         return "error";
+      } finally {
+        setSendingState(false);
       }
     },
-    [clearStreaming, client, connected, rollbackOptimisticMessage, sessionKey]
+    [
+      clearStreaming,
+      client,
+      connected,
+      rollbackOptimisticMessage,
+      sessionKey,
+      setActiveRunState,
+      setSendingState,
+    ]
   );
 
   const flushNextQueuedMessage = useCallback(async () => {
-    if (!client || !connected || runIdRef.current || streamRef.current !== null) {
+    if (!client || !connected || sendingRef.current || runIdRef.current) {
       return;
     }
 
@@ -664,6 +685,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
         if (payload.state === "final") {
           appendAssistantMessage(payload.message);
           reloadHistory();
+          void flushNextQueuedMessage();
         }
         return;
       }
@@ -671,10 +693,6 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       switch (payload.state) {
         case "delta": {
           clearSessionPending(sessionKey);
-          if (payload.runId && !runIdRef.current) {
-            runIdRef.current = payload.runId;
-            setActiveRunId(payload.runId);
-          }
           if (streamStartedAtRef.current === null) {
             streamStartedAtRef.current = Date.now();
           }
@@ -716,14 +734,6 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
     subscribe,
   ]);
 
-  useEffect(() => {
-    if (stream === null) return;
-    const interval = window.setInterval(() => {
-      reloadHistory();
-    }, 1500);
-    return () => window.clearInterval(interval);
-  }, [reloadHistory, stream]);
-
   const sendMessage = useCallback(
     async (
       text: string,
@@ -737,7 +747,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
         return "ignored";
       }
 
-      if (runIdRef.current || streamRef.current !== null) {
+      if (sendingRef.current || runIdRef.current) {
         setQueueState((prev) => [
           ...prev,
           {
@@ -756,7 +766,7 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
   );
 
   const abortRun = useCallback(async (): Promise<boolean> => {
-    if (!client || !connected || (runIdRef.current === null && streamRef.current === null)) {
+    if (!client || !connected || runIdRef.current === null) {
       return false;
     }
     try {
@@ -781,8 +791,8 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
   );
 
   const isStreaming = stream !== null;
-  const isBusy = activeRunId !== null || isStreaming;
-  const canAbort = isBusy;
+  const isBusy = sending || activeRunId !== null;
+  const canAbort = activeRunId !== null;
 
   return {
     messages,

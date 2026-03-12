@@ -8,7 +8,7 @@ type FileBrowserEntry = {
   size: number | null;
   updatedAtMs: number | null;
   mimeType: string | null;
-  previewKind: "markdown" | "image" | null;
+  previewKind: "markdown" | "image" | "text" | null;
 };
 
 type FileBrowserDirectory = {
@@ -61,6 +61,15 @@ const directories: Record<string, FileBrowserDirectory> = {
         updatedAtMs: 1_710_000_000_000,
         mimeType: "image/png",
         previewKind: "image",
+      },
+      {
+        name: "server.log",
+        relativePath: "server.log",
+        kind: "file",
+        size: 26,
+        updatedAtMs: 1_710_000_000_000,
+        mimeType: "text/plain",
+        previewKind: "text",
       },
       {
         name: "archive.zip",
@@ -147,6 +156,20 @@ function createRequestHandler() {
             },
           };
         }
+        if (params?.relativePath === "server.log") {
+          return {
+            file: {
+              name: "server.log",
+              relativePath: "server.log",
+              size: 26,
+              updatedAtMs: 1_710_000_000_000,
+              mimeType: "text/plain",
+              previewKind: "text",
+              encoding: "utf8",
+              content: "booting...\nworker ready\n",
+            },
+          };
+        }
         throw new Error(`unexpected read path: ${params?.relativePath}`);
       case "file-browser.download":
         return {
@@ -208,6 +231,22 @@ describe("Files page", () => {
 
     const image = await screen.findByAltText("preview.png");
     expect(image).toHaveAttribute("src", "data:image/png;base64,iVBORw==");
+  });
+
+  it("renders plain text previews for log files", async () => {
+    const { default: Files } = await import("./files");
+
+    render(<Files />);
+
+    await screen.findByText("server.log");
+    const logButton = screen.getByText("server.log").closest("button");
+    expect(logButton).not.toBeNull();
+    fireEvent.click(logButton!);
+
+    const preview = await screen.findByText(/booting\.\.\.\s+worker ready/, {
+      selector: "pre",
+    });
+    expect(preview).toBeInTheDocument();
   });
 
   it("shows metadata and download-only state for unsupported file previews", async () => {

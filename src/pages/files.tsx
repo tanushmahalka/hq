@@ -18,7 +18,7 @@ import { useGateway } from "@/hooks/use-gateway";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
-type FileBrowserPreviewKind = "markdown" | "image" | null;
+type FileBrowserPreviewKind = "markdown" | "image" | "text" | null;
 
 type FileBrowserEntry = {
   name: string;
@@ -60,6 +60,7 @@ type PreviewState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "markdown"; file: FileBrowserFile }
+  | { status: "text"; file: FileBrowserFile }
   | { status: "image"; file: FileBrowserFile; src: string }
   | { status: "unsupported" }
   | { status: "too-large"; message: string }
@@ -128,7 +129,7 @@ function EntryIcon({ entry }: { entry: FileBrowserEntry }) {
   if (entry.previewKind === "image") {
     return <ImageIcon className="size-4 shrink-0 text-emerald-600" />;
   }
-  if (entry.previewKind === "markdown") {
+  if (entry.previewKind === "markdown" || entry.previewKind === "text") {
     return <FileText className="size-4 shrink-0 text-amber-700" />;
   }
   return <File className="size-4 shrink-0 text-muted-foreground" />;
@@ -288,6 +289,13 @@ export default function Files() {
             status: "image",
             file: result.file,
             src: buildImageSrc(result.file),
+          });
+          return;
+        }
+        if (result.file.previewKind === "text") {
+          setPreview({
+            status: "text",
+            file: result.file,
           });
           return;
         }
@@ -538,6 +546,20 @@ export default function Files() {
           <div className="prose prose-sm max-w-none dark:prose-invert">
             <Markdown remarkPlugins={[remarkGfm]}>{preview.file.content}</Markdown>
           </div>
+        </PreviewFrame>
+      );
+    }
+
+    if (preview.status === "text") {
+      return (
+        <PreviewFrame title={previewTitle} subtitle={previewSubtitle} action={previewAction}>
+          <div className="mb-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span>{formatBytes(preview.file.size)}</span>
+            <span>{formatTimestamp(preview.file.updatedAtMs)}</span>
+          </div>
+          <pre className="overflow-x-auto rounded-lg border bg-muted/20 p-4 font-mono text-xs leading-6 whitespace-pre-wrap break-words">
+            {preview.file.content}
+          </pre>
         </PreviewFrame>
       );
     }
