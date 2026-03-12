@@ -6,6 +6,7 @@ import {
   pages,
   queryClusters,
   queries,
+  siteDomainFootprints,
   siteCompetitors,
   sites,
 } from "../../drizzle/schema/seo.ts";
@@ -26,6 +27,24 @@ export type SeoOverview = {
     clusterCount: number;
     keywordCount: number;
     mappedPageCount: number;
+    footprintSnapshotCount: number;
+    latestFootprint: {
+      location: string;
+      languageCode: string;
+      estimatedOrganicTraffic: number | null;
+      estimatedPaidTraffic: number | null;
+      rankedKeywordsCount: number | null;
+      top3KeywordsCount: number | null;
+      top10KeywordsCount: number | null;
+      top100KeywordsCount: number | null;
+      visibilityScore: string | null;
+      capturedAt: Date;
+    } | null;
+    history: Array<{
+      estimatedOrganicTraffic: number | null;
+      rankedKeywordsCount: number | null;
+      capturedAt: Date;
+    }>;
   }>;
   competitors: Array<{
     id: string;
@@ -51,6 +70,11 @@ export type SeoOverview = {
       visibilityScore: string | null;
       capturedAt: Date;
     } | null;
+    history: Array<{
+      estimatedOrganicTraffic: number | null;
+      rankedKeywordsCount: number | null;
+      capturedAt: Date;
+    }>;
     topKeywords: Array<{
       keyword: string;
       location: string;
@@ -109,6 +133,7 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     targetRows,
     competitorRows,
     footprintRows,
+    siteFootprintRows,
     competitorKeywordRows,
   ] = await Promise.all([
     db
@@ -186,6 +211,21 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
       .from(competitorDomainFootprints),
     db
       .select({
+        siteId: siteDomainFootprints.siteId,
+        location: siteDomainFootprints.location,
+        languageCode: siteDomainFootprints.languageCode,
+        estimatedOrganicTraffic: siteDomainFootprints.estimatedOrganicTraffic,
+        estimatedPaidTraffic: siteDomainFootprints.estimatedPaidTraffic,
+        rankedKeywordsCount: siteDomainFootprints.rankedKeywordsCount,
+        top3KeywordsCount: siteDomainFootprints.top3KeywordsCount,
+        top10KeywordsCount: siteDomainFootprints.top10KeywordsCount,
+        top100KeywordsCount: siteDomainFootprints.top100KeywordsCount,
+        visibilityScore: siteDomainFootprints.visibilityScore,
+        capturedAt: siteDomainFootprints.capturedAt,
+      })
+      .from(siteDomainFootprints),
+    db
+      .select({
         siteCompetitorId: competitorRankedKeywords.siteCompetitorId,
         keyword: competitorRankedKeywords.keyword,
         location: competitorRankedKeywords.location,
@@ -261,6 +301,16 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     footprintsByCompetitor.set(row.siteCompetitorId, existing);
   }
 
+  const footprintsBySite = new Map<
+    string,
+    Array<(typeof siteFootprintRows)[number]>
+  >();
+  for (const row of siteFootprintRows) {
+    const existing = footprintsBySite.get(row.siteId) ?? [];
+    existing.push(row);
+    footprintsBySite.set(row.siteId, existing);
+  }
+
   const keywordsByCompetitor = new Map<
     string,
     Array<(typeof competitorKeywordRows)[number]>
@@ -277,6 +327,13 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
         (a, b) => b.capturedAt.getTime() - a.capturedAt.getTime(),
       );
       const latestFootprint = competitorFootprints[0] ?? null;
+      const history = [...competitorFootprints]
+        .sort((a, b) => a.capturedAt.getTime() - b.capturedAt.getTime())
+        .map((footprint) => ({
+          estimatedOrganicTraffic: footprint.estimatedOrganicTraffic,
+          rankedKeywordsCount: footprint.rankedKeywordsCount,
+          capturedAt: footprint.capturedAt,
+        }));
 
       const competitorKeywords = [...(keywordsByCompetitor.get(competitor.id) ?? [])].sort(
         (a, b) => {
@@ -325,6 +382,7 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
               capturedAt: latestFootprint.capturedAt,
             }
           : null,
+        history,
         topKeywords: latestKeywordSnapshot.slice(0, 8),
       };
     })
@@ -411,6 +469,17 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
       const siteClusterCount = clusterRows.filter(
         (cluster) => cluster.siteId === site.id,
       ).length;
+      const siteFootprints = [...(footprintsBySite.get(site.id) ?? [])].sort(
+        (a, b) => b.capturedAt.getTime() - a.capturedAt.getTime(),
+      );
+      const latestFootprint = siteFootprints[0] ?? null;
+      const history = [...siteFootprints]
+        .sort((a, b) => a.capturedAt.getTime() - b.capturedAt.getTime())
+        .map((footprint) => ({
+          estimatedOrganicTraffic: footprint.estimatedOrganicTraffic,
+          rankedKeywordsCount: footprint.rankedKeywordsCount,
+          capturedAt: footprint.capturedAt,
+        }));
 
       return {
         id: site.id,
@@ -420,6 +489,22 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
         clusterCount: siteClusterCount,
         keywordCount: siteKeywordCount.get(site.id) ?? 0,
         mappedPageCount: siteMappedPages.get(site.id)?.size ?? 0,
+        footprintSnapshotCount: siteFootprints.length,
+        latestFootprint: latestFootprint
+          ? {
+              location: latestFootprint.location,
+              languageCode: latestFootprint.languageCode,
+              estimatedOrganicTraffic: latestFootprint.estimatedOrganicTraffic,
+              estimatedPaidTraffic: latestFootprint.estimatedPaidTraffic,
+              rankedKeywordsCount: latestFootprint.rankedKeywordsCount,
+              top3KeywordsCount: latestFootprint.top3KeywordsCount,
+              top10KeywordsCount: latestFootprint.top10KeywordsCount,
+              top100KeywordsCount: latestFootprint.top100KeywordsCount,
+              visibilityScore: latestFootprint.visibilityScore,
+              capturedAt: latestFootprint.capturedAt,
+            }
+          : null,
+        history,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

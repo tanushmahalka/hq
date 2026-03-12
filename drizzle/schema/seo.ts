@@ -106,6 +106,31 @@ export const competitorDomainFootprints = pgTable(
   ],
 );
 
+export const siteDomainFootprints = pgTable(
+  "site_domain_footprints",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    siteId: uuid("site_id")
+      .notNull()
+      .references(() => sites.id),
+    location: text("location").notNull(),
+    languageCode: text("language_code").notNull(),
+    estimatedOrganicTraffic: integer("estimated_organic_traffic"),
+    estimatedPaidTraffic: integer("estimated_paid_traffic"),
+    rankedKeywordsCount: integer("ranked_keywords_count"),
+    top3KeywordsCount: integer("top_3_keywords_count"),
+    top10KeywordsCount: integer("top_10_keywords_count"),
+    top100KeywordsCount: integer("top_100_keywords_count"),
+    visibilityScore: numeric("visibility_score", { precision: 10, scale: 2 }),
+    capturedAt: timestamp("captured_at", { mode: "date" }).notNull(),
+  },
+  (table) => [
+    index("idx_site_domain_footprints_site").on(table.siteId),
+    index("idx_site_domain_footprints_captured_at").on(table.capturedAt),
+    index("idx_site_domain_footprints_location_language").on(table.location, table.languageCode),
+  ],
+);
+
 export const competitorRankedKeywords = pgTable(
   "competitor_ranked_keywords",
   {

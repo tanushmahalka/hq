@@ -10,6 +10,22 @@ export type SeoSite = {
   clusterCount: number;
   keywordCount: number;
   mappedPageCount: number;
+  footprintSnapshotCount: number;
+  latestFootprint: SeoSiteFootprint | null;
+  history: SeoCompetitorHistoryPoint[];
+};
+
+export type SeoSiteFootprint = {
+  location: string;
+  languageCode: string;
+  estimatedOrganicTraffic: number | null;
+  estimatedPaidTraffic: number | null;
+  rankedKeywordsCount: number | null;
+  top3KeywordsCount: number | null;
+  top10KeywordsCount: number | null;
+  top100KeywordsCount: number | null;
+  visibilityScore: string | null;
+  capturedAt: Date;
 };
 
 export type SeoPage = {
@@ -61,6 +77,12 @@ export type SeoCompetitorKeyword = {
   capturedAt: Date;
 };
 
+export type SeoCompetitorHistoryPoint = {
+  estimatedOrganicTraffic: number | null;
+  rankedKeywordsCount: number | null;
+  capturedAt: Date;
+};
+
 export type SeoCompetitor = {
   id: string;
   siteId: string;
@@ -85,6 +107,7 @@ export type SeoCompetitor = {
     visibilityScore: string | null;
     capturedAt: Date;
   } | null;
+  history: SeoCompetitorHistoryPoint[];
   topKeywords: SeoCompetitorKeyword[];
 };
 

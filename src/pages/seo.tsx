@@ -103,6 +103,15 @@ export default function Seo() {
   const competitorTypeOptions = Array.from(
     new Set(siteCompetitors.map((competitor) => competitor.competitorType).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b));
+  const effectiveSelectedCompetitorType =
+    selectedCompetitorType === "all" ||
+    competitorTypeOptions.includes(selectedCompetitorType)
+      ? selectedCompetitorType
+      : "all";
+
+  const hasCompetitorFiltersApplied =
+    deferredCompetitorSearch.trim().length > 0 ||
+    effectiveSelectedCompetitorType !== "all";
 
   const filteredPages = sitePages.filter((page) => {
     const visibility = getVisibilityFilter(page.indexability, page.statusCode);
@@ -158,8 +167,8 @@ export default function Seo() {
         .toLowerCase()
         .includes(deferredCompetitorSearch.trim().toLowerCase());
     const matchesType =
-      selectedCompetitorType === "all" ||
-      competitor.competitorType === selectedCompetitorType;
+      effectiveSelectedCompetitorType === "all" ||
+      competitor.competitorType === effectiveSelectedCompetitorType;
 
     return matchesSearch && matchesType;
   });
@@ -358,12 +367,20 @@ export default function Seo() {
         ) : (
           <CompetitorsTab
             siteName={selectedSite?.name ?? "Selected site"}
+            selectedSite={selectedSite}
             competitors={filteredCompetitors}
+            trendCompetitors={siteCompetitors}
             competitorSearch={competitorSearch}
             onCompetitorSearchChange={setCompetitorSearch}
-            selectedCompetitorType={selectedCompetitorType}
+            selectedCompetitorType={effectiveSelectedCompetitorType}
             onCompetitorTypeChange={setSelectedCompetitorType}
             competitorTypeOptions={competitorTypeOptions}
+            totalCompetitorCount={siteCompetitors.length}
+            hasActiveFilters={hasCompetitorFiltersApplied}
+            onClearFilters={() => {
+              setCompetitorSearch("");
+              setSelectedCompetitorType("all");
+            }}
             activeCompetitor={activeCompetitor}
             onSelectCompetitor={setSelectedCompetitorId}
           />
