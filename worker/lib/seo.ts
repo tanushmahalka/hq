@@ -11,6 +11,21 @@ import {
   sites,
 } from "../../drizzle/schema/seo.ts";
 
+function parseRequiredDate(value: Date | string, fieldName: string): Date {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new TypeError(`Invalid ${fieldName}: ${String(value)}`);
+  }
+
+  return date;
+}
+
+function parseOptionalDate(value: Date | string | null, fieldName: string): Date | null {
+  if (value === null) return null;
+  return parseRequiredDate(value, fieldName);
+}
+
 export type SeoOverview = {
   summary: {
     siteCount: number;
@@ -242,8 +257,34 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
       .from(competitorRankedKeywords),
   ]);
 
+  const normalizedPageRows = pageRows.map((page) => ({
+    ...page,
+    lastCrawledAt: parseOptionalDate(page.lastCrawledAt, "pages.lastCrawledAt"),
+  }));
+
+  const normalizedFootprintRows = footprintRows.map((row) => ({
+    ...row,
+    capturedAt: parseRequiredDate(
+      row.capturedAt,
+      "competitor_domain_footprints.capturedAt",
+    ),
+  }));
+
+  const normalizedSiteFootprintRows = siteFootprintRows.map((row) => ({
+    ...row,
+    capturedAt: parseRequiredDate(row.capturedAt, "site_domain_footprints.capturedAt"),
+  }));
+
+  const normalizedCompetitorKeywordRows = competitorKeywordRows.map((row) => ({
+    ...row,
+    capturedAt: parseRequiredDate(
+      row.capturedAt,
+      "competitor_ranked_keywords.capturedAt",
+    ),
+  }));
+
   const siteById = new Map(siteRows.map((site) => [site.id, site]));
-  const pageById = new Map(pageRows.map((page) => [page.id, page]));
+  const pageById = new Map(normalizedPageRows.map((page) => [page.id, page]));
   const clusterById = new Map(clusterRows.map((cluster) => [cluster.id, cluster]));
 
   const keywordsByCluster = new Map<number, string[]>();
@@ -293,9 +334,9 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
 
   const footprintsByCompetitor = new Map<
     number,
-    Array<(typeof footprintRows)[number]>
+    Array<(typeof normalizedFootprintRows)[number]>
   >();
-  for (const row of footprintRows) {
+  for (const row of normalizedFootprintRows) {
     const existing = footprintsByCompetitor.get(row.siteCompetitorId) ?? [];
     existing.push(row);
     footprintsByCompetitor.set(row.siteCompetitorId, existing);
@@ -303,9 +344,9 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
 
   const footprintsBySite = new Map<
     number,
-    Array<(typeof siteFootprintRows)[number]>
+    Array<(typeof normalizedSiteFootprintRows)[number]>
   >();
-  for (const row of siteFootprintRows) {
+  for (const row of normalizedSiteFootprintRows) {
     const existing = footprintsBySite.get(row.siteId) ?? [];
     existing.push(row);
     footprintsBySite.set(row.siteId, existing);
@@ -313,9 +354,9 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
 
   const keywordsByCompetitor = new Map<
     number,
-    Array<(typeof competitorKeywordRows)[number]>
+    Array<(typeof normalizedCompetitorKeywordRows)[number]>
   >();
-  for (const row of competitorKeywordRows) {
+  for (const row of normalizedCompetitorKeywordRows) {
     const existing = keywordsByCompetitor.get(row.siteCompetitorId) ?? [];
     existing.push(row);
     keywordsByCompetitor.set(row.siteCompetitorId, existing);
@@ -396,7 +437,7 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
       return a.label.localeCompare(b.label);
     });
 
-  const pagesResult = pageRows
+  const pagesResult = normalizedPageRows
     .map((page) => {
       const site = siteById.get(page.siteId);
       const clusterNames = Array.from(clusterIdsByPage.get(page.id) ?? [])

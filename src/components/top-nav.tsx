@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bot,
   Database,
   Folder,
@@ -42,6 +43,7 @@ const baseNavLinks = [
 ] as const;
 
 const adminNavLinks = [
+  { to: "/app/usage", label: "Usage", icon: Activity },
   { to: "/app/agents", label: "Agents", icon: FolderOpen },
   { to: "/app/db", label: "Db", icon: Database },
 ] as const;
