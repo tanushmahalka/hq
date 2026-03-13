@@ -219,10 +219,13 @@ pnpm openclaw config set hooks.token "<OPENCLAW_HOOKS_TOKEN>"
 pnpm openclaw config set hooks.defaultSessionKey "hook:hq"
 pnpm openclaw config set hooks.allowRequestSessionKey false
 pnpm openclaw config set gateway.controlUi.allowedOrigins '["https://hq.example.com"]' --strict-json
+pnpm openclaw config set agents.defaults.subagents.maxSpawnDepth 2
 pnpm openclaw config set plugins.entries.hq-missions.config.hqApiUrl "http://127.0.0.1:5174/api/trpc"
 pnpm openclaw config set plugins.entries.hq-missions.config.hqApiToken "<AGENT_API_TOKEN>"
 pnpm openclaw gateway restart || sudo systemctl restart openclaw-gateway
 ```
+
+`agents.defaults.subagents.maxSpawnDepth=2` allows a depth-1 worker to spawn exactly one validator leaf while still preventing unbounded nested orchestration.
 
 ## 8) Build HQ and run it as a systemd service
 

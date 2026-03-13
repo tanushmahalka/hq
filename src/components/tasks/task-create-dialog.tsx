@@ -19,6 +19,10 @@ import {
 import { Loader2, CircleAlert, Star } from "lucide-react";
 import { toast } from "sonner";
 import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
+import {
+  TASK_WORKFLOW_MODES,
+  type TaskWorkflowMode,
+} from "@shared/task-workflow";
 
 const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
   todo: "bg-gray-400",
@@ -28,6 +32,7 @@ const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
 };
 import { trpc } from "@/lib/trpc";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
+import { useGateway } from "@/hooks/use-gateway";
 
 interface TaskCreateDialogProps {
   open: boolean;
@@ -40,10 +45,7 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>(initialStatus);
-
-  useEffect(() => {
-    if (open) setStatus(initialStatus);
-  }, [open, initialStatus]);
+  const [workflowMode, setWorkflowMode] = useState<TaskWorkflowMode>("simple");
 
   const [assignor, setAssignor] = useState("");
   const [assignee, setAssignee] = useState("");
@@ -53,11 +55,12 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
 
   const utils = trpc.useUtils();
   const notifyTask = useTaskNotify();
+  const { agents } = useGateway();
 
   const createTask = trpc.task.create.useMutation({
     onSuccess: (task) => {
       utils.task.list.invalidate();
-      if (task?.assignee) {
+      if (task?.workflowMode !== "complex" && task?.assignee) {
         notifyTask(task.assignee, task.id, formatTaskNotification("created", task));
       }
       resetForm();
@@ -73,6 +76,7 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
     setTitle("");
     setDescription("");
     setStatus("todo");
+    setWorkflowMode("simple");
     setAssignor("");
     setAssignee("");
     setDueDate("");
@@ -80,13 +84,29 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
     setImportant(false);
   };
 
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!open) return;
+    setTitle("");
+    setDescription("");
+    setStatus(initialStatus);
+    setWorkflowMode("simple");
+    setAssignor("");
+    setAssignee("");
+    setDueDate("");
+    setUrgent(false);
+    setImportant(false);
+  }, [open, initialStatus]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     createTask.mutate({
       title: title.trim(),
       description: description.trim() || undefined,
-      status,
+      status: workflowMode === "simple" ? status : undefined,
+      workflowMode,
       assignor: assignor.trim() || undefined,
       assignee: assignee.trim() || undefined,
       dueDate: dueDate ? new Date(dueDate) : undefined,
@@ -124,21 +144,18 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm">Status</label>
+              <label className="text-sm">Workflow</label>
               <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as TaskStatus)}
+                value={workflowMode}
+                onValueChange={(value) => setWorkflowMode(value as TaskWorkflowMode)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TASK_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      <span className="flex items-center gap-2">
-                        <span className={`size-2 rounded-full ${STATUS_DOT_COLORS[s]}`} />
-                        {STATUS_LABELS[s]}
-                      </span>
+                  {TASK_WORKFLOW_MODES.map((mode) => (
+                    <SelectItem key={mode} value={mode}>
+                      {mode === "complex" ? "Complex workflow" : "Simple task"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -146,12 +163,33 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm">Due Date</label>
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
+              <label className="text-sm">
+                {workflowMode === "complex" ? "Initial Lane" : "Status"}
+              </label>
+              {workflowMode === "simple" ? (
+                <Select
+                  value={status}
+                  onValueChange={(v) => setStatus(v as TaskStatus)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TASK_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        <span className="flex items-center gap-2">
+                          <span className={`size-2 rounded-full ${STATUS_DOT_COLORS[s]}`} />
+                          {STATUS_LABELS[s]}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                  Starts in <span className="font-medium text-foreground">Doing</span> when assigned, otherwise <span className="font-medium text-foreground">To Do</span>.
+                </div>
+              )}
             </div>
           </div>
 
@@ -166,10 +204,42 @@ export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", i
             </div>
             <div className="space-y-2">
               <label className="text-sm">Assignee</label>
+              {workflowMode === "complex" ? (
+                <Select
+                  value={assignee || "__unassigned__"}
+                  onValueChange={(value) =>
+                    setAssignee(value === "__unassigned__" ? "" : value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                    {agents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.identity?.name ?? agent.name ?? agent.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={assignee}
+                  onChange={(e) => setAssignee(e.target.value)}
+                  placeholder="Who's doing this"
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm">Due Date</label>
               <Input
-                value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
-                placeholder="Who's doing this"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
           </div>

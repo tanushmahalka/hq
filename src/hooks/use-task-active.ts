@@ -13,18 +13,26 @@ const ACTIVE_STALE_MS = 10_000;
  * Returns true while the gateway is streaming chat events
  * for any session whose key ends with `:{taskId}`.
  */
-export function useTaskActive(taskId: string): boolean {
+export function useTaskActive(
+  taskId: string,
+  linkedSessionKeys?: string[],
+): boolean {
   const { subscribe } = useGateway();
   const [active, setActive] = useState(false);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const suffix = `:task:${taskId}`;
+    const linked = new Set(linkedSessionKeys ?? []);
 
     return subscribe((evt: EventFrame) => {
       if (evt.event !== "chat") return;
       const payload = evt.payload as ChatEventPayload | undefined;
-      if (!payload?.sessionKey?.endsWith(suffix)) return;
+      if (!payload?.sessionKey) return;
+
+      const isRelevant =
+        payload.sessionKey.endsWith(suffix) || linked.has(payload.sessionKey);
+      if (!isRelevant) return;
 
       switch (payload.state) {
         case "delta":
@@ -48,7 +56,7 @@ export function useTaskActive(taskId: string): boolean {
           break;
       }
     });
-  }, [subscribe, taskId]);
+  }, [linkedSessionKeys, subscribe, taskId]);
 
   useEffect(() => {
     return () => {

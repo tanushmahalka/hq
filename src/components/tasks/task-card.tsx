@@ -5,6 +5,7 @@ import { useTaskActive } from "@/hooks/use-task-active";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { TaskStatusDropdown } from "./task-status-dropdown";
 import type { TaskStatus } from "@shared/types";
+import type { TaskWorkflowSummary } from "@shared/task-workflow";
 import type { BoardApprovalSummary } from "@/hooks/use-approvals";
 
 function formatApprovalTimestamp(timestamp: number): string {
@@ -17,12 +18,37 @@ function formatApprovalTimestamp(timestamp: number): string {
   });
 }
 
+function formatWorkflowBadge(summary?: TaskWorkflowSummary | null): string | null {
+  if (!summary || summary.mode !== "complex") {
+    return null;
+  }
+
+  switch (summary.status) {
+    case "pending_assignment":
+      return "Awaiting assignee";
+    case "planning":
+      return "Planning";
+    case "executing":
+      return summary.totalSubtasks > 0
+        ? `${summary.completedSubtasks}/${summary.totalSubtasks} done`
+        : "Preparing subtasks";
+    case "blocked":
+      return "Blocked";
+    case "completed":
+      return "Workflow complete";
+    default:
+      return "Complex";
+  }
+}
+
 interface TaskCardProps {
   task: {
     id: string;
     title: string;
     description: string | null;
     status: TaskStatus;
+    workflowMode?: "simple" | "complex";
+    workflowSummary?: TaskWorkflowSummary | null;
     assignee: string | null;
     dueDate: Date | string | null;
     urgent: boolean;
@@ -35,13 +61,14 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
   const utils = trpc.useUtils();
-  const active = useTaskActive(task.id);
+  const active = useTaskActive(task.id, task.workflowSummary?.sessionKeys);
   const notifyTask = useTaskNotify();
+  const workflowBadge = formatWorkflowBadge(task.workflowSummary);
 
   const updateTask = trpc.task.update.useMutation({
     onSuccess: (updated) => {
       utils.task.list.invalidate();
-      if (updated?.assignee) {
+      if (updated?.workflowMode !== "complex" && updated?.assignee) {
         notifyTask(updated.assignee, updated.id, formatTaskNotification("updated", updated));
       }
     },
@@ -132,6 +159,28 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
         </div>
       ) : null}
 
+      {workflowBadge ? (
+        <div className="mt-3 flex items-center gap-2">
+          <Badge
+            variant="secondary"
+            className={`text-[10px] ${
+              task.workflowSummary?.status === "blocked"
+                ? "bg-red-500/10 text-red-700 dark:text-red-300"
+                : task.workflowSummary?.status === "planning"
+                  ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                  : "bg-[var(--swarm-violet-dim)] text-[var(--swarm-violet)]"
+            }`}
+          >
+            {workflowBadge}
+          </Badge>
+          {task.workflowSummary?.rootAgentId ? (
+            <span className="text-[11px] text-muted-foreground/60">
+              root {task.workflowSummary.rootAgentId}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Campaign link */}
       {task.campaignId && (
         <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground/50">
@@ -162,6 +211,7 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
         <TaskStatusDropdown
           value={task.status}
           onValueChange={handleStatusChange}
+          disabled={task.workflowMode === "complex"}
         />
       </div>
     </div>

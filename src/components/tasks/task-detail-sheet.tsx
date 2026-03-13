@@ -33,16 +33,20 @@ import {
   Send,
   MessageSquare,
   Bot,
+  ListTodo,
 } from "lucide-react";
 import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
+import {
+  TASK_SUBTASK_STATUS_LABELS,
+  TASK_WORKFLOW_STATUS_LABELS,
+  type TaskSubtaskStatus,
+} from "@shared/task-workflow";
 import { trpc } from "@/lib/trpc";
 import { useApprovals } from "@/hooks/use-approvals";
 import { useTaskSessions } from "@/hooks/use-task-sessions";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { useGateway } from "@/hooks/use-gateway";
-import {
-  SessionMessageList,
-} from "@/components/chat/session-blocks";
+import { SessionMessageList } from "@/components/chat/session-blocks";
 import { MessageContent } from "@/components/messenger/message-content";
 import { ChatSendProvider } from "@/hooks/use-chat-send";
 import {
@@ -61,12 +65,65 @@ const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
 };
 
 // -- Tab definitions (extend this to add more right-panel tabs) --
-const TABS = [
+const ALL_TABS = [
   { id: "comments", label: "Comments", icon: MessageSquare },
   { id: "session", label: "Session", icon: Bot },
+  { id: "workflow", label: "Workflow", icon: ListTodo },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+type TabId = (typeof ALL_TABS)[number]["id"];
+
+type TaskSheetTask = {
+  id: string;
+  title: string;
+  description: string | null;
+  assignee: string | null;
+  workflowMode?: "simple" | "complex";
+  workflowSummary?: {
+    sessionKeys: string[];
+  } | null;
+};
+
+type TaskWorkflowDetailData = {
+  workflow: {
+    status: string;
+    planPath: string | null;
+    planSummary: string | null;
+  } | null;
+  subtasks: Array<{
+    id: number;
+    position: number;
+    title: string;
+    instructions: string | null;
+    acceptanceCriteria: string | null;
+    status: TaskSubtaskStatus;
+    latestWorkerSummary: string | null;
+    latestValidatorSummary: string | null;
+    latestFeedback: string | null;
+  }>;
+  sessions: Array<{
+    id: number;
+    sessionKey: string;
+    role: "root" | "planner" | "worker" | "validator";
+    subtaskId: number | null;
+    agentId: string | null;
+    parentSessionKey: string | null;
+    startedAt: Date | string | null;
+    completedAt: Date | string | null;
+    endedAt: Date | string | null;
+  }>;
+  summary: {
+    status: keyof typeof TASK_WORKFLOW_STATUS_LABELS | null;
+    planPath: string | null;
+    planSummary: string | null;
+    totalSubtasks: number;
+    completedSubtasks: number;
+    activeSubtaskId: number | null;
+    blockedSubtaskId: number | null;
+    rootAgentId: string | null;
+    sessionKeys: string[];
+  };
+};
 
 // -- Main component --
 
@@ -79,11 +136,30 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
   const utils = trpc.useUtils();
   const notifyTask = useTaskNotify();
   const [activeTab, setActiveTab] = useState<TabId>("comments");
+  const { agents } = useGateway();
 
   const { data: task } = trpc.task.get.useQuery(
     { id: taskId! },
     { enabled: !!taskId }
   );
+  const { data: workflowDetail, isLoading: workflowLoading } =
+    trpc.task.workflow.get.useQuery(
+      { taskId: taskId! },
+      {
+        enabled: Boolean(taskId && task?.workflowMode === "complex"),
+      }
+    );
+
+  const tabs =
+    task?.workflowMode === "complex"
+      ? ALL_TABS
+      : ALL_TABS.filter((tab) => tab.id !== "workflow");
+  const resolvedActiveTab =
+    task?.workflowMode === "complex"
+      ? activeTab
+      : activeTab === "workflow"
+      ? "comments"
+      : activeTab;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -93,6 +169,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
   const [urgent, setUrgent] = useState(false);
   const [important, setImportant] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (task) {
       setTitle(task.title);
@@ -106,12 +183,14 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
       setImportant(task.important);
     }
   }, [task]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateTask = trpc.task.update.useMutation({
     onSuccess: (updated) => {
       utils.task.list.invalidate();
       utils.task.get.invalidate({ id: taskId! });
-      if (updated?.assignee) {
+      utils.task.workflow.get.invalidate({ taskId: taskId! });
+      if (updated?.workflowMode !== "complex" && updated?.assignee) {
         notifyTask(
           updated.assignee,
           updated.id,
@@ -124,7 +203,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
   const deleteTask = trpc.task.delete.useMutation({
     onSuccess: () => {
       utils.task.list.invalidate();
-      if (task?.assignee) {
+      if (task?.workflowMode !== "complex" && task?.assignee) {
         notifyTask(
           task.assignee,
           task.id,
@@ -217,6 +296,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
                 <Select
                   value={task.status}
                   onValueChange={(v) => save("status", v)}
+                  disabled={task.workflowMode === "complex"}
                 >
                   <SelectTrigger className="h-7 w-auto gap-1.5 border-none shadow-none px-2 text-xs font-medium">
                     <SelectValue />
@@ -234,6 +314,11 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
                     ))}
                   </SelectContent>
                 </Select>
+                {task.workflowMode === "complex" ? (
+                  <p className="mt-1 text-[11px] text-muted-foreground/60">
+                    Status is synced from the workflow state.
+                  </p>
+                ) : null}
               </PropertyRow>
             )}
 
@@ -312,13 +397,37 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
             </PropertyRow>
 
             <PropertyRow icon={<User className="size-4" />} label="Assignee">
-              <input
-                value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
-                onBlur={() => save("assignee", assignee || null)}
-                placeholder="Who's doing this"
-                className="text-sm font-mono bg-transparent border-none outline-none placeholder:text-muted-foreground/50 placeholder:font-sans w-full"
-              />
+              {task?.workflowMode === "complex" ? (
+                <Select
+                  value={assignee || "__unassigned__"}
+                  onValueChange={(value) => {
+                    const nextAssignee =
+                      value === "__unassigned__" ? "" : value;
+                    setAssignee(nextAssignee);
+                    save("assignee", nextAssignee || null);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-full border-none px-0 shadow-none text-sm font-mono">
+                    <SelectValue placeholder="Select an agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                    {agents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.identity?.name ?? agent.name ?? agent.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <input
+                  value={assignee}
+                  onChange={(e) => setAssignee(e.target.value)}
+                  onBlur={() => save("assignee", assignee || null)}
+                  placeholder="Who's doing this"
+                  className="text-sm font-mono bg-transparent border-none outline-none placeholder:text-muted-foreground/50 placeholder:font-sans w-full"
+                />
+              )}
             </PropertyRow>
           </div>
 
@@ -339,9 +448,9 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Tab bar */}
           <div className="flex items-center gap-0 border-b pt-14 shrink-0">
-            {TABS.map((tab) => {
+            {tabs.map((tab) => {
               const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+              const isActive = resolvedActiveTab === tab.id;
               return (
                 <button
                   key={tab.id}
@@ -361,6 +470,13 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
                         {task.comments.length}
                       </span>
                     )}
+                  {tab.id === "workflow" &&
+                    workflowDetail?.subtasks &&
+                    workflowDetail.subtasks.length > 0 && (
+                      <span className="text-[11px] text-muted-foreground font-normal">
+                        {workflowDetail.subtasks.length}
+                      </span>
+                    )}
                 </button>
               );
             })}
@@ -368,7 +484,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
 
           {/* Tab content */}
           <div className="flex-1 overflow-hidden">
-            {activeTab === "comments" && task && (
+            {resolvedActiveTab === "comments" && task && (
               <CommentsPanel
                 taskId={task.id}
                 comments={task.comments ?? []}
@@ -377,9 +493,17 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
                 notifyTask={notifyTask}
               />
             )}
-            {activeTab === "session" && task && (
-              <SessionPanel taskId={task.id} assignee={task.assignee} />
+            {resolvedActiveTab === "session" && task && (
+              <SessionPanel task={task} workflowDetail={workflowDetail} />
             )}
+            {resolvedActiveTab === "workflow" &&
+              task?.workflowMode === "complex" && (
+                <WorkflowPanel
+                  task={task}
+                  workflowDetail={workflowDetail}
+                  loading={workflowLoading}
+                />
+              )}
           </div>
         </div>
       </SheetContent>
@@ -658,24 +782,283 @@ function CommentContent({
   );
 }
 
+function workflowStatusClasses(
+  status: keyof typeof TASK_WORKFLOW_STATUS_LABELS | null
+) {
+  if (status === "blocked") {
+    return "bg-red-500/10 text-red-700 dark:text-red-300";
+  }
+  if (status === "planning") {
+    return "bg-blue-500/10 text-blue-700 dark:text-blue-300";
+  }
+  if (status === "completed") {
+    return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+  }
+  return "bg-[var(--swarm-violet-dim)] text-[var(--swarm-violet)]";
+}
+
+function subtaskStatusClasses(status: TaskSubtaskStatus) {
+  if (status === "needs_revision") {
+    return "bg-red-500/10 text-red-700 dark:text-red-300";
+  }
+  if (status === "running") {
+    return "bg-[var(--swarm-violet-dim)] text-[var(--swarm-violet)]";
+  }
+  if (status === "done") {
+    return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+  }
+  return "bg-muted text-muted-foreground";
+}
+
+function WorkflowPanel({
+  task,
+  workflowDetail,
+  loading,
+}: {
+  task: TaskSheetTask;
+  workflowDetail?: TaskWorkflowDetailData;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <LoaderFive text="Loading workflow..." />
+      </div>
+    );
+  }
+
+  if (!workflowDetail) {
+    return (
+      <div className="flex h-full items-center justify-center px-6">
+        <p className="text-sm text-muted-foreground">
+          Workflow details are not available yet.
+        </p>
+      </div>
+    );
+  }
+
+  const workflowStatus = workflowDetail.summary.status;
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="space-y-6 p-6">
+        <section className="rounded-2xl border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant="secondary"
+              className={workflowStatusClasses(workflowStatus)}
+            >
+              {workflowStatus
+                ? TASK_WORKFLOW_STATUS_LABELS[workflowStatus]
+                : "Planning"}
+            </Badge>
+            <Badge variant="outline" className="text-[10px]">
+              {workflowDetail.summary.completedSubtasks}/
+              {workflowDetail.summary.totalSubtasks || 0} subtasks done
+            </Badge>
+            {workflowDetail.summary.rootAgentId ? (
+              <Badge variant="outline" className="text-[10px]">
+                root {workflowDetail.summary.rootAgentId}
+              </Badge>
+            ) : null}
+          </div>
+
+          <div className="mt-4 space-y-3 text-sm">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
+                Plan Path
+              </p>
+              <p className="mt-1 font-mono text-xs">
+                {workflowDetail.summary.planPath ??
+                  `.openclaw/tasks/${task.id}/plan.md`}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
+                Plan Preview
+              </p>
+              <p className="mt-1 leading-relaxed text-muted-foreground">
+                {workflowDetail.summary.planSummary ??
+                  workflowDetail.workflow?.planSummary ??
+                  "No plan summary has been recorded yet."}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border bg-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="text-sm font-medium">Execution Steps</h4>
+            <span className="text-[11px] text-muted-foreground/60">
+              Sequential in v1
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {workflowDetail.subtasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No subtasks have been registered yet.
+              </p>
+            ) : (
+              workflowDetail.subtasks.map((subtask) => (
+                <div
+                  key={subtask.id}
+                  className="rounded-xl border border-border/60 bg-muted/20 p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
+                        Step {subtask.position}
+                      </p>
+                      <h5 className="mt-1 text-sm font-medium">
+                        {subtask.title}
+                      </h5>
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className={subtaskStatusClasses(subtask.status)}
+                    >
+                      {TASK_SUBTASK_STATUS_LABELS[subtask.status]}
+                    </Badge>
+                  </div>
+
+                  {subtask.instructions ? (
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      {subtask.instructions}
+                    </p>
+                  ) : null}
+
+                  {subtask.acceptanceCriteria ? (
+                    <div className="mt-3 rounded-lg border border-border/60 bg-background/80 p-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
+                        Acceptance Criteria
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                        {subtask.acceptanceCriteria}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {subtask.latestWorkerSummary ? (
+                    <div className="mt-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
+                        Latest Worker Summary
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                        {subtask.latestWorkerSummary}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {subtask.latestValidatorSummary ? (
+                    <div className="mt-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
+                        Latest Validator Summary
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                        {subtask.latestValidatorSummary}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {subtask.latestFeedback ? (
+                    <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/5 p-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-red-700/80 dark:text-red-300/80">
+                        Latest Feedback
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                        {subtask.latestFeedback}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border bg-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="text-sm font-medium">Linked Sessions</h4>
+            <span className="text-[11px] text-muted-foreground/60">
+              {workflowDetail.sessions.length} tracked
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {workflowDetail.sessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No sessions have been linked yet.
+              </p>
+            ) : (
+              workflowDetail.sessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="rounded-xl border border-border/60 bg-muted/20 p-3"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] capitalize">
+                      {session.role}
+                    </Badge>
+                    {session.agentId ? (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {session.agentId}
+                      </Badge>
+                    ) : null}
+                    {session.subtaskId ? (
+                      <Badge variant="outline" className="text-[10px]">
+                        subtask:{session.subtaskId}
+                      </Badge>
+                    ) : null}
+                    <span className="text-[11px] text-muted-foreground/60">
+                      {session.endedAt
+                        ? "Ended"
+                        : session.completedAt
+                        ? "Completed"
+                        : "Active"}
+                    </span>
+                  </div>
+                  <p className="mt-2 break-all font-mono text-[11px] text-muted-foreground">
+                    {session.sessionKey}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 // -- Session panel --
 
 function SessionPanel({
-  taskId,
-  assignee,
+  task,
+  workflowDetail,
 }: {
-  taskId: string;
-  assignee: string | null;
+  task: TaskSheetTask;
+  workflowDetail?: TaskWorkflowDetailData;
 }) {
   const { agents, connected } = useGateway();
-  const fallbackAgentId = assignee || agents[0]?.id;
-  const agent = assignee ? agents.find((a) => a.id === assignee) : agents[0];
+  const fallbackAgentId = task.assignee || agents[0]?.id;
+  const agent = task.assignee
+    ? agents.find((a) => a.id === task.assignee)
+    : agents[0];
   const emoji = agent?.identity?.emoji;
+  const primarySessionKey =
+    workflowDetail?.sessions.find(
+      (session) => session.role === "root" && !session.endedAt
+    )?.sessionKey ??
+    workflowDetail?.sessions.find((session) => session.role === "root")
+      ?.sessionKey;
 
   return (
     <SessionChat
-      taskId={taskId}
+      taskId={task.id}
       fallbackAgentId={fallbackAgentId}
+      linkedSessionKeys={workflowDetail?.summary.sessionKeys}
+      primarySessionKey={primarySessionKey}
       agentEmoji={emoji}
       connected={connected}
     />
@@ -685,20 +1068,36 @@ function SessionPanel({
 function SessionChat({
   taskId,
   fallbackAgentId,
+  linkedSessionKeys,
+  primarySessionKey,
   agentEmoji,
   connected,
 }: {
   taskId: string;
   fallbackAgentId?: string;
+  linkedSessionKeys?: string[];
+  primarySessionKey?: string;
   agentEmoji?: string;
   connected: boolean;
 }) {
   const { approvals } = useApprovals();
-  const { messages, sessionKeys, stream, isStreaming, loading, error, sendMessage } =
-    useTaskSessions(taskId, fallbackAgentId);
+  const {
+    messages,
+    sessionKeys,
+    stream,
+    isStreaming,
+    loading,
+    error,
+    sendMessage,
+  } = useTaskSessions(taskId, {
+    fallbackAgentId,
+    linkedSessionKeys,
+    primarySessionKey,
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const sessionApprovals = approvals.filter((approval) => {
     return (
+      linkedSessionKeys?.includes(approval.request.sessionKey) ||
       approval.request.sessionKey.includes(`:task:${taskId}`) ||
       sessionKeys.includes(approval.request.sessionKey)
     );
@@ -793,7 +1192,8 @@ function SessionComposer({
             style={{
               background:
                 "linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 18%, color-mix(in oklab, var(--swarm-violet) 92%, white 8%) 50%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 82%, transparent 100%)",
-              boxShadow: "0 0 12px color-mix(in oklab, var(--swarm-violet) 65%, transparent)",
+              boxShadow:
+                "0 0 12px color-mix(in oklab, var(--swarm-violet) 65%, transparent)",
             }}
           />
           <div

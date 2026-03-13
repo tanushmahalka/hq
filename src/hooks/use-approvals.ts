@@ -1,5 +1,9 @@
 import { createContext, useContext } from "react";
 import type { TaskStatus } from "@shared/types";
+import type {
+  TaskWorkflowMode,
+  TaskWorkflowSummary,
+} from "@shared/task-workflow";
 
 export type ApprovalDecision = "approve" | "deny";
 
@@ -30,6 +34,8 @@ export type BoardTask = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  workflowMode?: TaskWorkflowMode;
+  workflowSummary?: TaskWorkflowSummary | null;
   assignee: string | null;
   dueDate: Date | string | null;
   urgent: boolean;
@@ -74,6 +80,20 @@ export const ApprovalsContext = createContext<ApprovalsContextValue | null>(null
 export function parseTaskIdFromApprovalSession(sessionKey: string): string | null {
   const match = sessionKey.match(/:task:([^:]+)/);
   return match?.[1] ?? null;
+}
+
+export function approvalBelongsToTask(
+  approval: PendingApproval,
+  task: Pick<BoardTask, "id" | "workflowMode" | "workflowSummary">,
+): boolean {
+  if (
+    task.workflowMode === "complex" &&
+    task.workflowSummary?.sessionKeys?.includes(approval.request.sessionKey)
+  ) {
+    return true;
+  }
+
+  return parseTaskIdFromApprovalSession(approval.request.sessionKey) === task.id;
 }
 
 export function buildApprovalSummary(approvals: PendingApproval[]): BoardApprovalSummary | null {

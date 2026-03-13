@@ -17,13 +17,23 @@ type ChatEventPayload = {
   errorMessage?: string;
 };
 
+type UseTaskSessionsOptions = {
+  fallbackAgentId?: string;
+  linkedSessionKeys?: string[];
+  primarySessionKey?: string;
+};
+
 /**
- * Discovers all gateway sessions related to a task (including sub-agent sessions)
- * by querying sessions.list and filtering by task ID, rather than constructing
- * session keys manually.
+ * Loads task-related session history. Complex tasks can provide linked session
+ * keys from HQ workflow state, while simple tasks still fall back to task-key
+ * discovery via sessions.list.
  */
-export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
+export function useTaskSessions(
+  taskId: string,
+  options: UseTaskSessionsOptions = {},
+) {
   const { client, connected, subscribe } = useGateway();
+  const { fallbackAgentId, linkedSessionKeys = [], primarySessionKey } = options;
 
   const [sessionKeys, setSessionKeys] = useState<string[]>([]);
   const [messages, setMessages] = useState<RawMessage[]>([]);
@@ -81,23 +91,28 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
     setError(null);
 
     try {
-      // 1. Discover sessions matching this task via sessions.list
-      const res = await client.request<unknown>("sessions.list", { limit: 500 });
-      if (fetchIdRef.current !== id) return;
+      let matchingKeys = [...new Set(linkedSessionKeys.filter(Boolean))];
 
-      // Handle different response shapes (array or { sessions: [...] })
-      const entries = (
-        Array.isArray(res)
-          ? res
-          : Array.isArray((res as Record<string, unknown>)?.sessions)
-            ? (res as Record<string, unknown>).sessions
-            : []
-      ) as Array<{ key?: string }>;
+      if (matchingKeys.length === 0) {
+        // 1. Discover sessions matching this task via sessions.list
+        const res = await client.request<unknown>("sessions.list", { limit: 500 });
+        if (fetchIdRef.current !== id) return;
 
-      const taskPattern = `task:${taskId}`;
-      const matchingKeys = entries
-        .filter((s) => s.key?.includes(taskPattern))
-        .map((s) => s.key!);
+        // Handle different response shapes (array or { sessions: [...] })
+        const entries = (
+          Array.isArray(res)
+            ? res
+            : Array.isArray((res as Record<string, unknown>)?.sessions)
+              ? (res as Record<string, unknown>).sessions
+              : []
+        ) as Array<{ key?: string }>;
+
+        const taskPattern = `task:${taskId}`;
+        matchingKeys = entries
+          .filter((s) => s.key?.includes(taskPattern))
+          .map((s) => s.key!)
+          .filter(Boolean);
+      }
 
       sessionKeysRef.current = new Set(matchingKeys);
       setSessionKeys(matchingKeys);
@@ -111,10 +126,12 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
       // 2. Load history for all task sessions
       const histories = await Promise.all(
         matchingKeys.map(async (key) => {
-          const h = await client.request<{ messages?: Array<unknown> }>(
-            "chat.history",
-            { sessionKey: key, limit: 200 },
-          );
+          const h = await client
+            .request<{ messages?: Array<unknown> }>("chat.history", {
+              sessionKey: key,
+              limit: 200,
+            })
+            .catch(() => ({ messages: [] }));
           const msgs = parseRawMessages(h.messages ?? []);
           // Tag each message with its session key
           for (const m of msgs) m.sessionKey = key;
@@ -153,10 +170,12 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
 
         const subHistories = await Promise.all(
           subAgentKeys.map(async (key) => {
-            const h = await client.request<{ messages?: Array<unknown> }>(
-              "chat.history",
-              { sessionKey: key, limit: 200 },
-            );
+            const h = await client
+              .request<{ messages?: Array<unknown> }>("chat.history", {
+                sessionKey: key,
+                limit: 200,
+              })
+              .catch(() => ({ messages: [] }));
             const msgs = parseRawMessages(h.messages ?? []);
             for (const m of msgs) m.sessionKey = key;
             return msgs;
@@ -190,7 +209,7 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
     } finally {
       if (fetchIdRef.current === id && !options?.background) setLoading(false);
     }
-  }, [clearStreaming, client, connected, taskId]);
+  }, [clearStreaming, client, connected, linkedSessionKeys, taskId]);
 
   // Initial load and reload on reconnect
   useEffect(() => {
@@ -200,6 +219,7 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
   // Subscribe to real-time chat events for discovered sessions
   useEffect(() => {
     const taskSuffix = `:task:${taskId}`;
+    const linked = new Set(linkedSessionKeys);
 
     return subscribe((evt: EventFrame) => {
       if (evt.event !== "chat") return;
@@ -207,6 +227,7 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
       if (!payload?.sessionKey) return;
 
       const isRelevant =
+        linked.has(payload.sessionKey) ||
         payload.sessionKey.includes(taskSuffix) ||
         sessionKeysRef.current.has(payload.sessionKey);
       if (!isRelevant) return;
@@ -256,7 +277,7 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
           break;
       }
     });
-  }, [appendAssistantMessage, clearStreaming, subscribe, taskId, loadAll]);
+  }, [appendAssistantMessage, clearStreaming, linkedSessionKeys, subscribe, taskId, loadAll]);
 
   useEffect(() => {
     if (stream === null) return;
@@ -272,6 +293,7 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
       if (!client || !connected || !text.trim()) return;
 
       const primaryKey =
+        primarySessionKey ??
         [...sessionKeysRef.current].find((k) =>
           k.includes(`:task:${taskId}`),
         ) ??
@@ -307,7 +329,7 @@ export function useTaskSessions(taskId: string, fallbackAgentId?: string) {
         setError(String(err));
       }
     },
-    [clearStreaming, client, connected, taskId, fallbackAgentId],
+    [clearStreaming, client, connected, primarySessionKey, taskId, fallbackAgentId],
   );
 
   const isStreaming = stream !== null;

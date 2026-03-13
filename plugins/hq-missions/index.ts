@@ -20,14 +20,20 @@ interface PluginAPI {
       respond: (ok: boolean, data: unknown) => void;
     }) => Promise<void>
   ) => void;
-  registerHook: (
-    event: string,
-    handler: (ctx: {
-      task: Record<string, unknown>;
-      sessionKey: string;
-      prependSystemContext: (text: string) => Promise<void>;
-    }) => Promise<void>,
-    meta: { name: string; description: string }
+  on: (
+    hookName: string,
+    handler: (
+      event: { prompt: string; messages: unknown[] },
+      ctx: { agentId?: string; sessionKey?: string }
+    ) =>
+      | Promise<{
+          prependSystemContext?: string;
+        } | void>
+      | {
+          prependSystemContext?: string;
+        }
+      | void,
+    opts?: { priority?: number }
   ) => void;
 }
 
@@ -35,6 +41,64 @@ type HQMissionsConfig = {
   hqApiUrl?: string;
   hqApiToken?: string;
   autoEnrich?: boolean;
+};
+
+type WorkflowSubtask = {
+  id: number;
+  position: number;
+  title: string;
+  instructions: string | null;
+  acceptanceCriteria: string | null;
+  status: string;
+  latestWorkerSummary: string | null;
+  latestValidatorSummary: string | null;
+  latestFeedback: string | null;
+};
+
+type WorkflowSession = {
+  id: number;
+  sessionKey: string;
+  role: "root" | "planner" | "worker" | "validator";
+  subtaskId: number | null;
+  agentId: string | null;
+  parentSessionKey: string | null;
+  startedAt: Date | string | null;
+  completedAt: Date | string | null;
+  endedAt: Date | string | null;
+};
+
+type WorkflowSummary = {
+  mode: "simple" | "complex";
+  status: string | null;
+  planPath: string | null;
+  planSummary: string | null;
+  totalSubtasks: number;
+  completedSubtasks: number;
+  activeSubtaskId: number | null;
+  blockedSubtaskId: number | null;
+  rootAgentId: string | null;
+  sessionKeys: string[];
+};
+
+type WorkflowDetail = {
+  task: {
+    id: string;
+    title: string;
+    description: string | null;
+    status: string;
+    workflowMode: "simple" | "complex";
+    assignor: string | null;
+    assignee: string | null;
+    campaignId?: number | null;
+  };
+  workflow: {
+    status: string;
+    planPath: string | null;
+    planSummary: string | null;
+  } | null;
+  subtasks: WorkflowSubtask[];
+  sessions: WorkflowSession[];
+  summary: WorkflowSummary;
 };
 
 function parsePositiveInt(value: unknown): number | null {
@@ -75,9 +139,188 @@ function toNonEmptyString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function toOptionalDate(value: unknown): Date | undefined {
+  const raw = toNonEmptyString(value);
+  if (!raw) return undefined;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function buildTaskPlanPath(taskId: string) {
+  return `.openclaw/tasks/${taskId}/plan.md`;
+}
+
+function formatSubtaskForPrompt(subtask: WorkflowSubtask): string[] {
+  const lines = [
+    `Subtask ${subtask.position}: ${subtask.title}`,
+    `Status: ${subtask.status}`,
+  ];
+
+  if (subtask.instructions) {
+    lines.push(`Instructions: ${subtask.instructions}`);
+  }
+  if (subtask.acceptanceCriteria) {
+    lines.push(`Acceptance Criteria: ${subtask.acceptanceCriteria}`);
+  }
+  if (subtask.latestWorkerSummary) {
+    lines.push(`Latest Worker Summary: ${subtask.latestWorkerSummary}`);
+  }
+  if (subtask.latestValidatorSummary) {
+    lines.push(`Latest Validator Summary: ${subtask.latestValidatorSummary}`);
+  }
+  if (subtask.latestFeedback) {
+    lines.push(`Latest Feedback: ${subtask.latestFeedback}`);
+  }
+
+  return lines;
+}
+
+function buildWorkflowRoleGuidance(params: {
+  role: WorkflowSession["role"];
+  planPath: string;
+  subtask: WorkflowSubtask | null;
+}) {
+  const { role, planPath, subtask } = params;
+
+  if (role === "root") {
+    return [
+      "Role: Root assignee orchestrator.",
+      "You own the full task lifecycle in HQ.",
+      `Plan first by spawning a planner subagent and having it write ${planPath}.`,
+      "After the planner finishes, call record_task_plan and then set_task_subtasks before execution begins.",
+      "Run subtasks sequentially. Only one subtask may be running at a time.",
+      "When you spawn planner, worker, or validator sessions, link them in HQ immediately with link_task_session.",
+      "If a validator returns needs_revision, you handle retries or spawn a fresh worker.",
+      "You are the only actor allowed to call complete_task_workflow.",
+    ];
+  }
+
+  if (role === "planner") {
+    return [
+      "Role: Planner subagent.",
+      `Write the implementation plan to ${planPath}.`,
+      "Return the relative plan path and a concise summary to the root assignee.",
+      "Do not execute subtasks, update subtask statuses, or complete the workflow.",
+    ];
+  }
+
+  if (role === "worker") {
+    return [
+      "Role: Worker subagent.",
+      ...(subtask
+        ? formatSubtaskForPrompt(subtask)
+        : ["No linked subtask metadata was found yet."]),
+      "Start by marking your linked subtask as running if the root has not already done so.",
+      "Do the work, then record a concise implementation summary with update_task_subtask.",
+      "Spawn exactly one validator subagent for review, and make sure that validator session is linked in HQ.",
+      "Do not call complete_task_workflow.",
+    ];
+  }
+
+  return [
+    "Role: Validator subagent.",
+    ...(subtask
+      ? formatSubtaskForPrompt(subtask)
+      : ["No linked subtask metadata was found yet."]),
+    "Review the completed work against the subtask acceptance criteria.",
+    "Record the validation result with update_task_subtask using status done or needs_revision.",
+    "Use latestValidatorSummary for the verdict and latestFeedback for requested changes when needed.",
+    "Do not execute unrelated implementation work and do not call complete_task_workflow.",
+  ];
+}
+
+async function maybeBuildWorkflowPromptContext(params: {
+  hq: HQClient;
+  sessionKey?: string;
+}): Promise<string | null> {
+  if (!params.sessionKey) {
+    return null;
+  }
+
+  let detail: WorkflowDetail;
+  try {
+    detail = await params.hq.call<WorkflowDetail>(
+      "task.workflow.get",
+      { sessionKey: params.sessionKey },
+      { type: "query" }
+    );
+  } catch {
+    return null;
+  }
+
+  const session =
+    detail.sessions.find((entry) => entry.sessionKey === params.sessionKey) ??
+    null;
+  if (!session) {
+    return null;
+  }
+
+  const planPath = detail.summary.planPath ?? buildTaskPlanPath(detail.task.id);
+  const subtask =
+    session.subtaskId != null
+      ? detail.subtasks.find((entry) => entry.id === session.subtaskId) ?? null
+      : null;
+
+  const lines = [
+    "HQ COMPLEX TASK WORKFLOW",
+    "========================",
+    `Task ID: ${detail.task.id}`,
+    `Title: ${detail.task.title}`,
+    `Task Status: ${detail.task.status}`,
+    `Workflow Status: ${detail.summary.status ?? "planning"}`,
+    `Plan File: ${planPath}`,
+    `Artifacts Root: .openclaw/tasks/${detail.task.id}/`,
+    detail.task.description ? `Description: ${detail.task.description}` : null,
+    detail.task.assignor ? `Assignor: ${detail.task.assignor}` : null,
+    detail.task.assignee ? `Assignee: ${detail.task.assignee}` : null,
+    "",
+    "Global Contract:",
+    "- HQ is the source of truth for workflow state, subtasks, and linked sessions.",
+    "- The planner writes plan.md first; the root records the plan and subtask list before execution.",
+    "- Only one subtask may be running at a time in this workflow.",
+    "- Each worker must spawn exactly one validator subagent.",
+    "- The validator records either done or needs_revision.",
+    "- Only the root assignee completes the workflow.",
+    "",
+    ...buildWorkflowRoleGuidance({
+      role: session.role,
+      planPath,
+      subtask,
+    }),
+  ].filter(Boolean);
+
+  if (detail.summary.planSummary) {
+    lines.push("", `Plan Summary: ${detail.summary.planSummary}`);
+  }
+
+  if (detail.subtasks.length > 0) {
+    lines.push("", "Current Subtasks:");
+    for (const entry of detail.subtasks) {
+      lines.push(
+        `- [${entry.status}] ${entry.position}. ${entry.title}${
+          entry.id === detail.summary.activeSubtaskId ? " (active)" : ""
+        }${entry.id === detail.summary.blockedSubtaskId ? " (blocked)" : ""}`
+      );
+    }
+  }
+
+  if (detail.task.campaignId) {
+    const chain = await params.hq.fetchMissionChain(detail.task.campaignId);
+    if (chain) {
+      lines.push("", formatMissionContext(chain));
+    }
+  }
+
+  return lines.join("\n");
+}
+
 function resolvePluginConfig(config: unknown): HQMissionsConfig {
   const hasUsableConfig = (value: HQMissionsConfig): boolean =>
-    Boolean(value.hqApiUrl || value.hqApiToken || typeof value.autoEnrich === "boolean");
+    Boolean(
+      value.hqApiUrl ||
+        value.hqApiToken ||
+        typeof value.autoEnrich === "boolean"
+    );
 
   const extractConfig = (value: unknown): HQMissionsConfig => {
     if (!value || typeof value !== "object") return {};
@@ -114,9 +357,11 @@ function resolvePluginConfig(config: unknown): HQMissionsConfig {
   }
 
   const entries =
-    (config as {
-      plugins?: { entries?: Record<string, { config?: HQMissionsConfig }> };
-    })?.plugins?.entries ?? {};
+    (
+      config as {
+        plugins?: { entries?: Record<string, { config?: HQMissionsConfig }> };
+      }
+    )?.plugins?.entries ?? {};
   const shallowEntries =
     (config as { entries?: Record<string, unknown> })?.entries ?? {};
   const topLevel = (config as Record<string, unknown>) ?? {};
@@ -284,10 +529,16 @@ export default function register(api: PluginAPI) {
     description:
       "Create a new mission for an agent. A mission is the top-level strategic directive that groups objectives and campaigns.",
     parameters: Type.Object({
-      agentId: Type.String({ description: "ID of the agent this mission belongs to" }),
+      agentId: Type.String({
+        description: "ID of the agent this mission belongs to",
+      }),
       title: Type.String({ description: "Mission title" }),
-      description: Type.Optional(Type.String({ description: "Mission description" })),
-      organizationId: Type.String({ description: "Organization ID this mission belongs to" }),
+      description: Type.Optional(
+        Type.String({ description: "Mission description" })
+      ),
+      organizationId: Type.String({
+        description: "Organization ID this mission belongs to",
+      }),
     }),
     async execute(_id, params) {
       const mission = await hq.call("custom.mission.create", {
@@ -310,12 +561,24 @@ export default function register(api: PluginAPI) {
       missionId: numericIdSchema("Numeric ID of the parent mission"),
       title: Type.String({ description: "Objective title" }),
       description: Type.Optional(Type.String()),
-      hypothesis: Type.Optional(Type.String({ description: "Hypothesis for achieving this objective" })),
-      targetMetric: Type.Optional(Type.String({ description: "Metric to track (e.g., 'organic visits')" })),
-      targetValue: Type.Optional(Type.String({ description: "Target value to reach (e.g., '5000')" })),
-      currentValue: Type.Optional(Type.String({ description: "Current baseline value (e.g., '1200')" })),
-      dueDateIso: Type.Optional(Type.String({ description: "ISO date/time deadline" })),
-      sortOrder: Type.Optional(Type.Number({ description: "Ordering index within mission" })),
+      hypothesis: Type.Optional(
+        Type.String({ description: "Hypothesis for achieving this objective" })
+      ),
+      targetMetric: Type.Optional(
+        Type.String({ description: "Metric to track (e.g., 'organic visits')" })
+      ),
+      targetValue: Type.Optional(
+        Type.String({ description: "Target value to reach (e.g., '5000')" })
+      ),
+      currentValue: Type.Optional(
+        Type.String({ description: "Current baseline value (e.g., '1200')" })
+      ),
+      dueDateIso: Type.Optional(
+        Type.String({ description: "ISO date/time deadline" })
+      ),
+      sortOrder: Type.Optional(
+        Type.Number({ description: "Ordering index within mission" })
+      ),
     }),
     async execute(_id, params) {
       const missionId = requirePositiveInt(params.missionId, "missionId");
@@ -346,10 +609,20 @@ export default function register(api: PluginAPI) {
       objectiveId: numericIdSchema("Numeric ID of the parent objective"),
       title: Type.String({ description: "Campaign title" }),
       description: Type.Optional(Type.String()),
-      hypothesis: Type.Optional(Type.String({ description: "What you expect this campaign to achieve and why" })),
-      startDateIso: Type.Optional(Type.String({ description: "ISO start date/time" })),
-      endDateIso: Type.Optional(Type.String({ description: "ISO end date/time" })),
-      sortOrder: Type.Optional(Type.Number({ description: "Ordering index within objective" })),
+      hypothesis: Type.Optional(
+        Type.String({
+          description: "What you expect this campaign to achieve and why",
+        })
+      ),
+      startDateIso: Type.Optional(
+        Type.String({ description: "ISO start date/time" })
+      ),
+      endDateIso: Type.Optional(
+        Type.String({ description: "ISO end date/time" })
+      ),
+      sortOrder: Type.Optional(
+        Type.Number({ description: "Ordering index within objective" })
+      ),
     }),
     async execute(_id, params) {
       const objectiveId = requirePositiveInt(params.objectiveId, "objectiveId");
@@ -382,16 +655,19 @@ export default function register(api: PluginAPI) {
     async execute(_id, params) {
       const campaignId = requirePositiveInt(params.campaignId, "campaignId");
       const tasks = (await hq.call<
-        { campaignId?: number | null; id: string; title: string; status: string }[]
+        {
+          campaignId?: number | null;
+          id: string;
+          title: string;
+          status: string;
+        }[]
       >("task.list", undefined, { type: "query" })) as {
         campaignId?: number | null;
         id: string;
         title: string;
         status: string;
       }[];
-      const linked = tasks.filter(
-        (t) => t.campaignId === campaignId
-      );
+      const linked = tasks.filter((t) => t.campaignId === campaignId);
       return {
         content: [{ type: "text", text: JSON.stringify(linked, null, 2) }],
       };
@@ -404,7 +680,9 @@ export default function register(api: PluginAPI) {
       "Create a task in HQ. Use this instead of Todo-CLI for task creation.",
     parameters: Type.Object({
       title: Type.String({ description: "Task title" }),
-      description: Type.Optional(Type.String({ description: "Task description" })),
+      description: Type.Optional(
+        Type.String({ description: "Task description" })
+      ),
       status: Type.Optional(
         Type.Union([
           Type.Literal("todo"),
@@ -412,6 +690,9 @@ export default function register(api: PluginAPI) {
           Type.Literal("stuck"),
           Type.Literal("done"),
         ])
+      ),
+      workflowMode: Type.Optional(
+        Type.Union([Type.Literal("simple"), Type.Literal("complex")])
       ),
       assignor: Type.Optional(Type.String()),
       assignee: Type.Optional(Type.String()),
@@ -432,7 +713,13 @@ export default function register(api: PluginAPI) {
       const task = await hq.call("task.create", {
         title: params.title as string,
         description: params.description as string | undefined,
-        status: params.status as "todo" | "doing" | "stuck" | "done" | undefined,
+        status: params.status as
+          | "todo"
+          | "doing"
+          | "stuck"
+          | "done"
+          | undefined,
+        workflowMode: params.workflowMode as "simple" | "complex" | undefined,
         assignor: params.assignor as string | undefined,
         assignee: params.assignee as string | undefined,
         dueDate: params.dueDateIso
@@ -502,9 +789,7 @@ export default function register(api: PluginAPI) {
     parameters: Type.Object({
       taskId: Type.String(),
       title: Type.Optional(Type.String()),
-      description: Type.Optional(
-        Type.Union([Type.String(), Type.Null()])
-      ),
+      description: Type.Optional(Type.Union([Type.String(), Type.Null()])),
       status: Type.Optional(
         Type.Union([
           Type.Literal("todo"),
@@ -512,6 +797,9 @@ export default function register(api: PluginAPI) {
           Type.Literal("stuck"),
           Type.Literal("done"),
         ])
+      ),
+      workflowMode: Type.Optional(
+        Type.Union([Type.Literal("simple"), Type.Literal("complex")])
       ),
       assignor: Type.Optional(Type.Union([Type.String(), Type.Null()])),
       assignee: Type.Optional(Type.Union([Type.String(), Type.Null()])),
@@ -532,8 +820,11 @@ export default function register(api: PluginAPI) {
         id: params.taskId as string,
       };
       if (params.title !== undefined) payload.title = params.title;
-      if (params.description !== undefined) payload.description = params.description;
+      if (params.description !== undefined)
+        payload.description = params.description;
       if (params.status !== undefined) payload.status = params.status;
+      if (params.workflowMode !== undefined)
+        payload.workflowMode = params.workflowMode;
       if (params.assignor !== undefined) payload.assignor = params.assignor;
       if (params.assignee !== undefined) payload.assignee = params.assignee;
       if (params.dueDateIso !== undefined) {
@@ -559,13 +850,216 @@ export default function register(api: PluginAPI) {
   });
 
   api.registerTool({
+    name: "get_task_workflow",
+    description:
+      "Get the workflow state for a complex HQ task, either by task ID or by the current linked session key.",
+    parameters: Type.Object({
+      taskId: Type.Optional(Type.String()),
+      sessionKey: Type.Optional(Type.String()),
+    }),
+    async execute(_id, params) {
+      if (!params.taskId && !params.sessionKey) {
+        throw new Error("taskId or sessionKey is required");
+      }
+
+      const workflow = await hq.call(
+        "task.workflow.get",
+        {
+          taskId: params.taskId as string | undefined,
+          sessionKey: params.sessionKey as string | undefined,
+        },
+        { type: "query" }
+      );
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(workflow, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "record_task_plan",
+    description:
+      "Record the plan artifact for a complex HQ task after the planner has written plan.md.",
+    parameters: Type.Object({
+      taskId: Type.String(),
+      planPath: Type.String({
+        description:
+          "Relative path to the plan artifact, for example .openclaw/tasks/<taskId>/plan.md",
+      }),
+      planSummary: Type.Optional(Type.String()),
+    }),
+    async execute(_id, params) {
+      const workflow = await hq.call("task.workflow.recordPlan", {
+        taskId: params.taskId as string,
+        planPath: params.planPath as string,
+        planSummary: params.planSummary as string | undefined,
+      });
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(workflow, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "set_task_subtasks",
+    description:
+      "Create the ordered execution subtasks for a complex HQ task after the plan has been recorded.",
+    parameters: Type.Object({
+      taskId: Type.String(),
+      subtasks: Type.Array(
+        Type.Object({
+          title: Type.String(),
+          instructions: Type.Optional(Type.String()),
+          acceptanceCriteria: Type.Optional(Type.String()),
+        })
+      ),
+    }),
+    async execute(_id, params) {
+      const subtasks = Array.isArray(params.subtasks)
+        ? params.subtasks.map((subtask) => ({
+            title: subtask.title as string,
+            instructions: subtask.instructions as string | undefined,
+            acceptanceCriteria: subtask.acceptanceCriteria as
+              | string
+              | undefined,
+          }))
+        : [];
+
+      const result = await hq.call("task.workflow.setSubtasks", {
+        taskId: params.taskId as string,
+        subtasks,
+      });
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "update_task_subtask",
+    description:
+      "Update a complex-task subtask with status, worker summary, validator summary, or revision feedback.",
+    parameters: Type.Object({
+      taskId: Type.String(),
+      subtaskId: numericIdSchema("Subtask ID"),
+      status: Type.Optional(
+        Type.Union([
+          Type.Literal("pending"),
+          Type.Literal("running"),
+          Type.Literal("needs_revision"),
+          Type.Literal("done"),
+        ])
+      ),
+      latestWorkerSummary: Type.Optional(
+        Type.Union([Type.String(), Type.Null()])
+      ),
+      latestValidatorSummary: Type.Optional(
+        Type.Union([Type.String(), Type.Null()])
+      ),
+      latestFeedback: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    }),
+    async execute(_id, params) {
+      const result = await hq.call("task.workflow.updateSubtask", {
+        taskId: params.taskId as string,
+        subtaskId: requirePositiveInt(params.subtaskId, "subtaskId"),
+        status: params.status as
+          | "pending"
+          | "running"
+          | "needs_revision"
+          | "done"
+          | undefined,
+        latestWorkerSummary: params.latestWorkerSummary as
+          | string
+          | null
+          | undefined,
+        latestValidatorSummary: params.latestValidatorSummary as
+          | string
+          | null
+          | undefined,
+        latestFeedback: params.latestFeedback as string | null | undefined,
+      });
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "link_task_session",
+    description:
+      "Link a root, planner, worker, or validator session to a complex HQ task so workflow state can be tracked in HQ.",
+    parameters: Type.Object({
+      taskId: Type.String(),
+      sessionKey: Type.String(),
+      role: Type.Union([
+        Type.Literal("root"),
+        Type.Literal("planner"),
+        Type.Literal("worker"),
+        Type.Literal("validator"),
+      ]),
+      subtaskId: Type.Optional(
+        Type.Union([numericIdSchema("Subtask ID"), Type.Null()])
+      ),
+      agentId: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+      parentSessionKey: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+      startedAtIso: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+      completedAtIso: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+      endedAtIso: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    }),
+    async execute(_id, params) {
+      const result = await hq.call("task.workflow.linkSession", {
+        taskId: params.taskId as string,
+        sessionKey: params.sessionKey as string,
+        role: params.role as "root" | "planner" | "worker" | "validator",
+        subtaskId:
+          params.subtaskId === undefined || params.subtaskId === null
+            ? params.subtaskId
+            : requirePositiveInt(params.subtaskId, "subtaskId"),
+        agentId: params.agentId as string | null | undefined,
+        parentSessionKey: params.parentSessionKey as string | null | undefined,
+        startedAt: toOptionalDate(params.startedAtIso),
+        completedAt: toOptionalDate(params.completedAtIso),
+        endedAt: toOptionalDate(params.endedAtIso),
+      });
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: "complete_task_workflow",
+    description:
+      "Mark a complex HQ task workflow complete after every recorded subtask is done.",
+    parameters: Type.Object({
+      taskId: Type.String(),
+    }),
+    async execute(_id, params) {
+      const result = await hq.call("task.workflow.complete", {
+        taskId: params.taskId as string,
+      });
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
     name: "delete_task",
     description: "Delete an HQ task by ID.",
     parameters: Type.Object({
       taskId: Type.String(),
     }),
     async execute(_id, params) {
-      const result = await hq.call("task.delete", { id: params.taskId as string });
+      const result = await hq.call("task.delete", {
+        id: params.taskId as string,
+      });
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
@@ -626,26 +1120,20 @@ export default function register(api: PluginAPI) {
     respond(true, { ok: true, connected: true });
   });
 
-  // ── Hook: Enrich task context with mission chain ──
-
-  api.registerHook(
-    "task:dispatched",
-    async (ctx) => {
-      if (config.autoEnrich === false) return;
-      const { task } = ctx;
-      const campaignId = parsePositiveInt(task.campaignId);
-      if (!campaignId) return;
-
-      const chain = await hq.fetchMissionChain(campaignId);
-      if (!chain) return;
-
-      const context = formatMissionContext(chain);
-      await ctx.prependSystemContext(context);
-    },
-    {
-      name: "hq-missions.enrich-task",
-      description:
-        "Injects mission/objective/campaign context into task sessions",
+  api.on("before_prompt_build", async (_event, ctx) => {
+    if (config.autoEnrich === false || !ctx.sessionKey) {
+      return;
     }
-  );
+
+    const prependSystemContext = await maybeBuildWorkflowPromptContext({
+      hq,
+      sessionKey: ctx.sessionKey,
+    });
+
+    if (!prependSystemContext) {
+      return;
+    }
+
+    return { prependSystemContext };
+  });
 }

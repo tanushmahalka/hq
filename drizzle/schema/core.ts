@@ -10,6 +10,12 @@ import {
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
+import {
+  TASK_SESSION_ROLES,
+  TASK_SUBTASK_STATUSES,
+  TASK_WORKFLOW_MODES,
+  TASK_WORKFLOW_STATUSES,
+} from "../../shared/task-workflow.ts";
 
 export const campaignStatus = pgEnum("campaign_status", [
   "planned",
@@ -26,6 +32,10 @@ export const missionStatus = pgEnum("mission_status", [
 ]);
 export const objectiveStatus = pgEnum("objective_status", ["active", "paused", "completed"]);
 export const taskStatus = pgEnum("task_status", ["todo", "doing", "stuck", "done"]);
+export const taskWorkflowMode = pgEnum("task_workflow_mode", TASK_WORKFLOW_MODES);
+export const taskWorkflowStatus = pgEnum("task_workflow_status", TASK_WORKFLOW_STATUSES);
+export const taskSubtaskStatus = pgEnum("task_subtask_status", TASK_SUBTASK_STATUSES);
+export const taskSessionRole = pgEnum("task_session_role", TASK_SESSION_ROLES);
 
 export const agentDatabases = pgTable("agent_databases", {
   agentId: text("agent_id").primaryKey().notNull(),
@@ -160,6 +170,7 @@ export const tasks = pgTable("tasks", {
   title: text().notNull(),
   description: text(),
   status: taskStatus().default("todo").notNull(),
+  workflowMode: taskWorkflowMode("workflow_mode").default("simple").notNull(),
   assignor: text(),
   assignee: text(),
   dueDate: timestamp("due_date", { withTimezone: true, mode: "string" }),
@@ -170,6 +181,104 @@ export const tasks = pgTable("tasks", {
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
   campaignId: integer("campaign_id"),
 });
+
+export const taskWorkflows = pgTable(
+  "task_workflows",
+  {
+    taskId: text("task_id").primaryKey().notNull(),
+    status: taskWorkflowStatus().default("pending_assignment").notNull(),
+    planPath: text("plan_path"),
+    planSummary: text("plan_summary"),
+    startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }),
+    completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.taskId],
+      foreignColumns: [tasks.id],
+      name: "task_workflows_task_id_tasks_id_fk",
+    }).onDelete("cascade"),
+  ],
+);
+
+export const taskSubtasks = pgTable(
+  "task_subtasks",
+  {
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "task_subtasks_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    taskId: text("task_id").notNull(),
+    position: integer("position").notNull(),
+    title: text().notNull(),
+    instructions: text(),
+    acceptanceCriteria: text("acceptance_criteria"),
+    status: taskSubtaskStatus().default("pending").notNull(),
+    latestWorkerSummary: text("latest_worker_summary"),
+    latestValidatorSummary: text("latest_validator_summary"),
+    latestFeedback: text("latest_feedback"),
+    startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }),
+    completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.taskId],
+      foreignColumns: [tasks.id],
+      name: "task_subtasks_task_id_tasks_id_fk",
+    }).onDelete("cascade"),
+    unique("task_subtasks_task_id_position_unique").on(table.taskId, table.position),
+  ],
+);
+
+export const taskSessions = pgTable(
+  "task_sessions",
+  {
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "task_sessions_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    taskId: text("task_id").notNull(),
+    subtaskId: integer("subtask_id"),
+    sessionKey: text("session_key").notNull(),
+    role: taskSessionRole().notNull(),
+    agentId: text("agent_id"),
+    parentSessionKey: text("parent_session_key"),
+    startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+    endedAt: timestamp("ended_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.taskId],
+      foreignColumns: [tasks.id],
+      name: "task_sessions_task_id_tasks_id_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.subtaskId],
+      foreignColumns: [taskSubtasks.id],
+      name: "task_sessions_subtask_id_task_subtasks_id_fk",
+    }).onDelete("set null"),
+    unique("task_sessions_session_key_unique").on(table.sessionKey),
+  ],
+);
 
 export const taskComments = pgTable(
   "task_comments",

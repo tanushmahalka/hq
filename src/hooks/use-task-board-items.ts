@@ -80,11 +80,23 @@ export function useTaskBoardItems() {
     const buckets = createEmptyBuckets();
     const taskList = (tasks ?? []) as BoardTask[];
     const taskIds = new Set(taskList.map((task) => task.id));
+    const workflowTaskBySessionKey = new Map<string, string>();
     const approvalsByTaskId = new Map<string, PendingApproval[]>();
     const standaloneApprovals: PendingApproval[] = [];
 
+    for (const task of taskList) {
+      if (task.workflowMode !== "complex") {
+        continue;
+      }
+      for (const sessionKey of task.workflowSummary?.sessionKeys ?? []) {
+        workflowTaskBySessionKey.set(sessionKey, task.id);
+      }
+    }
+
     for (const approval of approvals) {
-      const taskId = parseTaskIdFromApprovalSession(approval.request.sessionKey);
+      const taskId =
+        workflowTaskBySessionKey.get(approval.request.sessionKey) ??
+        parseTaskIdFromApprovalSession(approval.request.sessionKey);
       if (!taskId || !taskIds.has(taskId)) {
         standaloneApprovals.push(approval);
         continue;

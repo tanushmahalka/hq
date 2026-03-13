@@ -17,18 +17,25 @@ const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
 interface TaskStatusDropdownProps {
   value: TaskStatus;
   onValueChange: (status: TaskStatus) => void;
+  disabled?: boolean;
 }
 
 export function TaskStatusDropdown({
   value,
   onValueChange,
+  disabled = false,
 }: TaskStatusDropdownProps) {
   return (
-    <Select value={value} onValueChange={(v) => onValueChange(v as TaskStatus)}>
+    <Select
+      value={value}
+      onValueChange={(v) => onValueChange(v as TaskStatus)}
+      disabled={disabled}
+    >
       <SelectTrigger
         size="sm"
         className="h-7 text-xs"
         onClick={(e) => e.stopPropagation()}
+        disabled={disabled}
       >
         <SelectValue />
       </SelectTrigger>

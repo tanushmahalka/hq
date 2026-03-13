@@ -10,6 +10,7 @@ vi.mock("@sinclair/typebox", () => ({
     Object: (value: unknown) => value,
     Optional: (value: unknown) => value,
     Union: (value: unknown) => value,
+    Array: (value: unknown) => value,
     Literal: (value: unknown) => value,
     String: (value: unknown) => value,
     Number: (value: unknown) => value,
@@ -35,11 +36,16 @@ type ToolDef = {
   ) => Promise<{ content: { type: string; text: string }[] }>;
 };
 
-type HookHandler = (ctx: {
-  task: Record<string, unknown>;
-  sessionKey: string;
-  prependSystemContext: (text: string) => Promise<void>;
-}) => Promise<void>;
+type HookHandler = (
+  ctx: {
+    prompt: string;
+    messages: unknown[];
+  },
+  meta: {
+    agentId?: string;
+    sessionKey?: string;
+  }
+) => Promise<{ prependSystemContext?: string } | void>;
 
 function createPlugin() {
   const tools = new Map<string, ToolDef>();
@@ -54,7 +60,7 @@ function createPlugin() {
       tools.set(def.name, def as ToolDef);
     },
     registerGatewayMethod: () => {},
-    registerHook: (event, handler) => {
+    on: (event, handler) => {
       hooks.set(event, handler as HookHandler);
     },
   });
@@ -68,13 +74,14 @@ beforeEach(() => {
 });
 
 describe("hq-missions plugin", () => {
-  it("coerces campaign ids for task create and update", async () => {
+  it("coerces campaign ids and forwards workflowMode for task create and update", async () => {
     const { tools } = createPlugin();
     callMock.mockResolvedValue({ id: "task-1" });
 
     await tools.get("create_task")!.execute("1", {
       title: "Write brief",
       campaignId: "42",
+      workflowMode: "complex",
     });
     expect(callMock).toHaveBeenNthCalledWith(
       1,
@@ -82,16 +89,19 @@ describe("hq-missions plugin", () => {
       expect.objectContaining({
         title: "Write brief",
         campaignId: 42,
+        workflowMode: "complex",
       })
     );
 
     await tools.get("update_task")!.execute("1", {
       taskId: "task-1",
       campaignId: "99",
+      workflowMode: "simple",
     });
     expect(callMock).toHaveBeenNthCalledWith(2, "task.update", {
       id: "task-1",
       campaignId: 99,
+      workflowMode: "simple",
     });
   });
 
@@ -106,8 +116,101 @@ describe("hq-missions plugin", () => {
     expect(callMock).toHaveBeenCalledWith("task.comment.delete", { id: 17 });
   });
 
-  it("coerces hook campaign ids before fetching mission context", async () => {
+  it("coerces workflow tool payloads", async () => {
+    const { tools } = createPlugin();
+    callMock.mockResolvedValue({ ok: true });
+
+    await tools.get("update_task_subtask")!.execute("1", {
+      taskId: "task-1",
+      subtaskId: "7",
+      status: "done",
+    });
+    expect(callMock).toHaveBeenNthCalledWith(1, "task.workflow.updateSubtask", {
+      taskId: "task-1",
+      subtaskId: 7,
+      status: "done",
+      latestWorkerSummary: undefined,
+      latestValidatorSummary: undefined,
+      latestFeedback: undefined,
+    });
+
+    await tools.get("link_task_session")!.execute("2", {
+      taskId: "task-1",
+      sessionKey: "agent:worker:subagent:abc",
+      role: "worker",
+      subtaskId: "7",
+      startedAtIso: "2026-03-13T09:00:00.000Z",
+    });
+    expect(callMock).toHaveBeenNthCalledWith(2, "task.workflow.linkSession", {
+      taskId: "task-1",
+      sessionKey: "agent:worker:subagent:abc",
+      role: "worker",
+      subtaskId: 7,
+      agentId: undefined,
+      parentSessionKey: undefined,
+      startedAt: new Date("2026-03-13T09:00:00.000Z"),
+      completedAt: undefined,
+      endedAt: undefined,
+    });
+  });
+
+  it("injects complex workflow context during before_prompt_build", async () => {
     const { hooks } = createPlugin();
+    callMock.mockResolvedValue({
+      task: {
+        id: "task-1",
+        title: "Complex task",
+        description: "Ship the workflow",
+        status: "doing",
+        workflowMode: "complex",
+        assignor: "lead",
+        assignee: "agent-1",
+        campaignId: 3,
+      },
+      workflow: {
+        status: "planning",
+        planPath: ".openclaw/tasks/task-1/plan.md",
+        planSummary: "Plan summary",
+      },
+      subtasks: [
+        {
+          id: 11,
+          position: 1,
+          title: "Implement data model",
+          instructions: "Add tables and enums",
+          acceptanceCriteria: "Schema and API compile",
+          status: "running",
+          latestWorkerSummary: null,
+          latestValidatorSummary: null,
+          latestFeedback: null,
+        },
+      ],
+      sessions: [
+        {
+          id: 1,
+          sessionKey: "agent:agent-1:task:task-1",
+          role: "root",
+          subtaskId: null,
+          agentId: "agent-1",
+          parentSessionKey: null,
+          startedAt: null,
+          completedAt: null,
+          endedAt: null,
+        },
+      ],
+      summary: {
+        mode: "complex",
+        status: "planning",
+        planPath: ".openclaw/tasks/task-1/plan.md",
+        planSummary: "Plan summary",
+        totalSubtasks: 1,
+        completedSubtasks: 0,
+        activeSubtaskId: 11,
+        blockedSubtaskId: null,
+        rootAgentId: "agent-1",
+        sessionKeys: ["agent:agent-1:task:task-1"],
+      },
+    });
     fetchMissionChainMock.mockResolvedValue({
       mission: {
         id: 1,
@@ -136,14 +239,50 @@ describe("hq-missions plugin", () => {
       },
     });
 
-    const prependSystemContext = vi.fn(async () => {});
-    await hooks.get("task:dispatched")!({
-      task: { campaignId: "3" },
-      sessionKey: "agent:agent-1:task:task-1",
-      prependSystemContext,
-    });
+    const result = await hooks.get("before_prompt_build")!(
+      {
+        prompt: "hello",
+        messages: [],
+      },
+      {
+        sessionKey: "agent:agent-1:task:task-1",
+      }
+    );
 
+    expect(callMock).toHaveBeenCalledWith(
+      "task.workflow.get",
+      { sessionKey: "agent:agent-1:task:task-1" },
+      { type: "query" }
+    );
     expect(fetchMissionChainMock).toHaveBeenCalledWith(3);
-    expect(prependSystemContext).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(
+      expect.objectContaining({
+        prependSystemContext: expect.stringContaining(
+          "HQ COMPLEX TASK WORKFLOW"
+        ),
+      })
+    );
+    expect(result?.prependSystemContext).toContain(
+      "Role: Root assignee orchestrator."
+    );
+    expect(result?.prependSystemContext).toContain("MISSION CONTEXT");
+  });
+
+  it("skips prompt enrichment when the session is not linked to a workflow", async () => {
+    const { hooks } = createPlugin();
+    callMock.mockRejectedValue(new Error("not found"));
+
+    const result = await hooks.get("before_prompt_build")!(
+      {
+        prompt: "hello",
+        messages: [],
+      },
+      {
+        sessionKey: "agent:agent-1:task:task-1",
+      }
+    );
+
+    expect(result).toBeUndefined();
+    expect(fetchMissionChainMock).not.toHaveBeenCalled();
   });
 });
