@@ -47,7 +47,7 @@ export const commentRouter = router({
     }),
 
   delete: authedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const [comment] = await ctx.db
         .select()

@@ -34,7 +34,7 @@ export type BoardTask = {
   dueDate: Date | string | null;
   urgent: boolean;
   important: boolean;
-  campaignId?: string | null;
+  campaignId?: number | null;
   createdAt?: Date | string | null;
 };
 

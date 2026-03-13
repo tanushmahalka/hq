@@ -7,7 +7,7 @@ import { notifyAgent } from "../../../lib/notify-agent.ts";
 
 export const campaignRouter = router({
   list: orgProcedure
-    .input(z.object({ objectiveId: z.string().uuid() }))
+    .input(z.object({ objectiveId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       const rows = await ctx.db.query.campaigns.findMany({
         where: eq(campaigns.objectiveId, input.objectiveId),
@@ -19,7 +19,7 @@ export const campaignRouter = router({
   create: orgProcedure
     .input(
       z.object({
-        objectiveId: z.string().uuid(),
+        objectiveId: z.number().int().positive(),
         title: z.string().min(1),
         description: z.string().optional(),
         hypothesis: z.string().optional(),
@@ -75,7 +75,7 @@ export const campaignRouter = router({
   update: orgProcedure
     .input(
       z.object({
-        id: z.string().uuid(),
+        id: z.number().int().positive(),
         title: z.string().min(1).optional(),
         description: z.string().nullable().optional(),
         hypothesis: z.string().nullable().optional(),
@@ -99,7 +99,7 @@ export const campaignRouter = router({
     }),
 
   delete: orgProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.delete(campaigns).where(eq(campaigns.id, input.id));
       return { success: true };

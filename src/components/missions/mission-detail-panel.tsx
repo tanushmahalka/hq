@@ -29,7 +29,7 @@ const STATUS_DOT_COLORS: Record<MissionStatus, string> = {
 };
 
 interface Campaign {
-  id: string;
+  id: number;
   title: string;
   hypothesis: string | null;
   learnings: string | null;
@@ -39,8 +39,8 @@ interface Campaign {
 }
 
 interface Objective {
-  id: string;
-  missionId: string;
+  id: number;
+  missionId: number;
   title: string;
   description: string | null;
   targetMetric: string | null;
@@ -53,7 +53,7 @@ interface Objective {
 
 interface MissionDetailPanelProps {
   mission: {
-    id: string;
+    id: number;
     agentId: string;
     title: string;
     description: string | null;
@@ -66,7 +66,7 @@ interface MissionDetailPanelProps {
     identity?: { name?: string; emoji?: string; role?: string };
   };
   tasksByCampaign: Record<
-    string,
+    number,
     {
       done: number;
       total: number;

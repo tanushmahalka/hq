@@ -1,10 +1,10 @@
-import { pgTable, uuid, text, integer, timestamp, foreignKey, date, unique, jsonb } from "drizzle-orm/pg-core"
+import { pgTable, text, integer, timestamp, foreignKey, date, unique, jsonb } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
 
 export const imports = pgTable("imports", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
 	filename: text().notNull(),
 	accountsImported: integer("accounts_imported").default(0).notNull(),
 	contactsImported: integer("contacts_imported").default(0).notNull(),
@@ -13,9 +13,9 @@ export const imports = pgTable("imports", {
 });
 
 export const callTasks = pgTable("call_tasks", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	contactId: uuid("contact_id").notNull(),
-	assignedTo: uuid("assigned_to").notNull(),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
+	contactId: integer("contact_id").notNull(),
+	assignedTo: integer("assigned_to").notNull(),
 	scheduledDate: date("scheduled_date").notNull(),
 	status: text().default('pending').notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
@@ -33,10 +33,10 @@ export const callTasks = pgTable("call_tasks", {
 ]);
 
 export const callLogs = pgTable("call_logs", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	callTaskId: uuid("call_task_id").notNull(),
-	contactId: uuid("contact_id").notNull(),
-	teamMemberId: uuid("team_member_id").notNull(),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
+	callTaskId: integer("call_task_id").notNull(),
+	contactId: integer("contact_id").notNull(),
+	teamMemberId: integer("team_member_id").notNull(),
 	outcome: text().notNull(),
 	durationSeconds: integer("duration_seconds"),
 	notes: text(),
@@ -60,8 +60,8 @@ export const callLogs = pgTable("call_logs", {
 ]);
 
 export const contacts = pgTable("contacts", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	accountId: uuid("account_id"),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
+	accountId: integer("account_id"),
 	name: text().notNull(),
 	title: text(),
 	email: text(),
@@ -78,7 +78,7 @@ export const contacts = pgTable("contacts", {
 ]);
 
 export const teamMembers = pgTable("team_members", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
 	name: text().notNull(),
 	email: text(),
 	dailyCallLimit: integer("daily_call_limit").default(25).notNull(),
@@ -88,7 +88,7 @@ export const teamMembers = pgTable("team_members", {
 ]);
 
 export const scrapeRuns = pgTable("scrape_runs", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
 	city: text(),
 	country: text().notNull(),
 	requestedCount: integer("requested_count"),
@@ -105,7 +105,7 @@ export const scrapeRuns = pgTable("scrape_runs", {
 });
 
 export const accounts = pgTable("accounts", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
 	companyName: text("company_name").notNull(),
 	website: text(),
 	industry: text(),
@@ -118,8 +118,8 @@ export const accounts = pgTable("accounts", {
 });
 
 export const accountEnrichments = pgTable("account_enrichments", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	accountId: uuid("account_id").notNull(),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
+	accountId: integer("account_id").notNull(),
 	provider: text().notNull(),
 	data: jsonb(),
 	fetchedAt: timestamp("fetched_at", { mode: 'string' }).defaultNow().notNull(),
@@ -133,8 +133,8 @@ export const accountEnrichments = pgTable("account_enrichments", {
 ]);
 
 export const jobs = pgTable("jobs", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	accountId: uuid("account_id"),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
+	accountId: integer("account_id"),
 	title: text().notNull(),
 	companyName: text("company_name").notNull(),
 	location: text(),
@@ -150,7 +150,7 @@ export const jobs = pgTable("jobs", {
 	recruiterPhone: text("recruiter_phone"),
 	companyRating: text("company_rating"),
 	source: text().default('naukri'),
-	scrapeRunId: uuid("scrape_run_id"),
+	scrapeRunId: integer("scrape_run_id"),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	externalCompanyId: text("external_company_id"),
 }, (table) => [
@@ -168,10 +168,10 @@ export const jobs = pgTable("jobs", {
 ]);
 
 export const accountEvents = pgTable("account_events", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	accountId: uuid("account_id").notNull(),
-	contactId: uuid("contact_id"),
-	teamMemberId: uuid("team_member_id").notNull(),
+	id: integer("id").generatedByDefaultAsIdentity().primaryKey().notNull(),
+	accountId: integer("account_id").notNull(),
+	contactId: integer("contact_id"),
+	teamMemberId: integer("team_member_id").notNull(),
 	type: text().notNull(),
 	notes: text(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),

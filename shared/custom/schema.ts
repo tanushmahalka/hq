@@ -1,6 +1,5 @@
 import {
   pgTable,
-  uuid,
   text,
   integer,
   timestamp,
@@ -23,7 +22,7 @@ export const campaignStatusEnum = pgEnum("campaign_status", CAMPAIGN_STATUSES);
 // -- Tables --
 
 export const missions = pgTable("missions", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   agentId: text("agent_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
@@ -38,8 +37,8 @@ export const missions = pgTable("missions", {
 });
 
 export const objectives = pgTable("objectives", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  missionId: uuid("mission_id")
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  missionId: integer("mission_id")
     .notNull()
     .references(() => missions.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
@@ -59,8 +58,8 @@ export const objectives = pgTable("objectives", {
 });
 
 export const campaigns = pgTable("campaigns", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  objectiveId: uuid("objective_id")
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  objectiveId: integer("objective_id")
     .notNull()
     .references(() => objectives.id, { onDelete: "cascade" }),
   title: text("title").notNull(),

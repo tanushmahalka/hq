@@ -33,7 +33,7 @@ interface TaskCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialStatus?: TaskStatus;
-  initialCampaignId?: string;
+  initialCampaignId?: number;
 }
 
 export function TaskCreateDialog({ open, onOpenChange, initialStatus = "todo", initialCampaignId }: TaskCreateDialogProps) {

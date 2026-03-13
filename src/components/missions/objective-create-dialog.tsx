@@ -16,7 +16,7 @@ import { trpc } from "@/lib/trpc";
 interface ObjectiveCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  missionId: string;
+  missionId: number;
 }
 
 export function ObjectiveCreateDialog({

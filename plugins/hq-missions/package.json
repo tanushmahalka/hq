@@ -8,6 +8,7 @@
     ]
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.32.0"
+    "@sinclair/typebox": "^0.32.0",
+    "superjson": "^2.2.6"
   }
 }

@@ -1,6 +1,6 @@
 import {
   pgTable,
-  uuid,
+  integer,
   text,
   boolean,
   timestamp,
@@ -21,7 +21,7 @@ export const tasks = pgTable("tasks", {
   dueDate: timestamp("due_date", { withTimezone: true }),
   urgent: boolean("urgent").notNull().default(false),
   important: boolean("important").notNull().default(false),
-  campaignId: text("campaign_id"),
+  campaignId: integer("campaign_id"),
   organizationId: text("organization_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -33,7 +33,7 @@ export const tasks = pgTable("tasks", {
 });
 
 export const taskComments = pgTable("task_comments", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   taskId: text("task_id")
     .notNull()
     .references(() => tasks.id, { onDelete: "cascade" }),

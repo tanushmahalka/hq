@@ -8,7 +8,7 @@ import { fetchMissionChain } from "../../../lib/mission-chain.ts";
 
 export const missionRouter = router({
   chain: orgProcedure
-    .input(z.object({ campaignId: z.string().uuid() }))
+    .input(z.object({ campaignId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       return fetchMissionChain(ctx.db, input.campaignId);
     }),
@@ -49,7 +49,7 @@ export const missionRouter = router({
     }),
 
   get: orgProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       const conditions = [eq(missions.id, input.id)];
       if (!ctx.isAgent && ctx.organizationId) {
@@ -114,7 +114,7 @@ export const missionRouter = router({
   update: orgProcedure
     .input(
       z.object({
-        id: z.string().uuid(),
+        id: z.number().int().positive(),
         title: z.string().min(1).optional(),
         description: z.string().nullable().optional(),
         status: z.enum(MISSION_STATUSES).optional(),
@@ -153,7 +153,7 @@ export const missionRouter = router({
     }),
 
   delete: orgProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const [mission] = await ctx.db
         .select()

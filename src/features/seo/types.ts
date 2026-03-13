@@ -2,7 +2,7 @@ export type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
 export type SeoViewTab = "overview" | "competitors";
 
 export type SeoSite = {
-  id: string;
+  id: number;
   name: string;
   domain: string;
   pageCount: number;
@@ -28,8 +28,8 @@ export type SeoSiteFootprint = {
 };
 
 export type SeoPage = {
-  id: string;
-  siteId: string;
+  id: number;
+  siteId: number;
   siteName: string;
   siteDomain: string;
   url: string;
@@ -48,8 +48,8 @@ export type SeoPage = {
 };
 
 export type SeoCluster = {
-  id: string;
-  siteId: string;
+  id: number;
+  siteId: number;
   siteName: string;
   siteDomain: string;
   name: string;
@@ -83,8 +83,8 @@ export type SeoCompetitorHistoryPoint = {
 };
 
 export type SeoCompetitor = {
-  id: string;
-  siteId: string;
+  id: number;
+  siteId: number;
   label: string;
   competitorDomain: string;
   competitorType: string;

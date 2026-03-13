@@ -37,6 +37,38 @@ type HQMissionsConfig = {
   autoEnrich?: boolean;
 };
 
+function parsePositiveInt(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return null;
+    const parsed = Number(trimmed);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function requirePositiveInt(value: unknown, field: string): number {
+  const parsed = parsePositiveInt(value);
+  if (parsed === null) {
+    throw new Error(`${field} must be a positive integer`);
+  }
+  return parsed;
+}
+
+function numericIdSchema(description: string) {
+  return Type.Union([
+    Type.Number({ description }),
+    Type.String({ description: `${description} as a stringified integer` }),
+  ]);
+}
+
 function toNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -174,7 +206,7 @@ export default function register(api: PluginAPI) {
     description:
       "Update a campaign's status (planned, active, paused, completed, failed). Use this when you've finished a campaign's work or need to mark it as failed.",
     parameters: Type.Object({
-      campaignId: Type.String(),
+      campaignId: numericIdSchema("Campaign ID"),
       status: Type.Union([
         Type.Literal("planned"),
         Type.Literal("active"),
@@ -184,15 +216,16 @@ export default function register(api: PluginAPI) {
       ]),
     }),
     async execute(_id, params) {
+      const campaignId = requirePositiveInt(params.campaignId, "campaignId");
       await hq.call("custom.campaign.update", {
-        id: params.campaignId as string,
+        id: campaignId,
         status: params.status as string,
       });
       return {
         content: [
           {
             type: "text",
-            text: `Campaign ${params.campaignId} → ${params.status}`,
+            text: `Campaign ${campaignId} → ${params.status}`,
           },
         ],
       };
@@ -204,12 +237,13 @@ export default function register(api: PluginAPI) {
     description:
       "Report a metric update for an objective. Use this to track progress (e.g., 'current organic visits: 5200').",
     parameters: Type.Object({
-      objectiveId: Type.String(),
+      objectiveId: numericIdSchema("Objective ID"),
       currentValue: Type.String({ description: "Current metric value" }),
     }),
     async execute(_id, params) {
+      const objectiveId = requirePositiveInt(params.objectiveId, "objectiveId");
       await hq.call("custom.objective.update", {
-        id: params.objectiveId as string,
+        id: objectiveId,
         currentValue: params.currentValue as string,
       });
       return {
@@ -228,14 +262,15 @@ export default function register(api: PluginAPI) {
     description:
       "Record learnings/reflections for a campaign. Use this after completing or reviewing a campaign to capture what worked, what didn't, and insights for future campaigns.",
     parameters: Type.Object({
-      campaignId: Type.String(),
+      campaignId: numericIdSchema("Campaign ID"),
       learnings: Type.String({
         description: "What was learned from this campaign",
       }),
     }),
     async execute(_id, params) {
+      const campaignId = requirePositiveInt(params.campaignId, "campaignId");
       await hq.call("custom.campaign.update", {
-        id: params.campaignId as string,
+        id: campaignId,
         learnings: params.learnings as string,
       });
       return {
@@ -272,7 +307,7 @@ export default function register(api: PluginAPI) {
     description:
       "Create a new objective under a mission. An objective defines a measurable outcome with an optional target metric (e.g., 'organic visits: 5000').",
     parameters: Type.Object({
-      missionId: Type.String({ description: "UUID of the parent mission" }),
+      missionId: numericIdSchema("Numeric ID of the parent mission"),
       title: Type.String({ description: "Objective title" }),
       description: Type.Optional(Type.String()),
       hypothesis: Type.Optional(Type.String({ description: "Hypothesis for achieving this objective" })),
@@ -283,8 +318,9 @@ export default function register(api: PluginAPI) {
       sortOrder: Type.Optional(Type.Number({ description: "Ordering index within mission" })),
     }),
     async execute(_id, params) {
+      const missionId = requirePositiveInt(params.missionId, "missionId");
       const objective = await hq.call("custom.objective.create", {
-        missionId: params.missionId as string,
+        missionId,
         title: params.title as string,
         description: params.description as string | undefined,
         hypothesis: params.hypothesis as string | undefined,
@@ -307,7 +343,7 @@ export default function register(api: PluginAPI) {
     description:
       "Create a new campaign under an objective. A campaign is a specific initiative with a hypothesis to test, executed to move an objective's metric.",
     parameters: Type.Object({
-      objectiveId: Type.String({ description: "UUID of the parent objective" }),
+      objectiveId: numericIdSchema("Numeric ID of the parent objective"),
       title: Type.String({ description: "Campaign title" }),
       description: Type.Optional(Type.String()),
       hypothesis: Type.Optional(Type.String({ description: "What you expect this campaign to achieve and why" })),
@@ -316,8 +352,9 @@ export default function register(api: PluginAPI) {
       sortOrder: Type.Optional(Type.Number({ description: "Ordering index within objective" })),
     }),
     async execute(_id, params) {
+      const objectiveId = requirePositiveInt(params.objectiveId, "objectiveId");
       const campaign = await hq.call("custom.campaign.create", {
-        objectiveId: params.objectiveId as string,
+        objectiveId,
         title: params.title as string,
         description: params.description as string | undefined,
         hypothesis: params.hypothesis as string | undefined,
@@ -340,19 +377,20 @@ export default function register(api: PluginAPI) {
     description:
       "List all tasks linked to a specific campaign, showing their status and progress.",
     parameters: Type.Object({
-      campaignId: Type.String(),
+      campaignId: numericIdSchema("Campaign ID"),
     }),
     async execute(_id, params) {
+      const campaignId = requirePositiveInt(params.campaignId, "campaignId");
       const tasks = (await hq.call<
-        { campaignId?: string; id: string; title: string; status: string }[]
+        { campaignId?: number | null; id: string; title: string; status: string }[]
       >("task.list", undefined, { type: "query" })) as {
-        campaignId?: string;
+        campaignId?: number | null;
         id: string;
         title: string;
         status: string;
       }[];
       const linked = tasks.filter(
-        (t) => t.campaignId === (params.campaignId as string)
+        (t) => t.campaignId === campaignId
       );
       return {
         content: [{ type: "text", text: JSON.stringify(linked, null, 2) }],
@@ -382,7 +420,7 @@ export default function register(api: PluginAPI) {
       ),
       urgent: Type.Optional(Type.Boolean()),
       important: Type.Optional(Type.Boolean()),
-      campaignId: Type.Optional(Type.String()),
+      campaignId: Type.Optional(numericIdSchema("Campaign ID")),
       organizationId: Type.Optional(
         Type.String({
           description:
@@ -402,7 +440,10 @@ export default function register(api: PluginAPI) {
           : undefined,
         urgent: params.urgent as boolean | undefined,
         important: params.important as boolean | undefined,
-        campaignId: params.campaignId as string | undefined,
+        campaignId:
+          params.campaignId === undefined
+            ? undefined
+            : requirePositiveInt(params.campaignId, "campaignId"),
         organizationId: params.organizationId as string | undefined,
       });
       return {
@@ -482,6 +523,9 @@ export default function register(api: PluginAPI) {
       ),
       urgent: Type.Optional(Type.Boolean()),
       important: Type.Optional(Type.Boolean()),
+      campaignId: Type.Optional(
+        Type.Union([numericIdSchema("Campaign ID"), Type.Null()])
+      ),
     }),
     async execute(_id, params) {
       const payload: Record<string, unknown> = {
@@ -500,6 +544,12 @@ export default function register(api: PluginAPI) {
       }
       if (params.urgent !== undefined) payload.urgent = params.urgent;
       if (params.important !== undefined) payload.important = params.important;
+      if (params.campaignId !== undefined) {
+        payload.campaignId =
+          params.campaignId === null
+            ? null
+            : requirePositiveInt(params.campaignId, "campaignId");
+      }
 
       const task = await hq.call("task.update", payload);
       return {
@@ -545,13 +595,14 @@ export default function register(api: PluginAPI) {
 
   api.registerTool({
     name: "delete_task_comment",
-    description: "Delete a task comment by comment UUID.",
+    description: "Delete a task comment by numeric comment ID.",
     parameters: Type.Object({
-      commentId: Type.String({ description: "Task comment UUID" }),
+      commentId: numericIdSchema("Task comment ID"),
     }),
     async execute(_id, params) {
+      const commentId = requirePositiveInt(params.commentId, "commentId");
       const result = await hq.call("task.comment.delete", {
-        id: params.commentId as string,
+        id: commentId,
       });
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
@@ -582,9 +633,10 @@ export default function register(api: PluginAPI) {
     async (ctx) => {
       if (config.autoEnrich === false) return;
       const { task } = ctx;
-      if (!task.campaignId) return;
+      const campaignId = parsePositiveInt(task.campaignId);
+      if (!campaignId) return;
 
-      const chain = await hq.fetchMissionChain(task.campaignId as string);
+      const chain = await hq.fetchMissionChain(campaignId);
       if (!chain) return;
 
       const context = formatMissionContext(chain);

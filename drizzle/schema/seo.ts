@@ -8,13 +8,12 @@ import {
   text,
   timestamp,
   uniqueIndex,
-  uuid,
 } from "drizzle-orm/pg-core";
 
 export const sites = pgTable(
   "sites",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     name: text("name").notNull(),
     domain: text("domain").notNull(),
     businessType: text("business_type").notNull(),
@@ -31,8 +30,8 @@ export const sites = pgTable(
 export const pages = pgTable(
   "pages",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
     url: text("url").notNull(),
@@ -62,8 +61,8 @@ export const pages = pgTable(
 export const siteCompetitors = pgTable(
   "site_competitors",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
     competitorDomain: text("competitor_domain").notNull(),
@@ -84,8 +83,8 @@ export const siteCompetitors = pgTable(
 export const competitorDomainFootprints = pgTable(
   "competitor_domain_footprints",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteCompetitorId: uuid("site_competitor_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteCompetitorId: integer("site_competitor_id")
       .notNull()
       .references(() => siteCompetitors.id),
     location: text("location").notNull(),
@@ -109,8 +108,8 @@ export const competitorDomainFootprints = pgTable(
 export const siteDomainFootprints = pgTable(
   "site_domain_footprints",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
     location: text("location").notNull(),
@@ -134,8 +133,8 @@ export const siteDomainFootprints = pgTable(
 export const competitorRankedKeywords = pgTable(
   "competitor_ranked_keywords",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteCompetitorId: uuid("site_competitor_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteCompetitorId: integer("site_competitor_id")
       .notNull()
       .references(() => siteCompetitors.id),
     keyword: text("keyword").notNull(),
@@ -159,8 +158,8 @@ export const competitorRankedKeywords = pgTable(
 );
 
 export const queryClusters = pgTable("query_clusters", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  siteId: uuid("site_id")
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  siteId: integer("site_id")
     .notNull()
     .references(() => sites.id),
   name: text("name").notNull(),
@@ -175,8 +174,8 @@ export const queryClusters = pgTable("query_clusters", {
 export const queries = pgTable(
   "queries",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    clusterId: uuid("cluster_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clusterId: integer("cluster_id")
       .notNull()
       .references(() => queryClusters.id),
     query: text("query").notNull(),
@@ -191,11 +190,11 @@ export const queries = pgTable(
 export const pageClusterTargets = pgTable(
   "page_cluster_targets",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    pageId: uuid("page_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    pageId: integer("page_id")
       .notNull()
       .references(() => pages.id),
-    clusterId: uuid("cluster_id")
+    clusterId: integer("cluster_id")
       .notNull()
       .references(() => queryClusters.id),
     targetRole: text("target_role").notNull(),
@@ -208,12 +207,12 @@ export const pageClusterTargets = pgTable(
 export const searchConsoleDaily = pgTable(
   "search_console_daily",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
-    pageId: uuid("page_id").references(() => pages.id),
-    queryId: uuid("query_id").references(() => queries.id),
+    pageId: integer("page_id").references(() => pages.id),
+    queryId: integer("query_id").references(() => queries.id),
     eventDate: date("event_date").notNull(),
     device: text("device"),
     countryCode: text("country_code"),
@@ -241,11 +240,11 @@ export const searchConsoleDaily = pgTable(
 export const analyticsDaily = pgTable(
   "analytics_daily",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
-    pageId: uuid("page_id").references(() => pages.id),
+    pageId: integer("page_id").references(() => pages.id),
     eventDate: date("event_date").notNull(),
     channel: text("channel").notNull(),
     device: text("device"),
@@ -274,8 +273,8 @@ export const analyticsDaily = pgTable(
 );
 
 export const crawlRuns = pgTable("crawl_runs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  siteId: uuid("site_id")
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  siteId: integer("site_id")
     .notNull()
     .references(() => sites.id),
   source: text("source").notNull(),
@@ -288,11 +287,11 @@ export const crawlRuns = pgTable("crawl_runs", {
 export const crawlPageFacts = pgTable(
   "crawl_page_facts",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    crawlRunId: uuid("crawl_run_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    crawlRunId: integer("crawl_run_id")
       .notNull()
       .references(() => crawlRuns.id),
-    pageId: uuid("page_id").references(() => pages.id),
+    pageId: integer("page_id").references(() => pages.id),
     url: text("url").notNull(),
     statusCode: integer("status_code"),
     contentType: text("content_type"),
@@ -318,14 +317,14 @@ export const crawlPageFacts = pgTable(
 export const internalLinks = pgTable(
   "internal_links",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
-    sourcePageId: uuid("source_page_id")
+    sourcePageId: integer("source_page_id")
       .notNull()
       .references(() => pages.id),
-    targetPageId: uuid("target_page_id")
+    targetPageId: integer("target_page_id")
       .notNull()
       .references(() => pages.id),
     anchorText: text("anchor_text"),
@@ -350,13 +349,13 @@ export const internalLinks = pgTable(
 export const backlinkSources = pgTable(
   "backlink_sources",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
     sourceDomain: text("source_domain").notNull(),
     sourceUrl: text("source_url"),
-    targetPageId: uuid("target_page_id").references(() => pages.id),
+    targetPageId: integer("target_page_id").references(() => pages.id),
     targetUrl: text("target_url").notNull(),
     anchorText: text("anchor_text"),
     relAttr: text("rel_attr"),
@@ -382,8 +381,8 @@ export const backlinkSources = pgTable(
 export const brandMentions = pgTable(
   "brand_mentions",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
     sourceDomain: text("source_domain").notNull(),
@@ -403,8 +402,8 @@ export const brandMentions = pgTable(
 );
 
 export const outreachProspects = pgTable("outreach_prospects", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  siteId: uuid("site_id")
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  siteId: integer("site_id")
     .notNull()
     .references(() => sites.id),
   organizationName: text("organization_name").notNull(),
@@ -420,14 +419,14 @@ export const outreachProspects = pgTable("outreach_prospects", {
 });
 
 export const outreachCampaigns = pgTable("outreach_campaigns", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  siteId: uuid("site_id")
-    .notNull()
-    .references(() => sites.id),
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  siteId: integer("site_id")
+      .notNull()
+      .references(() => sites.id),
   name: text("name").notNull(),
   campaignType: text("campaign_type").notNull(),
-  targetPageId: uuid("target_page_id").references(() => pages.id),
-  targetAssetPageId: uuid("target_asset_page_id").references(() => pages.id),
+  targetPageId: integer("target_page_id").references(() => pages.id),
+  targetAssetPageId: integer("target_asset_page_id").references(() => pages.id),
   startDate: date("start_date"),
   endDate: date("end_date"),
   status: text("status").notNull(),
@@ -437,17 +436,17 @@ export const outreachCampaigns = pgTable("outreach_campaigns", {
 export const outreachActions = pgTable(
   "outreach_actions",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    campaignId: uuid("campaign_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    campaignId: integer("campaign_id")
       .notNull()
       .references(() => outreachCampaigns.id),
-    prospectId: uuid("prospect_id")
+    prospectId: integer("prospect_id")
       .notNull()
       .references(() => outreachProspects.id),
     actionType: text("action_type").notNull(),
     actionDate: timestamp("action_date", { mode: "date" }).notNull(),
     outcome: text("outcome"),
-    linkedBacklinkSourceId: uuid("linked_backlink_source_id").references(() => backlinkSources.id),
+    linkedBacklinkSourceId: integer("linked_backlink_source_id").references(() => backlinkSources.id),
     notes: text("notes"),
   },
   (table) => [index("idx_outreach_actions_campaign").on(table.campaignId)],
@@ -456,8 +455,8 @@ export const outreachActions = pgTable(
 export const reviews = pgTable(
   "reviews",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
     platform: text("platform").notNull(),
@@ -484,8 +483,8 @@ export const reviews = pgTable(
 export const businessProfiles = pgTable(
   "business_profiles",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    siteId: uuid("site_id")
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    siteId: integer("site_id")
       .notNull()
       .references(() => sites.id),
     platform: text("platform").notNull(),
@@ -508,11 +507,11 @@ export const businessProfiles = pgTable(
 );
 
 export const assets = pgTable("assets", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  siteId: uuid("site_id")
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  siteId: integer("site_id")
     .notNull()
     .references(() => sites.id),
-  pageId: uuid("page_id").references(() => pages.id),
+  pageId: integer("page_id").references(() => pages.id),
   assetType: text("asset_type").notNull(),
   title: text("title").notNull(),
   launchDate: date("launch_date"),

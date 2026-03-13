@@ -18,13 +18,13 @@ const PROGRESS_BAR_COLORS: Record<MissionStatus, string> = {
 
 interface MissionListRowProps {
   mission: {
-    id: string;
+    id: number;
     agentId: string;
     title: string;
     description: string | null;
     status: MissionStatus;
     objectives: Array<{
-      id: string;
+      id: number;
       title: string;
       status: ObjectiveStatus;
       targetMetric: string | null;

@@ -30,7 +30,7 @@ const STATUS_DOT_COLORS: Record<ObjectiveStatus, string> = {
 };
 
 interface Campaign {
-  id: string;
+  id: number;
   title: string;
   hypothesis: string | null;
   learnings: string | null;
@@ -41,8 +41,8 @@ interface Campaign {
 
 interface ObjectiveCardProps {
   objective: {
-    id: string;
-    missionId: string;
+    id: number;
+    missionId: number;
     title: string;
     description: string | null;
     targetMetric: string | null;
@@ -52,7 +52,7 @@ interface ObjectiveCardProps {
     dueDate: Date | null;
     campaigns: Campaign[];
   };
-  tasksByCampaign: Record<string, { done: number; total: number; tasks: Array<{ id: string; title: string; status: string }> }>;
+  tasksByCampaign: Record<number, { done: number; total: number; tasks: Array<{ id: string; title: string; status: string }> }>;
 }
 
 export function ObjectiveCard({

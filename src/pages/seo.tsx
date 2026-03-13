@@ -50,15 +50,15 @@ function readArray<T>(value: unknown): T[] {
 
 export default function Seo() {
   const [activeTab, setActiveTab] = useState<SeoViewTab>("overview");
-  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [selectedSiteId, setSelectedSiteId] = useState<number | null>(null);
   const [pageSearch, setPageSearch] = useState("");
   const [clusterSearch, setClusterSearch] = useState("");
   const [competitorSearch, setCompetitorSearch] = useState("");
   const [selectedPageType, setSelectedPageType] = useState("all");
   const [selectedIntent, setSelectedIntent] = useState("all");
-  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
-  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
-  const [selectedCompetitorId, setSelectedCompetitorId] = useState<string | null>(null);
+  const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
+  const [selectedClusterId, setSelectedClusterId] = useState<number | null>(null);
+  const [selectedCompetitorId, setSelectedCompetitorId] = useState<number | null>(null);
 
   const deferredPageSearch = useDeferredValue(pageSearch);
   const deferredClusterSearch = useDeferredValue(clusterSearch);
@@ -181,15 +181,15 @@ export default function Seo() {
               {sites.length ? (
                 <div className="w-full max-w-[320px]">
                   <Select
-                    value={effectiveSelectedSiteId ?? undefined}
-                    onValueChange={setSelectedSiteId}
+                    value={effectiveSelectedSiteId?.toString()}
+                    onValueChange={(value) => setSelectedSiteId(Number(value))}
                   >
                     <SelectTrigger className="h-11 w-full rounded-full bg-background/80 px-4">
                       <SelectValue placeholder="Choose a site" />
                     </SelectTrigger>
                     <SelectContent>
                       {sites.map((site) => (
-                        <SelectItem key={site.id} value={site.id}>
+                        <SelectItem key={site.id} value={site.id.toString()}>
                           {site.name} · {site.domain}
                         </SelectItem>
                       ))}

@@ -44,16 +44,16 @@ export function OverviewTab({
   pageTypeOptions: string[];
   pageSearch: string;
   onPageSearchChange: (value: string) => void;
-  selectedPageId: string | null;
-  onSelectPage: (value: string) => void;
+  selectedPageId: number | null;
+  onSelectPage: (value: number) => void;
   activeCluster: SeoCluster | null;
   selectedIntent: string;
   onIntentChange: (value: string) => void;
   intentOptions: string[];
   clusterSearch: string;
   onClusterSearchChange: (value: string) => void;
-  selectedClusterId: string | null;
-  onSelectCluster: (value: string) => void;
+  selectedClusterId: number | null;
+  onSelectCluster: (value: number) => void;
 }) {
   return (
     <>

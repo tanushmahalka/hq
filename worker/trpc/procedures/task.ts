@@ -65,7 +65,7 @@ export const taskRouter = router({
         dueDate: z.date().optional(),
         urgent: z.boolean().optional(),
         important: z.boolean().optional(),
-        campaignId: z.string().optional(),
+        campaignId: z.number().int().positive().optional(),
         organizationId: z.string().optional(),
       })
     )
@@ -144,6 +144,7 @@ export const taskRouter = router({
         dueDate: z.date().nullable().optional(),
         urgent: z.boolean().optional(),
         important: z.boolean().optional(),
+        campaignId: z.number().int().positive().nullable().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {

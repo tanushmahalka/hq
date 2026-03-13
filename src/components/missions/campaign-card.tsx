@@ -33,7 +33,7 @@ type TaskEntry = { id: string; title: string; status: string };
 
 interface CampaignCardProps {
   campaign: {
-    id: string;
+    id: number;
     title: string;
     hypothesis: string | null;
     learnings: string | null;

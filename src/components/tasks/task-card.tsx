@@ -27,7 +27,7 @@ interface TaskCardProps {
     dueDate: Date | string | null;
     urgent: boolean;
     important: boolean;
-    campaignId?: string | null;
+    campaignId?: number | null;
   };
   onClick: () => void;
   approvalSummary?: BoardApprovalSummary;
@@ -136,7 +136,7 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
       {task.campaignId && (
         <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground/50">
           <Link2 className="size-3 shrink-0" />
-          <span className="truncate">{task.campaignId.slice(0, 8)}</span>
+          <span className="truncate">#{task.campaignId}</span>
         </div>
       )}
 

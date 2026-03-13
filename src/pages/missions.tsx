@@ -9,7 +9,7 @@ import { MissionCreateDialog } from "@/components/missions/mission-create-dialog
 
 export default function Missions() {
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(
+  const [selectedMissionId, setSelectedMissionId] = useState<number | null>(
     null
   );
   const { agents } = useGateway();
@@ -25,10 +25,10 @@ export default function Missions() {
     total: number;
     tasks: Array<{ id: string; title: string; status: string }>;
   };
-  const tasksByCampaign: Record<string, CampaignTaskEntry> = {};
+  const tasksByCampaign: Record<number, CampaignTaskEntry> = {};
   if (allTasks) {
     for (const task of allTasks) {
-      const cid = (task as { campaignId?: string | null }).campaignId;
+      const cid = (task as { campaignId?: number | null }).campaignId;
       if (!cid) continue;
       if (!tasksByCampaign[cid])
         tasksByCampaign[cid] = { done: 0, total: 0, tasks: [] };

@@ -119,7 +119,7 @@ export function CompetitorsTab({
   hasActiveFilters: boolean;
   onClearFilters: () => void;
   activeCompetitor: SeoCompetitor | null;
-  onSelectCompetitor: (value: string | null) => void;
+  onSelectCompetitor: (value: number | null) => void;
 }) {
   return (
     <div className="space-y-6">

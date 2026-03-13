@@ -16,7 +16,7 @@ import { trpc } from "@/lib/trpc";
 interface CampaignCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  objectiveId: string;
+  objectiveId: number;
 }
 
 export function CampaignCreateDialog({

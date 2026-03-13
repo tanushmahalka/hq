@@ -26,7 +26,7 @@ type MetricPoint = {
 };
 
 type MetricSeries = {
-  id: string;
+  id: number | string;
   label: string;
   color: string;
   latestValue: number;

@@ -24,7 +24,12 @@ export interface Context {
   agentDatabases: Map<string, string>;
   localPgAdminUrl?: string;
   leadAgentId: string;
-  user: { id: string; email: string; name: string; role?: string | null } | null;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role?: string | null;
+  } | null;
   session: { id: string; activeOrganizationId?: string | null } | null;
   organizationId: string | null;
   isAgent: boolean;
@@ -107,7 +112,7 @@ export async function createContext(
     waitUntil: executionCtx.waitUntil.bind(executionCtx),
     agentDatabases,
     localPgAdminUrl: env.LOCAL_PG_ADMIN_URL,
-    leadAgentId: env.LEAD_AGENT_ID ?? "jessica",
+    leadAgentId: env.LEAD_AGENT_ID ?? "Unknown",
     user,
     session,
     organizationId,

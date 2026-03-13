@@ -412,7 +412,7 @@ function PropertyRow({
 // -- Comments panel --
 
 interface Comment {
-  id: string;
+  id: number;
   author: string;
   content: string;
   createdAt: Date;

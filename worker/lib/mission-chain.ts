@@ -8,14 +8,14 @@ import type { Database } from "../db/client.ts";
 
 export interface MissionChain {
   mission: {
-    id: string;
+    id: number;
     agentId: string;
     title: string;
     description: string | null;
     status: string;
   };
   objective: {
-    id: string;
+    id: number;
     title: string;
     description: string | null;
     targetMetric: string | null;
@@ -25,7 +25,7 @@ export interface MissionChain {
     dueDate: Date | null;
   };
   campaign: {
-    id: string;
+    id: number;
     title: string;
     description: string | null;
     hypothesis: string | null;
@@ -36,13 +36,13 @@ export interface MissionChain {
 
 export async function fetchMissionChain(
   db: Database,
-  campaignId: string
+  campaignId: number
 ): Promise<MissionChain | null> {
   const campaign = (await db.query.campaigns.findFirst({
     where: eq(campaigns.id, campaignId),
   })) as {
-    id: string;
-    objectiveId: string;
+    id: number;
+    objectiveId: number;
     title: string;
     description: string | null;
     hypothesis: string | null;
@@ -55,8 +55,8 @@ export async function fetchMissionChain(
   const objective = (await db.query.objectives.findFirst({
     where: eq(objectives.id, campaign.objectiveId),
   })) as {
-    id: string;
-    missionId: string;
+    id: number;
+    missionId: number;
     title: string;
     description: string | null;
     targetMetric: string | null;
@@ -71,7 +71,7 @@ export async function fetchMissionChain(
   const mission = (await db.query.missions.findFirst({
     where: eq(missions.id, objective.missionId),
   })) as {
-    id: string;
+    id: number;
     agentId: string;
     title: string;
     description: string | null;

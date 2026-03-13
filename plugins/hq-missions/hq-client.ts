@@ -1,23 +1,25 @@
+import superjson from "superjson";
+
 export interface MissionChain {
   mission: {
-    id: string;
+    id: number;
     agentId: string;
     title: string;
     description: string | null;
     status: string;
   };
   objective: {
-    id: string;
+    id: number;
     title: string;
     description: string | null;
     targetMetric: string | null;
     targetValue: string | null;
     currentValue: string | null;
     status: string;
-    dueDate: string | null;
+    dueDate: Date | null;
   };
   campaign: {
-    id: string;
+    id: number;
     title: string;
     description: string | null;
     hypothesis: string | null;
@@ -35,8 +37,9 @@ export function createHQClient(baseUrl: string, token: string) {
     const isQuery = options?.type
       ? options.type === "query"
       : !input;
+    const serializedInput = superjson.serialize(input ?? {});
     const url = isQuery
-      ? `${baseUrl}/${procedure}?input=${encodeURIComponent(JSON.stringify(input ?? {}))}`
+      ? `${baseUrl}/${procedure}?input=${encodeURIComponent(JSON.stringify(serializedInput))}`
       : `${baseUrl}/${procedure}`;
 
     const res = await fetch(url, {
@@ -45,7 +48,7 @@ export function createHQClient(baseUrl: string, token: string) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: isQuery ? undefined : JSON.stringify(input),
+      body: isQuery ? undefined : JSON.stringify(serializedInput),
     });
 
     if (!res.ok) {
@@ -53,11 +56,14 @@ export function createHQClient(baseUrl: string, token: string) {
     }
 
     const data = await res.json();
-    return data.result?.data as T;
+    const result = data.result?.data;
+    return result === undefined
+      ? (undefined as T)
+      : (superjson.deserialize(result) as T);
   }
 
   async function fetchMissionChain(
-    campaignId: string
+    campaignId: number
   ): Promise<MissionChain | null> {
     try {
       return await call<MissionChain | null>(

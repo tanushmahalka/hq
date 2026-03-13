@@ -20,7 +20,7 @@ export type SeoOverview = {
     mappedPageCount: number;
   };
   sites: Array<{
-    id: string;
+    id: number;
     name: string;
     domain: string;
     pageCount: number;
@@ -47,8 +47,8 @@ export type SeoOverview = {
     }>;
   }>;
   competitors: Array<{
-    id: string;
-    siteId: string;
+    id: number;
+    siteId: number;
     label: string;
     competitorDomain: string;
     competitorType: string;
@@ -90,8 +90,8 @@ export type SeoOverview = {
     }>;
   }>;
   pages: Array<{
-    id: string;
-    siteId: string;
+    id: number;
+    siteId: number;
     siteName: string;
     siteDomain: string;
     url: string;
@@ -109,8 +109,8 @@ export type SeoOverview = {
     clusterNames: string[];
   }>;
   clusters: Array<{
-    id: string;
-    siteId: string;
+    id: number;
+    siteId: number;
     siteName: string;
     siteDomain: string;
     name: string;
@@ -246,8 +246,8 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
   const pageById = new Map(pageRows.map((page) => [page.id, page]));
   const clusterById = new Map(clusterRows.map((cluster) => [cluster.id, cluster]));
 
-  const keywordsByCluster = new Map<string, string[]>();
-  const primaryKeywordByCluster = new Map<string, string>();
+  const keywordsByCluster = new Map<number, string[]>();
+  const primaryKeywordByCluster = new Map<number, string>();
 
   for (const row of queryRows) {
     const existing = keywordsByCluster.get(row.clusterId) ?? [];
@@ -259,20 +259,20 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     }
   }
 
-  const pageIdsByCluster = new Map<string, Set<string>>();
-  const clusterIdsByPage = new Map<string, Set<string>>();
+  const pageIdsByCluster = new Map<number, Set<number>>();
+  const clusterIdsByPage = new Map<number, Set<number>>();
 
   for (const row of targetRows) {
-    const pageIds = pageIdsByCluster.get(row.clusterId) ?? new Set<string>();
+    const pageIds = pageIdsByCluster.get(row.clusterId) ?? new Set<number>();
     pageIds.add(row.pageId);
     pageIdsByCluster.set(row.clusterId, pageIds);
 
-    const clusterIds = clusterIdsByPage.get(row.pageId) ?? new Set<string>();
+    const clusterIds = clusterIdsByPage.get(row.pageId) ?? new Set<number>();
     clusterIds.add(row.clusterId);
     clusterIdsByPage.set(row.pageId, clusterIds);
   }
 
-  const siteKeywordCount = new Map<string, number>();
+  const siteKeywordCount = new Map<number, number>();
   for (const cluster of clusterRows) {
     const count = keywordsByCluster.get(cluster.id)?.length ?? 0;
     siteKeywordCount.set(
@@ -281,18 +281,18 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     );
   }
 
-  const siteMappedPages = new Map<string, Set<string>>();
+  const siteMappedPages = new Map<number, Set<number>>();
   for (const [pageId, clusterIds] of clusterIdsByPage) {
     if (clusterIds.size === 0) continue;
     const page = pageById.get(pageId);
     if (!page) continue;
-    const mapped = siteMappedPages.get(page.siteId) ?? new Set<string>();
+    const mapped = siteMappedPages.get(page.siteId) ?? new Set<number>();
     mapped.add(pageId);
     siteMappedPages.set(page.siteId, mapped);
   }
 
   const footprintsByCompetitor = new Map<
-    string,
+    number,
     Array<(typeof footprintRows)[number]>
   >();
   for (const row of footprintRows) {
@@ -302,7 +302,7 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
   }
 
   const footprintsBySite = new Map<
-    string,
+    number,
     Array<(typeof siteFootprintRows)[number]>
   >();
   for (const row of siteFootprintRows) {
@@ -312,7 +312,7 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
   }
 
   const keywordsByCompetitor = new Map<
-    string,
+    number,
     Array<(typeof competitorKeywordRows)[number]>
   >();
   for (const row of competitorKeywordRows) {
