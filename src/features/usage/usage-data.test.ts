@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { GatewayClient } from "@/lib/gateway-client";
 import {
   __test,
   loadSessionLogs,
   loadSessionTimeSeries,
   loadUsageSnapshot,
 } from "./usage-data";
+
+type RequestFn = GatewayClient["request"];
 
 describe("usage data loader", () => {
   beforeEach(() => {
@@ -14,16 +17,18 @@ describe("usage data loader", () => {
 
   it("retries sessions.usage without date interpretation fields for legacy gateways", async () => {
     let sessionsUsageAttempts = 0;
-    const request = vi.fn(async (method: string, params: Record<string, unknown>) => {
+    const requestImpl: RequestFn = async <T = unknown>(method: string, params?: unknown) => {
+      const typedParams = (params ?? {}) as Record<string, unknown>;
+
       if (method === "sessions.usage") {
         sessionsUsageAttempts += 1;
         if (sessionsUsageAttempts === 1) {
-          expect(params.mode).toBe("specific");
-          expect(params.utcOffset).toMatch(/^UTC[+-]/);
+          expect(typedParams.mode).toBe("specific");
+          expect(typedParams.utcOffset).toMatch(/^UTC[+-]/);
           throw new Error("invalid sessions.usage params: unexpected property 'mode'");
         }
-        expect(params.mode).toBeUndefined();
-        expect(params.utcOffset).toBeUndefined();
+        expect(typedParams.mode).toBeUndefined();
+        expect(typedParams.utcOffset).toBeUndefined();
         return {
           updatedAt: 1,
           startDate: "2026-03-13",
@@ -58,16 +63,16 @@ describe("usage data loader", () => {
             byChannel: [],
             daily: [],
           },
-        };
+        } as T;
       }
 
       expect(method).toBe("usage.cost");
       if (sessionsUsageAttempts === 0) {
-        expect(params.mode).toBe("specific");
-        expect(params.utcOffset).toMatch(/^UTC[+-]/);
+        expect(typedParams.mode).toBe("specific");
+        expect(typedParams.utcOffset).toMatch(/^UTC[+-]/);
       } else {
-        expect(params.mode).toBeUndefined();
-        expect(params.utcOffset).toBeUndefined();
+        expect(typedParams.mode).toBeUndefined();
+        expect(typedParams.utcOffset).toBeUndefined();
       }
       return {
         updatedAt: 1,
@@ -86,11 +91,12 @@ describe("usage data loader", () => {
           cacheWriteCost: 0,
           missingCostEntries: 0,
         },
-      };
-    });
+      } as T;
+    };
+    const request = vi.fn(requestImpl);
 
     const result = await loadUsageSnapshot({
-      client: { request },
+      client: { request: request as RequestFn },
       gatewayUrl: "ws://gateway.example.test",
       startDate: "2026-03-13",
       endDate: "2026-03-13",
@@ -107,9 +113,15 @@ describe("usage data loader", () => {
     const request = vi.fn();
 
     await expect(
-      loadSessionTimeSeries({ request }, "session-1", ["sessions.usage", "usage.cost"]),
+      loadSessionTimeSeries(
+        { request: request as RequestFn },
+        "session-1",
+        ["sessions.usage", "usage.cost"],
+      ),
     ).resolves.toBeNull();
-    await expect(loadSessionLogs({ request }, "session-1", ["sessions.usage"])).resolves.toBeNull();
+    await expect(
+      loadSessionLogs({ request: request as RequestFn }, "session-1", ["sessions.usage"]),
+    ).resolves.toBeNull();
     expect(request).not.toHaveBeenCalled();
   });
 
@@ -117,8 +129,18 @@ describe("usage data loader", () => {
     const request = vi.fn().mockRejectedValue(new Error("unsupported"));
 
     await expect(
-      loadSessionTimeSeries({ request }, "session-1", ["sessions.usage.timeseries"]),
+      loadSessionTimeSeries(
+        { request: request as RequestFn },
+        "session-1",
+        ["sessions.usage.timeseries"],
+      ),
     ).resolves.toBeNull();
-    await expect(loadSessionLogs({ request }, "session-1", ["sessions.usage.logs"])).resolves.toBeNull();
+    await expect(
+      loadSessionLogs(
+        { request: request as RequestFn },
+        "session-1",
+        ["sessions.usage.logs"],
+      ),
+    ).resolves.toBeNull();
   });
 });
