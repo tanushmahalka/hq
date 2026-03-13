@@ -349,6 +349,8 @@ After DNS + TLS is ready, switch them back to your public domain.
 
 ## 10) OpenClaw update process (new release)
 
+Current repo-pinned release: `v2026.3.12` (March 12, 2026).
+
 ### Preferred: keep repo-pinned submodule version
 
 ```bash
@@ -362,8 +364,11 @@ pnpm install
 pnpm ui:build
 pnpm build
 pnpm openclaw doctor
+pnpm openclaw health
 pnpm openclaw gateway restart || sudo systemctl restart openclaw-gateway
 ```
+
+This path is preferred because the `hq` repo pins the exact OpenClaw commit it was tested with.
 
 ### Optional: move submodule to latest upstream main
 
@@ -376,6 +381,23 @@ pnpm install
 pnpm ui:build
 pnpm build
 pnpm openclaw doctor
+pnpm openclaw health
+pnpm openclaw gateway restart || sudo systemctl restart openclaw-gateway
+```
+
+### One-time manual fast-forward to the pinned `v2026.3.12` release
+
+Use this if the server clone is behind and you want to update OpenClaw before pulling a new `hq` commit that carries the submodule pointer:
+
+```bash
+cd /opt/hq/openclaw
+git fetch --tags upstream origin
+git checkout v2026.3.12
+pnpm install
+pnpm ui:build
+pnpm build
+pnpm openclaw doctor
+pnpm openclaw health
 pnpm openclaw gateway restart || sudo systemctl restart openclaw-gateway
 ```
 
