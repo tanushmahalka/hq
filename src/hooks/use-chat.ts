@@ -55,6 +55,8 @@ export type ContentBlock =
       url?: string;
       dataUrl?: string;
       mimeType?: string;
+      omitted?: boolean;
+      bytes?: number;
     };
 
 export type RawMessage = {
@@ -151,6 +153,19 @@ function parseImageBlock(
 
   if (source) {
     if (source.type === "base64" && typeof source.data === "string") {
+      if (source.data.startsWith("data:")) {
+        return {
+          type: "image",
+          dataUrl: source.data,
+          mimeType:
+            typeof source.media_type === "string"
+              ? source.media_type
+              : typeof source.mimeType === "string"
+              ? source.mimeType
+              : blockMimeType,
+        };
+      }
+
       const mimeType =
         typeof source.media_type === "string"
           ? source.media_type
@@ -194,7 +209,29 @@ function parseImageBlock(
     };
   }
 
+  if (raw.omitted === true) {
+    return {
+      type: "image",
+      mimeType: blockMimeType,
+      omitted: true,
+      bytes: typeof raw.bytes === "number" ? raw.bytes : undefined,
+    };
+  }
+
   return null;
+}
+
+function parseImageUrlBlock(
+  raw: Record<string, unknown>
+): Extract<ContentBlock, { type: "image" }> | null {
+  const imageUrl = isRecord(raw.image_url) ? raw.image_url : null;
+  if (typeof imageUrl?.url !== "string") {
+    return null;
+  }
+  return {
+    type: "image",
+    url: imageUrl.url,
+  };
 }
 
 function normalizePendingAttachments(
@@ -391,6 +428,13 @@ export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
             break;
           case "image": {
             const parsed = parseImageBlock(block);
+            if (parsed) {
+              blocks.push(parsed);
+            }
+            break;
+          }
+          case "image_url": {
+            const parsed = parseImageUrlBlock(block);
             if (parsed) {
               blocks.push(parsed);
             }

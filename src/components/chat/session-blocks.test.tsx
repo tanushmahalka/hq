@@ -74,4 +74,24 @@ describe("SessionMessageRow", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByAltText("Image attachment")).toBeInTheDocument();
   });
+
+  it("renders omitted image attachments from history metadata", () => {
+    const message: RawMessage = {
+      role: "user",
+      timestamp: Date.now(),
+      blocks: [
+        {
+          type: "image",
+          mimeType: "image/jpeg",
+          omitted: true,
+          bytes: 1291204,
+        },
+      ],
+    };
+
+    render(<SessionMessageRow msg={message} />);
+
+    expect(screen.getByText("Image attachment")).toBeInTheDocument();
+    expect(screen.getByText("image/jpeg · 1.2 MB")).toBeInTheDocument();
+  });
 });

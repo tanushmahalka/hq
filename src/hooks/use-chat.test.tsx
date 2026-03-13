@@ -89,6 +89,95 @@ describe("useChat", () => {
     ]);
   });
 
+  it("preserves persisted image blocks from history reloads", async () => {
+    request.mockImplementation(async (method) => {
+      if (method === "chat.history") {
+        return {
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: "image/png",
+                    data: "data:image/png;base64,Zm9v",
+                  },
+                },
+              ],
+            },
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "image_url",
+                  image_url: { url: "https://example.com/reply.png" },
+                },
+              ],
+            },
+          ],
+        };
+      }
+      return {};
+    });
+
+    const { result } = renderHook(() => useChat("agent-1"));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.rawMessages).toHaveLength(2);
+    expect(result.current.rawMessages[0]?.blocks).toMatchObject([
+      {
+        type: "image",
+        dataUrl: "data:image/png;base64,Zm9v",
+      },
+    ]);
+    expect(result.current.rawMessages[1]?.blocks).toMatchObject([
+      {
+        type: "image",
+        url: "https://example.com/reply.png",
+      },
+    ]);
+  });
+
+  it("preserves omitted image metadata blocks from history reloads", async () => {
+    request.mockImplementation(async (method) => {
+      if (method === "chat.history") {
+        return {
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image",
+                  mimeType: "image/jpeg",
+                  omitted: true,
+                  bytes: 1291204,
+                },
+              ],
+            },
+          ],
+        };
+      }
+      return {};
+    });
+
+    const { result } = renderHook(() => useChat("agent-1"));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.rawMessages).toHaveLength(1);
+    expect(result.current.rawMessages[0]?.blocks).toMatchObject([
+      {
+        type: "image",
+        mimeType: "image/jpeg",
+        omitted: true,
+        bytes: 1291204,
+      },
+    ]);
+  });
+
   it("suppresses silent-reply deltas and finals from the active run", async () => {
     const { result } = renderHook(() => useChat("agent-1"));
 

@@ -7,6 +7,7 @@ import {
   Info,
   BrainCircuit,
   Bot,
+  Image as ImageIcon,
 } from "lucide-react";
 import { MessageContent } from "@/components/messenger/message-content";
 import {
@@ -167,6 +168,19 @@ function collectImages(blocks: ContentBlock[]): ImageBlock[] {
   return blocks.filter((block): block is ImageBlock => block.type === "image");
 }
 
+function formatImageBytes(bytes?: number): string | null {
+  if (bytes == null || !Number.isFinite(bytes) || bytes <= 0) {
+    return null;
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function ImageGrid({
   images,
   className = "",
@@ -182,6 +196,28 @@ function ImageGrid({
     <div className={`mt-2 flex flex-wrap gap-2 ${className}`.trim()}>
       {images.map((image, index) => {
         const src = image.dataUrl ?? image.url;
+        if (!src && image.omitted) {
+          return (
+            <div
+              key={`omitted-${image.mimeType ?? "image"}-${index}`}
+              className="flex h-24 w-[220px] items-center gap-3 rounded-lg border border-border/40 bg-muted/20 px-3 text-muted-foreground"
+            >
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-background/70">
+                <ImageIcon className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-foreground/80">
+                  Image attachment
+                </div>
+                <div className="truncate text-xs text-muted-foreground/70">
+                  {[image.mimeType, formatImageBytes(image.bytes)]
+                    .filter(Boolean)
+                    .join(" · ") || "Attachment omitted from history"}
+                </div>
+              </div>
+            </div>
+          );
+        }
         if (!src) {
           return null;
         }
