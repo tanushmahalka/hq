@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MessengerComposer } from "./messenger-panel";
-import type { PendingImageAttachment, QueuedChatMessage } from "@/hooks/use-chat";
+import type { PendingImageAttachment } from "@/hooks/use-chat";
 
 vi.mock("@/hooks/use-approvals", () => ({
   useApprovals: () => ({ approvals: [] }),
@@ -40,15 +40,6 @@ class MockFileReader {
   }
 }
 
-function buildQueueItem(partial?: Partial<QueuedChatMessage>): QueuedChatMessage {
-  return {
-    id: partial?.id ?? "queue-1",
-    text: partial?.text ?? "Queued draft",
-    attachments: partial?.attachments ?? [],
-    createdAt: partial?.createdAt ?? Date.now(),
-  };
-}
-
 describe("MessengerComposer", () => {
   beforeEach(() => {
     vi.stubGlobal("FileReader", MockFileReader);
@@ -59,12 +50,8 @@ describe("MessengerComposer", () => {
       <MessengerComposer
         connected
         isBusy={false}
-        canAbort={false}
-        queue={[]}
-        placeholder="Message..."
         onSend={vi.fn().mockResolvedValue("ignored")}
         onAbort={vi.fn()}
-        onRemoveQueuedMessage={vi.fn()}
       />
     );
 
@@ -97,12 +84,8 @@ describe("MessengerComposer", () => {
       <MessengerComposer
         connected
         isBusy={false}
-        canAbort={false}
-        queue={[]}
-        placeholder="Message..."
         onSend={onSend}
         onAbort={vi.fn()}
-        onRemoveQueuedMessage={vi.fn()}
       />
     );
 
@@ -128,23 +111,18 @@ describe("MessengerComposer", () => {
     expect(attachments?.[0]?.mimeType).toBe("image/png");
   });
 
-  it("switches the primary action to Queue and shows Stop while busy", () => {
+  it("keeps Send and shows Stop while busy", () => {
     render(
       <MessengerComposer
         connected
         isBusy
-        canAbort
-        queue={[buildQueueItem()]}
-        placeholder="Message..."
         onSend={vi.fn().mockResolvedValue("queued")}
         onAbort={vi.fn()}
-        onRemoveQueuedMessage={vi.fn()}
       />
     );
 
-    expect(screen.getByText("Queue")).toBeInTheDocument();
-    expect(screen.getByLabelText("Queue message")).toBeInTheDocument();
+    expect(screen.getByText("Send")).toBeInTheDocument();
+    expect(screen.getByLabelText("Send message")).toBeInTheDocument();
     expect(screen.getByLabelText("Stop run")).toBeInTheDocument();
-    expect(screen.getByText("Queued (1)")).toBeInTheDocument();
   });
 });

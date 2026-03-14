@@ -7,7 +7,10 @@ import {
 } from "react";
 import { useGateway } from "./use-gateway";
 import type { EventFrame } from "@/lib/gateway-client";
-import { markSessionPending, clearSessionPending } from "./use-any-agent-active";
+import {
+  markSessionPending,
+  clearSessionPending,
+} from "./use-any-agent-active";
 
 export type PendingImageAttachment = {
   id: string;
@@ -267,7 +270,9 @@ function serializeAttachments(
         content: parsed.content,
       };
     })
-    .filter((attachment): attachment is ApiImageAttachment => attachment !== null);
+    .filter(
+      (attachment): attachment is ApiImageAttachment => attachment !== null
+    );
 
   return serialized.length > 0 ? serialized : undefined;
 }
@@ -448,10 +453,8 @@ export function parseRawMessages(raw: Array<unknown>): RawMessage[] {
   });
 }
 
-export function useChat(agentId: string, sessionSuffix = "webchat") {
+export function useChat(sessionKey: string) {
   const { client, connected, subscribe } = useGateway();
-  const sessionKey = `agent:${agentId}:${sessionSuffix}`;
-
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [rawMessages, setRawMessages] = useState<RawMessage[]>([]);
   const [stream, setStream] = useState<string | null>(null);
@@ -467,19 +470,21 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
   const queueRef = useRef<QueuedChatMessage[]>([]);
   const sendingRef = useRef(false);
 
-  // Monotonically increasing fetch ID — only the latest fetch can write to state
-  const fetchIdRef = useRef(0);
-
-  const setQueueState = useCallback((updater: SetStateAction<QueuedChatMessage[]>) => {
-    setQueue((prev) => {
-      const next =
-        typeof updater === "function"
-          ? (updater as (value: QueuedChatMessage[]) => QueuedChatMessage[])(prev)
-          : updater;
-      queueRef.current = next;
-      return next;
-    });
-  }, []);
+  const setQueueState = useCallback(
+    (updater: SetStateAction<QueuedChatMessage[]>) => {
+      setQueue((prev) => {
+        const next =
+          typeof updater === "function"
+            ? (updater as (value: QueuedChatMessage[]) => QueuedChatMessage[])(
+                prev
+              )
+            : updater;
+        queueRef.current = next;
+        return next;
+      });
+    },
+    []
+  );
 
   const setSendingState = useCallback((value: boolean) => {
     sendingRef.current = value;
@@ -526,8 +531,12 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
   }, [sessionKey, setActiveRunState]);
 
   const rollbackOptimisticMessage = useCallback((localId: string) => {
-    setRawMessages((prev) => prev.filter((message) => message.localId !== localId));
-    setMessages((prev) => prev.filter((message) => message.localId !== localId));
+    setRawMessages((prev) =>
+      prev.filter((message) => message.localId !== localId)
+    );
+    setMessages((prev) =>
+      prev.filter((message) => message.localId !== localId)
+    );
   }, []);
 
   const applyHistory = useCallback(
@@ -575,21 +584,6 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
     return () => {
       stale = true;
     };
-  }, [applyHistory, client, connected, sessionKey]);
-
-  const reloadHistory = useCallback(() => {
-    if (!client || !connected) return;
-    const id = ++fetchIdRef.current;
-    client
-      .request<{ messages?: Array<unknown> }>("chat.history", {
-        sessionKey,
-        limit: 200,
-      })
-      .then((res) => {
-        if (fetchIdRef.current !== id) return;
-        applyHistory(res.messages ?? []);
-      })
-      .catch(() => {});
   }, [applyHistory, client, connected, sessionKey]);
 
   const appendAssistantMessage = useCallback(
@@ -650,14 +644,21 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
           role: "user",
           content:
             trimmed ||
-            `Image${normalizedAttachments.length > 1 ? "s" : ""} (${normalizedAttachments.length})`,
+            `Image${normalizedAttachments.length > 1 ? "s" : ""} (${
+              normalizedAttachments.length
+            })`,
           timestamp: now,
           localId,
         },
       ]);
       setRawMessages((prev) => [
         ...prev,
-        buildOptimisticUserMessage(trimmed, normalizedAttachments, now, localId),
+        buildOptimisticUserMessage(
+          trimmed,
+          normalizedAttachments,
+          now,
+          localId
+        ),
       ]);
 
       const runId = crypto.randomUUID();
@@ -728,7 +729,6 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
       if (knownRunId && payload.runId && payload.runId !== knownRunId) {
         if (payload.state === "final") {
           appendAssistantMessage(payload.message);
-          reloadHistory();
           void flushNextQueuedMessage();
         }
         return;
@@ -743,7 +743,8 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
           const next = extractText(payload.message);
           if (typeof next === "string" && !isSilentReplyText(next)) {
             setStream((prev) => {
-              const resolved = !prev || next.length >= prev.length ? next : prev;
+              const resolved =
+                !prev || next.length >= prev.length ? next : prev;
               streamRef.current = resolved;
               return resolved;
             });
@@ -751,14 +752,19 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
           break;
         }
         case "final": {
-          appendAssistantMessage(payload.message, streamRef.current ?? undefined);
+          appendAssistantMessage(
+            payload.message,
+            streamRef.current ?? undefined
+          );
           clearStreaming();
-          reloadHistory();
           void flushNextQueuedMessage();
           break;
         }
         case "aborted":
-          appendAssistantMessage(payload.message, streamRef.current ?? undefined);
+          appendAssistantMessage(
+            payload.message,
+            streamRef.current ?? undefined
+          );
           clearStreaming();
           void flushNextQueuedMessage();
           break;
@@ -773,7 +779,6 @@ export function useChat(agentId: string, sessionSuffix = "webchat") {
     appendAssistantMessage,
     clearStreaming,
     flushNextQueuedMessage,
-    reloadHistory,
     sessionKey,
     subscribe,
   ]);

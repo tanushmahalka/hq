@@ -8,11 +8,11 @@ import {
   type FormEvent,
 } from "react";
 import { X, ArrowUp, ChevronDown, Paperclip, Square } from "lucide-react";
-import { useApprovals } from "@/hooks/use-approvals";
+import { useApprovals, type PendingApproval } from "@/hooks/use-approvals";
 import {
   useChat,
   type PendingImageAttachment,
-  type QueuedChatMessage,
+  type RawMessage,
 } from "@/hooks/use-chat";
 import { useGateway } from "@/hooks/use-gateway";
 import { useMessengerPanel } from "@/hooks/use-messenger-panel";
@@ -61,13 +61,6 @@ async function readFileAsAttachment(
   };
 }
 
-function queueSummary(item: QueuedChatMessage): string {
-  if (item.text) {
-    return item.text.length > 72 ? `${item.text.slice(0, 72)}...` : item.text;
-  }
-  return `Image${item.attachments.length > 1 ? "s" : ""} (${item.attachments.length})`;
-}
-
 /* ── Chat Panel (slides in/out, 420px) ── */
 
 export function ChatPanel() {
@@ -76,6 +69,13 @@ export function ChatPanel() {
 
   if (!selectedAgentId) return null;
 
+  const selectedAgent = agents.find((a) => a.id === selectedAgentId);
+  const selectedRaw =
+    selectedAgent?.identity?.name ?? selectedAgent?.name ?? selectedAgentId;
+  const { name: selectedName, role: selectedRole } = parseAgentName(selectedRaw);
+  const otherAgents = agents.filter((a) => a.id !== selectedAgentId);
+  const sessionKey = `agent:${selectedAgentId}:webchat`;
+
   return (
     <div className="h-full w-[420px] flex flex-col border-l border-border/50 bg-card relative">
       {/* Active shimmer — top edge */}
@@ -83,63 +83,52 @@ export function ChatPanel() {
 
       {/* Header — selected agent + agent switcher dropdown + close */}
       <div className="h-11 px-4 flex items-center gap-2 border-b border-border/50 shrink-0">
-        {(() => {
-          const selectedAgent = agents.find((a) => a.id === selectedAgentId);
-          const raw = selectedAgent?.identity?.name ?? selectedAgent?.name ?? selectedAgentId;
-          const { name, role } = parseAgentName(raw);
-          const otherAgents = agents.filter((a) => a.id !== selectedAgentId);
+        {/* Selected agent name + role badge */}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-sm font-medium truncate">{selectedName}</span>
+          {selectedRole && (
+            <span className="inline-flex items-center rounded-full bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground/60 shrink-0">
+              {selectedRole}
+            </span>
+          )}
+          <span
+            className={cn(
+              "size-1.5 rounded-full shrink-0",
+              connected ? "bg-[var(--swarm-mint)]" : "bg-red-400"
+            )}
+          />
+        </div>
 
-          return (
-            <>
-              {/* Selected agent name + role badge */}
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className="text-sm font-medium truncate">{name}</span>
-                {role && (
-                  <span className="inline-flex items-center rounded-full bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground/60 shrink-0">
-                    {role}
-                  </span>
-                )}
-                <span
-                  className={cn(
-                    "size-1.5 rounded-full shrink-0",
-                    connected ? "bg-[var(--swarm-mint)]" : "bg-red-400"
-                  )}
-                />
-              </div>
-
-              {/* Other agents dropdown */}
-              {otherAgents.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors">
-                      <ChevronDown className="size-3" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[180px]">
-                    {otherAgents.map((agent) => {
-                      const r = agent.identity?.name ?? agent.name ?? agent.id;
-                      const { name: n, role: rl } = parseAgentName(r);
-                      return (
-                        <DropdownMenuItem
-                          key={agent.id}
-                          onClick={() => selectAgent(agent.id)}
-                          className="flex items-center gap-2"
-                        >
-                          <span className="text-sm">{n}</span>
-                          {rl && (
-                            <span className="text-[10px] text-muted-foreground/50">
-                              {rl}
-                            </span>
-                          )}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </>
-          );
-        })()}
+        {/* Other agents dropdown */}
+        {otherAgents.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors">
+                <ChevronDown className="size-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[180px]">
+              {otherAgents.map((agent) => {
+                const r = agent.identity?.name ?? agent.name ?? agent.id;
+                const { name: n, role: rl } = parseAgentName(r);
+                return (
+                  <DropdownMenuItem
+                    key={agent.id}
+                    onClick={() => selectAgent(agent.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <span className="text-sm">{n}</span>
+                    {rl && (
+                      <span className="text-[10px] text-muted-foreground/50">
+                        {rl}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         <button
           onClick={closeChat}
@@ -150,7 +139,7 @@ export function ChatPanel() {
       </div>
 
       {/* Chat content */}
-      <ChatContent agentId={selectedAgentId} />
+      <Session sessionKey={sessionKey} />
     </div>
   );
 }
@@ -175,10 +164,13 @@ function ActiveShimmer({ agentId }: { agentId: string }) {
   );
 }
 
-/* ── Chat content (messages + input) ── */
-function ChatContent({ agentId }: { agentId: string }) {
+/* ── Reusable Session (messages + input) ── */
+export function Session({
+  sessionKey,
+}: {
+  sessionKey: string;
+}) {
   const { connected } = useGateway();
-  const { agents } = useGateway();
   const { approvals } = useApprovals();
   const {
     rawMessages,
@@ -187,129 +179,131 @@ function ChatContent({ agentId }: { agentId: string }) {
     loading,
     error,
     sendMessage,
-    queue,
-    canAbort,
     abortRun,
-    removeQueuedMessage,
-  } = useChat(agentId);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const sessionKey = `agent:${agentId}:webchat`;
+  } = useChat(sessionKey);
   const sessionApprovals = approvals.filter(
-    (approval) => approval.request.sessionKey === sessionKey,
+    (approval) => approval.request.sessionKey === sessionKey
   );
 
-  const agent = agents.find((a) => a.id === agentId);
-  const raw = agent?.identity?.name ?? agent?.name ?? agentId;
-  const { name: displayName } = parseAgentName(raw);
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
-  }, [rawMessages, stream]);
-
   return (
-    <>
-      {/* Messages */}
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       <ChatSendProvider sendMessage={(text) => void sendMessage(text)}>
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto scrollbar-hide"
-        >
-          {sessionApprovals.length > 0 && (
-            <div className="space-y-3 px-4 pt-4">
-              {sessionApprovals.map((approval) => (
-                <ApprovalCard key={approval.id} approval={approval} />
-              ))}
-            </div>
-          )}
-
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <span className="text-xs text-muted-foreground/40">
-                Loading...
-              </span>
-            </div>
-          )}
-
-          {!loading && rawMessages.length === 0 && !isBusy && (
-            <p className="text-xs text-muted-foreground/50 text-center py-12">
-              Start a conversation
-            </p>
-          )}
-
-          <UXMessageList messages={rawMessages} />
-
-          {isBusy && (
-            <div className="px-4 py-1.5">
-              <div className="max-w-[90%] space-y-1.5">
-                <LoaderFive text="Thinking..." />
-                {stream ? (
-                  <div className="text-sm text-foreground/90 leading-relaxed">
-                    <MessageContent text={stream} />
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="mx-4 my-2 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-              {error}
-            </div>
-          )}
-        </div>
+        <SessionMessages
+          approvals={sessionApprovals}
+          messages={rawMessages}
+          stream={stream}
+          isBusy={isBusy}
+          loading={loading}
+          error={error}
+        />
       </ChatSendProvider>
 
-      {/* Input — clean, border-top separator */}
       <div className="relative border-t border-border/50 shrink-0">
-        <MessengerComposer
+        <SessionInput
           connected={connected}
           isBusy={isBusy}
-          canAbort={canAbort}
-          queue={queue}
-          placeholder={connected ? `Message ${displayName}...` : "Connecting..."}
           onSend={(text, attachments) => sendMessage(text, attachments)}
           onAbort={() => void abortRun()}
-          onRemoveQueuedMessage={removeQueuedMessage}
         />
       </div>
-    </>
+    </div>
   );
 }
 
-export function MessengerComposer({
+export function SessionMessages({
+  approvals,
+  messages,
+  stream,
+  isBusy,
+  loading,
+  error,
+}: {
+  approvals: PendingApproval[];
+  messages: RawMessage[];
+  stream: string | null;
+  isBusy: boolean;
+  loading: boolean;
+  error: string | null;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
+  }, [messages, stream]);
+
+  return (
+    <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
+      {approvals.length > 0 && (
+        <div className="space-y-3 px-4 pt-4">
+          {approvals.map((approval) => (
+            <ApprovalCard key={approval.id} approval={approval} />
+          ))}
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <span className="text-xs text-muted-foreground/40">Loading...</span>
+        </div>
+      )}
+
+      {!loading && messages.length === 0 && !isBusy && (
+        <p className="text-xs text-muted-foreground/50 text-center py-12">
+          No messages yet.
+        </p>
+      )}
+
+      <UXMessageList messages={messages} />
+
+      {isBusy && (
+        <div className="px-4 py-1.5">
+          <div className="max-w-[90%] space-y-1.5">
+            <LoaderFive text="Thinking..." />
+            {stream ? (
+              <div className="text-sm text-foreground/90 leading-relaxed">
+                <MessageContent text={stream} />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="mx-4 my-2 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function SessionInput({
   connected,
   isBusy,
-  canAbort,
-  queue,
-  placeholder,
   onSend,
   onAbort,
-  onRemoveQueuedMessage,
-  allowAttachments = true,
-  allowQueueWhileBusy = true,
 }: {
   connected: boolean;
   isBusy: boolean;
-  canAbort: boolean;
-  queue: QueuedChatMessage[];
-  placeholder: string;
   onSend: (
     text: string,
     attachments: PendingImageAttachment[]
   ) => Promise<"sent" | "queued" | "error" | "ignored">;
   onAbort: () => void;
-  onRemoveQueuedMessage: (id: string) => void;
-  allowAttachments?: boolean;
-  allowQueueWhileBusy?: boolean;
 }) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<PendingImageAttachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const placeholder = connected ? "Message..." : "Connecting...";
 
   const addFiles = async (files: FileList | File[]) => {
     const nextAttachments = (
-      await Promise.all(Array.from(files).map((file) => readFileAsAttachment(file)))
-    ).filter((attachment): attachment is PendingImageAttachment => attachment !== null);
+      await Promise.all(
+        Array.from(files).map((file) => readFileAsAttachment(file))
+      )
+    ).filter(
+      (attachment): attachment is PendingImageAttachment => attachment !== null
+    );
 
     if (nextAttachments.length === 0) {
       return;
@@ -330,11 +324,8 @@ export function MessengerComposer({
     }
   };
 
-  const canQueue = allowQueueWhileBusy && isBusy;
-  const hasDraft =
-    input.trim().length > 0 || (allowAttachments && attachments.length > 0);
-  const sendDisabled =
-    !connected || !hasDraft || (!allowQueueWhileBusy && isBusy);
+  const hasDraft = input.trim().length > 0 || attachments.length > 0;
+  const sendDisabled = !connected || !hasDraft;
 
   return (
     <>
@@ -345,7 +336,8 @@ export function MessengerComposer({
             style={{
               background:
                 "linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 18%, color-mix(in oklab, var(--swarm-violet) 92%, white 8%) 50%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 82%, transparent 100%)",
-              boxShadow: "0 0 12px color-mix(in oklab, var(--swarm-violet) 65%, transparent)",
+              boxShadow:
+                "0 0 12px color-mix(in oklab, var(--swarm-violet) 65%, transparent)",
             }}
           />
           <div
@@ -359,34 +351,7 @@ export function MessengerComposer({
           />
         </div>
       )}
-      {queue.length > 0 && (
-        <div className="border-b border-border/40 px-3 py-2 space-y-1.5">
-          <div className="text-[11px] text-muted-foreground/50 uppercase tracking-[0.12em]">
-            Queued ({queue.length})
-          </div>
-          <div className="space-y-1">
-            {queue.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-2 rounded-md border border-border/40 bg-muted/20 px-2.5 py-1.5"
-              >
-                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground/80">
-                  {queueSummary(item)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onRemoveQueuedMessage(item.id)}
-                  className="rounded p-0.5 text-muted-foreground/40 transition-colors hover:text-foreground"
-                  aria-label="Remove queued message"
-                >
-                  <X className="size-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {allowAttachments && attachments.length > 0 && (
+      {attachments.length > 0 && (
         <div className="border-b border-border/40 px-3 py-2">
           <div className="flex flex-wrap gap-2">
             {attachments.map((attachment) => (
@@ -417,29 +382,24 @@ export function MessengerComposer({
         </div>
       )}
       <form onSubmit={handleSubmit} className="relative flex items-end">
-        {allowAttachments && (
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              if (e.target.files) {
-                void addFiles(e.target.files);
-              }
-            }}
-          />
-        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            if (e.target.files) {
+              void addFiles(e.target.files);
+            }
+          }}
+        />
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onPaste={(e: ClipboardEvent<HTMLTextAreaElement>) => {
-            if (!allowAttachments) {
-              return;
-            }
-            const imageFiles = Array.from(e.clipboardData.files).filter((file) =>
-              file.type.startsWith("image/")
+            const imageFiles = Array.from(e.clipboardData.files).filter(
+              (file) => file.type.startsWith("image/")
             );
             if (imageFiles.length === 0) {
               return;
@@ -465,19 +425,17 @@ export function MessengerComposer({
           }}
         />
         <div className="absolute right-3 bottom-2.5 flex items-center gap-1.5">
-          {allowAttachments && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              disabled={!connected}
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Attach images"
-            >
-              <Paperclip className="size-3.5" />
-            </Button>
-          )}
-          {canAbort && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={!connected}
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="Attach images"
+          >
+            <Paperclip className="size-3.5" />
+          </Button>
+          {isBusy && (
             <Button
               type="button"
               variant="ghost"
@@ -494,10 +452,10 @@ export function MessengerComposer({
             variant="ghost"
             size="sm"
             disabled={sendDisabled}
-            aria-label={canQueue ? "Queue message" : "Send message"}
-            title={canQueue ? "Queue message" : "Send message"}
+            aria-label="Send message"
+            title="Send message"
           >
-            <span>{canQueue ? "Queue" : "Send"}</span>
+            <span>Send</span>
             <ArrowUp className="size-3.5" />
           </Button>
         </div>
@@ -505,3 +463,5 @@ export function MessengerComposer({
     </>
   );
 }
+
+export const MessengerComposer = SessionInput;

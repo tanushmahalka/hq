@@ -695,7 +695,12 @@ export default function register(api: PluginAPI) {
         Type.Union([Type.Literal("simple"), Type.Literal("complex")])
       ),
       assignor: Type.Optional(Type.String()),
-      assignee: Type.Optional(Type.String()),
+      assignee: Type.Optional(
+        Type.String({
+          description:
+            "The agent ID to assign this task to. Must be one of the available agents in the config.",
+        })
+      ),
       dueDateIso: Type.Optional(
         Type.String({ description: "ISO date/time for due date" })
       ),

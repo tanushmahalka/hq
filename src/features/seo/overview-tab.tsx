@@ -1,7 +1,4 @@
-import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { SeoCluster, SeoPage, SeoSite } from "./types";
 import { FilterChip, InfoTile, InlineEmptyState } from "./shared";
@@ -17,7 +14,6 @@ import {
 } from "./utils";
 
 export function OverviewTab({
-  selectedSite,
   filteredPages,
   filteredClusters,
   selectedPageType,
@@ -56,171 +52,150 @@ export function OverviewTab({
   onSelectCluster: (value: number) => void;
 }) {
   return (
-    <>
-      <div className="grid gap-6">
-        <Card className="overflow-hidden border-border/70 bg-card/95">
-          <CardHeader className="border-b border-border/70 bg-muted/20">
-            <div>
-              <CardTitle className="text-xl">Pages Overview</CardTitle>
-              <CardDescription className="mt-1">
-                Every tracked page, its role, and how clearly it is aligned
-                with keyword coverage.
-              </CardDescription>
-            </div>
-            <div className="flex flex-col gap-3">
-              <Input
-                value={pageSearch}
-                onChange={(event) => onPageSearchChange(event.target.value)}
-                placeholder="Search pages by title, URL, type, or keyword cluster"
-                className="h-10 bg-background/75"
+    <div className="space-y-8">
+      {/* Pages section */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Pages</h2>
+          <span className="text-xs text-muted-foreground/60">
+            {formatNumber(filteredPages.length)} shown
+          </span>
+        </div>
+
+        {/* Search + filters */}
+        <div className="flex flex-col gap-2 mb-3">
+          <input
+            value={pageSearch}
+            onChange={(event) => onPageSearchChange(event.target.value)}
+            placeholder="Search pages by title, URL, type, or cluster..."
+            className="text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/50 w-full"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            <FilterChip
+              active={selectedPageType === "all"}
+              onClick={() => onPageTypeChange("all")}
+              label="All"
+            />
+            {pageTypeOptions.map((pageType) => (
+              <FilterChip
+                key={pageType}
+                active={selectedPageType === pageType}
+                onClick={() => onPageTypeChange(pageType)}
+                label={toTitleCase(pageType)}
               />
-              <div className="flex flex-wrap gap-2">
-                <FilterChip
-                  active={selectedPageType === "all"}
-                  onClick={() => onPageTypeChange("all")}
-                  label="All page types"
-                />
-                {pageTypeOptions.map((pageType) => (
-                  <FilterChip
-                    key={pageType}
-                    active={selectedPageType === pageType}
-                    onClick={() => onPageTypeChange(pageType)}
-                    label={toTitleCase(pageType)}
-                  />
-                ))}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="px-0">
-            {filteredPages.length === 0 ? (
-              <InlineEmptyState
-                title="No pages match these filters"
-                description="Try a broader search or switch back to all page types."
-              />
-            ) : (
-              <div className="px-5 pb-5">
-                <div className="overflow-hidden rounded-[2rem] border border-border/70 bg-background/85 shadow-sm">
-                  <div className="flex items-center justify-between border-b border-border/60 px-6 py-4">
-                    <div>
-                      <div className="text-sm font-semibold text-foreground">
-                        Showing {formatNumber(filteredPages.length)} page
-                        {filteredPages.length !== 1 ? "s" : ""}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Scroll to browse the full page inventory
-                      </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Page list */}
+        <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
+          {filteredPages.length === 0 ? (
+            <InlineEmptyState
+              title="No pages match these filters"
+              description="Try a broader search or switch back to all page types."
+            />
+          ) : (
+            <div className="max-h-[600px] overflow-y-auto">
+              {filteredPages.map((page) => {
+                const visibility = getVisibilityStatus(
+                  page.indexability,
+                  page.statusCode,
+                );
+                const pageRole = getPageRole(
+                  page.pageType,
+                  page.isMoneyPage,
+                  page.isAuthorityAsset,
+                );
+
+                return (
+                  <button
+                    key={page.id}
+                    type="button"
+                    onClick={() => onSelectPage(page.id)}
+                    className={cn(
+                      "relative w-full text-left px-4 py-3 transition-colors border-b border-border/30 last:border-b-0",
+                      selectedPageId === page.id
+                        ? "bg-muted/40 border-l-[3px] border-l-[var(--swarm-violet)]"
+                        : "hover:bg-muted/20",
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={cn(
+                          "size-1.5 rounded-full shrink-0",
+                          getPageStatusDotClass(visibility.filter),
+                        )}
+                      />
+                      <span className="flex-1 text-sm truncate">
+                        {page.displayTitle}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 shrink-0 hidden lg:inline-flex"
+                      >
+                        {pageRole.label}
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className="rounded-full px-3 py-1">
-                      {selectedSite?.name}
-                    </Badge>
-                  </div>
-                  <div className="max-h-[720px] overflow-y-auto">
-                    {filteredPages.map((page, index) => {
-                      const visibility = getVisibilityStatus(
-                        page.indexability,
-                        page.statusCode,
-                      );
-                      const pageRole = getPageRole(
-                        page.pageType,
-                        page.isMoneyPage,
-                        page.isAuthorityAsset,
-                      );
-
-                      return (
-                        <button
-                          key={page.id}
-                          type="button"
-                          onClick={() => onSelectPage(page.id)}
-                          className={cn(
-                            "flex w-full items-center gap-4 px-6 py-6 text-left transition-colors hover:bg-muted/20",
-                            index !== filteredPages.length - 1 &&
-                              "border-b border-border/50",
-                            selectedPageId === page.id && "bg-primary/5",
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "size-4 shrink-0 rounded-full border-2 border-background shadow-sm",
-                              getPageStatusDotClass(visibility.filter),
-                            )}
-                          />
-
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-[1.05rem] font-semibold text-foreground">
-                              {page.displayTitle}
-                            </div>
-                            <div className="mt-1 truncate text-sm text-muted-foreground">
-                              {getDisplayPath(page.url)}
-                            </div>
-                          </div>
-
-                          <div className="hidden shrink-0 lg:block">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em]",
-                                pageRole.tone,
-                              )}
-                            >
-                              {pageRole.label}
-                            </Badge>
-                          </div>
-
-                          <div className="flex shrink-0 items-center gap-3">
-                            <ChevronRight className="size-6 text-muted-foreground/55" />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.5fr)]">
-        <Card className="border-border/70 bg-card/95">
-          <CardHeader className="border-b border-border/70 bg-muted/20">
-            <CardTitle className="text-lg">Cluster focus</CardTitle>
-            <CardDescription>
-              The selected keyword cluster and the terms connected to it.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {activeCluster ? (
-              <ClusterDetailCard cluster={activeCluster} />
-            ) : (
-              <InlineEmptyState
-                title="Choose a cluster"
-                description="Select a cluster card to inspect its keywords and linked pages."
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card/95">
-          <CardHeader className="border-b border-border/70 bg-muted/20">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <CardTitle className="text-xl">Keyword clusters</CardTitle>
-                <CardDescription className="mt-1">
-                  Topic groups and the keywords that belong to each one.
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="rounded-full px-3 py-1">
-                {formatNumber(filteredClusters.length)} shown
-              </Badge>
+                    <div className="flex items-center gap-1.5 mt-0.5 ml-4">
+                      <span className="text-xs text-muted-foreground/50 truncate">
+                        {getDisplayPath(page.url)}
+                      </span>
+                      {page.clusterNames.length > 0 && (
+                        <>
+                          <span className="text-xs text-muted-foreground/30">·</span>
+                          <span className="text-xs text-muted-foreground/50">
+                            {page.clusterNames.length} cluster{page.clusterNames.length !== 1 ? "s" : ""}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex flex-col gap-3">
-              <Input
+          )}
+        </div>
+      </section>
+
+      {/* Clusters section */}
+      <section>
+        <div className="grid gap-6 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.5fr)]">
+          {/* Cluster focus */}
+          <div>
+            <h2 className="text-sm font-medium text-muted-foreground mb-3">
+              Cluster focus
+            </h2>
+            <div className="rounded-xl border border-border/40 bg-card p-4">
+              {activeCluster ? (
+                <ClusterDetailCard cluster={activeCluster} />
+              ) : (
+                <p className="text-sm text-muted-foreground/40 text-center py-8">
+                  Select a cluster to inspect
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Cluster grid */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-medium text-muted-foreground">
+                Keyword clusters
+              </h2>
+              <span className="text-xs text-muted-foreground/60">
+                {formatNumber(filteredClusters.length)} shown
+              </span>
+            </div>
+
+            {/* Search + filters */}
+            <div className="flex flex-col gap-2 mb-3">
+              <input
                 value={clusterSearch}
                 onChange={(event) => onClusterSearchChange(event.target.value)}
-                placeholder="Search by cluster name, intent, or keyword"
-                className="h-10 bg-background/75"
+                placeholder="Search by cluster name, intent, or keyword..."
+                className="text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/50 w-full"
               />
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 <FilterChip
                   active={selectedIntent === "all"}
                   onClick={() => onIntentChange("all")}
@@ -236,15 +211,14 @@ export function OverviewTab({
                 ))}
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
+
             {filteredClusters.length === 0 ? (
               <InlineEmptyState
                 title="No clusters match these filters"
-                description="Clear the search or switch back to all intents to see more."
+                description="Clear the search or switch back to all intents."
               />
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2 md:grid-cols-2">
                 {filteredClusters.map((cluster) => {
                   const priority = getPriorityStatus(cluster.priorityScore);
                   return (
@@ -253,100 +227,97 @@ export function OverviewTab({
                       type="button"
                       onClick={() => onSelectCluster(cluster.id)}
                       className={cn(
-                        "rounded-3xl border p-5 text-left transition-all",
+                        "group relative overflow-hidden rounded-xl border p-4 text-left transition-all swarm-card",
                         selectedClusterId === cluster.id
-                          ? "border-primary/20 bg-primary/6 shadow-sm"
-                          : "border-border/70 bg-background/75 hover:border-primary/15 hover:bg-muted/30",
+                          ? "border-[var(--swarm-violet)]/20 bg-[var(--swarm-violet-dim)]"
+                          : "border-border/40 bg-card hover:bg-muted/20",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="truncate text-lg font-semibold text-foreground">
+                          <div className="text-sm font-medium truncate">
                             {cluster.name}
                           </div>
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            {cluster.siteName} · {cluster.siteDomain}
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-xs text-muted-foreground/50">
+                              {toTitleCase(cluster.primaryIntent)}
+                            </span>
+                            {cluster.funnelStage && (
+                              <>
+                                <span className="text-xs text-muted-foreground/30">·</span>
+                                <span className="text-xs text-muted-foreground/50">
+                                  {toTitleCase(cluster.funnelStage)}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
-                        <Badge variant={priority.variant} className="rounded-full px-3 py-1">
+                        <Badge variant={priority.variant} className="text-[10px] px-1.5 py-0 shrink-0">
                           {priority.label}
                         </Badge>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Badge variant="secondary" className="rounded-full px-3 py-1">
-                          {toTitleCase(cluster.primaryIntent)}
-                        </Badge>
-                        {cluster.funnelStage ? (
-                          <Badge variant="outline" className="rounded-full px-3 py-1">
-                            {toTitleCase(cluster.funnelStage)}
-                          </Badge>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-4 text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">
+                      <div className="mt-3 text-[13px] text-muted-foreground">
+                        <span className="text-foreground">
                           {cluster.primaryKeyword ?? "No lead keyword"}
                         </span>
                         {" · "}
-                        {formatNumber(cluster.keywordCount)} keyword
-                        {cluster.keywordCount !== 1 ? "s" : ""}
+                        {formatNumber(cluster.keywordCount)} keyword{cluster.keywordCount !== 1 ? "s" : ""}
                       </div>
 
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {cluster.keywords.slice(0, 4).map((keyword) => (
-                          <Badge
-                            key={keyword}
-                            variant="outline"
-                            className="rounded-full px-3 py-1"
-                          >
-                            {keyword}
-                          </Badge>
-                        ))}
-                        {cluster.keywords.length > 4 ? (
-                          <Badge variant="outline" className="rounded-full px-3 py-1">
-                            +{cluster.keywords.length - 4} more
-                          </Badge>
-                        ) : null}
-                      </div>
+                      {cluster.keywords.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {cluster.keywords.slice(0, 3).map((keyword) => (
+                            <span
+                              key={keyword}
+                              className="text-[10px] text-muted-foreground/60 border border-border/30 rounded px-1.5 py-0.5"
+                            >
+                              {keyword}
+                            </span>
+                          ))}
+                          {cluster.keywords.length > 3 && (
+                            <span className="text-[10px] text-muted-foreground/40 px-1 py-0.5">
+                              +{cluster.keywords.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </button>
                   );
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-    </>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
 export function PageDetailCard({ page }: { page: SeoPage }) {
   const visibility = getVisibilityStatus(page.indexability, page.statusCode);
+  const pageRole = getPageRole(page.pageType, page.isMoneyPage, page.isAuthorityAsset);
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <div className="text-xl font-semibold text-foreground">{page.displayTitle}</div>
-        <div className="break-all text-sm text-muted-foreground">{page.url}</div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="secondary" className="rounded-full px-3 py-1">
+    <div className="space-y-4">
+      {/* Badges */}
+      <div className="flex flex-wrap gap-1.5">
+        <Badge variant="secondary" className="text-[11px] px-2 py-0.5">
           {toTitleCase(page.pageType)}
         </Badge>
-        <Badge variant="outline" className="rounded-full px-3 py-1">
-          {getPageRole(page.pageType, page.isMoneyPage, page.isAuthorityAsset).label}
+        <Badge variant="outline" className="text-[11px] px-2 py-0.5">
+          {pageRole.label}
         </Badge>
-        <Badge variant={visibility.variant} className="rounded-full px-3 py-1">
+        <Badge variant={visibility.variant} className="text-[11px] px-2 py-0.5">
           {visibility.label}
         </Badge>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/* Properties */}
+      <div className="space-y-0">
         <InfoTile label="Content status" value={toTitleCase(page.contentStatus)} />
         <InfoTile label="Last crawl" value={formatDate(page.lastCrawledAt)} />
-        <InfoTile label="HTTP status" value={`HTTP ${page.statusCode ?? "unknown"}`} />
+        <InfoTile label="HTTP status" value={`${page.statusCode ?? "Unknown"}`} />
         <InfoTile
           label="Keyword coverage"
           value={
@@ -357,40 +328,37 @@ export function PageDetailCard({ page }: { page: SeoPage }) {
         />
       </div>
 
-      <div className="space-y-2">
-        <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70">
-          H1
-        </div>
-        <div className="rounded-2xl bg-muted/35 p-4 text-sm text-foreground">
-          {page.h1 ?? "No H1 stored yet."}
-        </div>
+      {/* H1 */}
+      <div className="mt-4 border-t border-border/50 pt-4">
+        <h4 className="text-sm font-normal mb-2 text-muted-foreground">H1</h4>
+        <p className="text-sm">
+          {page.h1 ?? <span className="text-muted-foreground/40">No H1 stored yet</span>}
+        </p>
       </div>
 
-      <div className="space-y-2">
-        <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70">
-          Meta description
-        </div>
-        <div className="rounded-2xl bg-muted/35 p-4 text-sm text-foreground">
-          {page.metaDescription ?? "No meta description stored yet."}
-        </div>
+      {/* Meta description */}
+      <div className="border-t border-border/50 pt-4">
+        <h4 className="text-sm font-normal mb-2 text-muted-foreground">Meta description</h4>
+        <p className="text-sm leading-relaxed">
+          {page.metaDescription ?? <span className="text-muted-foreground/40">No meta description stored yet</span>}
+        </p>
       </div>
 
-      <div className="space-y-2">
-        <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70">
-          Connected clusters
-        </div>
+      {/* Connected clusters */}
+      <div className="border-t border-border/50 pt-4">
+        <h4 className="text-sm font-normal mb-2 text-muted-foreground">Connected clusters</h4>
         {page.clusterNames.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {page.clusterNames.map((clusterName) => (
-              <Badge key={clusterName} variant="outline" className="rounded-full px-3 py-1">
+              <Badge key={clusterName} variant="outline" className="text-[11px] px-2 py-0.5">
                 {clusterName}
               </Badge>
             ))}
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">
-            This page has not been mapped to a keyword cluster yet.
-          </div>
+          <p className="text-sm text-muted-foreground/40">
+            Not mapped to a keyword cluster yet
+          </p>
         )}
       </div>
     </div>
@@ -401,31 +369,32 @@ function ClusterDetailCard({ cluster }: { cluster: SeoCluster }) {
   const priority = getPriorityStatus(cluster.priorityScore);
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <div className="text-xl font-semibold text-foreground">{cluster.name}</div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary" className="rounded-full px-3 py-1">
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-medium">{cluster.name}</h3>
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          <Badge variant="secondary" className="text-[11px] px-2 py-0.5">
             {toTitleCase(cluster.primaryIntent)}
           </Badge>
-          {cluster.funnelStage ? (
-            <Badge variant="outline" className="rounded-full px-3 py-1">
+          {cluster.funnelStage && (
+            <Badge variant="outline" className="text-[11px] px-2 py-0.5">
               {toTitleCase(cluster.funnelStage)}
             </Badge>
-          ) : null}
-          <Badge variant={priority.variant} className="rounded-full px-3 py-1">
+          )}
+          <Badge variant={priority.variant} className="text-[11px] px-2 py-0.5">
             {priority.label}
           </Badge>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/* Properties */}
+      <div className="space-y-0">
         <InfoTile
           label="Lead keyword"
           value={cluster.primaryKeyword ?? "Not selected yet"}
         />
         <InfoTile
-          label="Keywords in cluster"
+          label="Keywords"
           value={`${formatNumber(cluster.keywordCount)} total`}
         />
         <InfoTile
@@ -438,46 +407,36 @@ function ClusterDetailCard({ cluster }: { cluster: SeoCluster }) {
         />
       </div>
 
-      <div className="space-y-2">
-        <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70">
-          Included keywords
-        </div>
-        {cluster.keywords.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
+      {/* Keywords */}
+      {cluster.keywords.length > 0 && (
+        <div className="border-t border-border/50 pt-3">
+          <h4 className="text-sm font-normal mb-2 text-muted-foreground">Keywords</h4>
+          <div className="flex flex-wrap gap-1.5">
             {cluster.keywords.map((keyword) => (
-              <Badge key={keyword} variant="outline" className="rounded-full px-3 py-1">
+              <Badge key={keyword} variant="outline" className="text-[11px] px-2 py-0.5">
                 {keyword}
               </Badge>
             ))}
           </div>
-        ) : (
-          <div className="text-sm text-muted-foreground">
-            No keywords have been attached to this cluster yet.
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/70">
-          Connected pages
         </div>
-        {cluster.pageUrls.length > 0 ? (
-          <div className="space-y-2">
+      )}
+
+      {/* Connected pages */}
+      {cluster.pageUrls.length > 0 && (
+        <div className="border-t border-border/50 pt-3">
+          <h4 className="text-sm font-normal mb-2 text-muted-foreground">Connected pages</h4>
+          <div className="space-y-1">
             {cluster.pageUrls.map((pageUrl) => (
               <div
                 key={pageUrl}
-                className="rounded-2xl bg-muted/35 px-4 py-3 text-sm text-foreground"
+                className="text-[13px] text-muted-foreground truncate"
               >
                 {pageUrl}
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-sm text-muted-foreground">
-            No page has been linked to this cluster yet.
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

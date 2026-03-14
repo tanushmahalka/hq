@@ -77,7 +77,7 @@ describe("useChat", () => {
       return {};
     });
 
-    const { result } = renderHook(() => useChat("agent-1"));
+    const { result } = renderHook(() => useChat(getSessionKey()));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -122,7 +122,7 @@ describe("useChat", () => {
       return {};
     });
 
-    const { result } = renderHook(() => useChat("agent-1"));
+    const { result } = renderHook(() => useChat(getSessionKey()));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -163,7 +163,7 @@ describe("useChat", () => {
       return {};
     });
 
-    const { result } = renderHook(() => useChat("agent-1"));
+    const { result } = renderHook(() => useChat(getSessionKey()));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -179,7 +179,7 @@ describe("useChat", () => {
   });
 
   it("suppresses silent-reply deltas and finals from the active run", async () => {
-    const { result } = renderHook(() => useChat("agent-1"));
+    const { result } = renderHook(() => useChat(getSessionKey()));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -215,7 +215,7 @@ describe("useChat", () => {
   });
 
   it("does not queue follow-ups when there is no visible in-flight stream", async () => {
-    const { result } = renderHook(() => useChat("agent-1"));
+    const { result } = renderHook(() => useChat(getSessionKey()));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -241,7 +241,7 @@ describe("useChat", () => {
   });
 
   it("queues a follow-up message while busy and flushes it after final", async () => {
-    const { result } = renderHook(() => useChat("agent-1"));
+    const { result } = renderHook(() => useChat(getSessionKey()));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -269,7 +269,7 @@ describe("useChat", () => {
   });
 
   it("aborts the active run without clearing the queue and flushes after aborted", async () => {
-    const { result } = renderHook(() => useChat("agent-1"));
+    const { result } = renderHook(() => useChat(getSessionKey()));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -313,7 +313,7 @@ describe("useChat", () => {
       return {};
     });
 
-    const { result } = renderHook(() => useChat("agent-1"));
+    const { result } = renderHook(() => useChat(getSessionKey()));
     const attachment: PendingImageAttachment = {
       id: "att-1",
       dataUrl: "data:image/png;base64,Zm9v",

@@ -3,13 +3,10 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -39,22 +36,19 @@ const competitorColumns: ColumnDef<SeoCompetitor>[] = [
       const competitor = row.original;
 
       return (
-        <div className="flex min-w-[240px] items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Building2 className="size-4.5" />
-          </div>
+        <div className="flex min-w-[240px] items-center gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <div className="truncate font-semibold text-foreground">{competitor.label}</div>
+              <span className="text-sm truncate">{competitor.label}</span>
               <a
                 href={`https://${competitor.competitorDomain}`}
                 target="_blank"
                 rel="noreferrer"
                 aria-label={`Open ${competitor.competitorDomain}`}
-                className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                className="shrink-0 text-muted-foreground/40 hover:text-foreground transition-colors"
                 onClick={(event) => event.stopPropagation()}
               >
-                <Link2 className="size-3.5" />
+                <Link2 className="size-3" />
               </a>
             </div>
           </div>
@@ -73,9 +67,9 @@ const competitorColumns: ColumnDef<SeoCompetitor>[] = [
       />
     ),
     cell: ({ row }) => (
-      <div className="whitespace-nowrap text-sm">
+      <span className="text-sm text-muted-foreground">
         {formatOptionalNumber(row.original.latestFootprint?.estimatedOrganicTraffic)}
-      </div>
+      </span>
     ),
   },
   {
@@ -89,9 +83,9 @@ const competitorColumns: ColumnDef<SeoCompetitor>[] = [
       />
     ),
     cell: ({ row }) => (
-      <div className="whitespace-nowrap text-sm">
+      <span className="text-sm text-muted-foreground">
         {formatOptionalNumber(row.original.latestFootprint?.rankedKeywordsCount)}
-      </div>
+      </span>
     ),
   },
 ];
@@ -122,111 +116,116 @@ export function CompetitorsTab({
   onSelectCompetitor: (value: number | null) => void;
 }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <CompetitorTrends competitors={trendCompetitors} site={selectedSite} />
 
-      <Card className="flex min-h-[760px] flex-col border-border/70 bg-card/95">
-        <CardHeader className="border-b border-border/70 bg-muted/20">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <CardTitle className="text-xl">Competitor set</CardTitle>
-              <CardDescription className="mt-1">
-                Domains tied to {siteName}, with their latest footprint captures.
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="rounded-full px-3 py-1">
-              {formatNumber(competitors.length)} shown
-            </Badge>
+      {/* Competitor table */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-medium text-muted-foreground">Competitor set</h2>
+            <p className="text-xs text-muted-foreground/50 mt-0.5">
+              Domains tied to {siteName}
+            </p>
           </div>
-          <div className="flex flex-col gap-3">
-            <Input
-              value={competitorSearch}
-              onChange={(event) => onCompetitorSearchChange(event.target.value)}
-              placeholder="Search by competitor, domain, type, or keyword"
-              className="h-10 bg-background/75"
-            />
-          </div>
-        </CardHeader>
+          <span className="text-xs text-muted-foreground/60">
+            {formatNumber(competitors.length)} shown
+          </span>
+        </div>
 
-        <CardContent className="flex min-h-0 flex-1 flex-col px-0">
+        <div className="mb-3">
+          <input
+            value={competitorSearch}
+            onChange={(event) => onCompetitorSearchChange(event.target.value)}
+            placeholder="Search by competitor, domain, type, or keyword..."
+            className="text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/50 w-full"
+          />
+        </div>
+
+        <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
           <DataTable
             columns={competitorColumns}
             data={competitors}
             initialSorting={[{ id: "label", desc: false }]}
             onRowClick={(row) => onSelectCompetitor(row.original.id)}
             getRowClassName={(row) =>
-              cn(activeCompetitor?.id === row.original.id && "bg-primary/5")
+              cn(activeCompetitor?.id === row.original.id && "bg-muted/40")
             }
             tableClassName="min-w-[720px]"
             emptyState={
-              <div className="flex min-h-[520px] flex-col justify-center px-6 py-16">
+              <div className="py-12 px-6">
                 <InlineEmptyState
                   title={
                     hasActiveFilters && totalCompetitorCount > 0
-                      ? "Competitors are hidden by the current filters"
-                      : "No competitors match these filters"
+                      ? "Competitors hidden by filters"
+                      : "No competitors match"
                   }
                   description={
                     hasActiveFilters && totalCompetitorCount > 0
-                      ? `${formatNumber(totalCompetitorCount)} competitors are tracked for this site, but none match the current search or type filter.`
-                      : "Add competitor records or clear the filters to inspect the full tracked set."
+                      ? `${formatNumber(totalCompetitorCount)} competitors are tracked but none match the current search.`
+                      : "Add competitor records or clear the filters."
                   }
                 />
-                {hasActiveFilters && totalCompetitorCount > 0 ? (
+                {hasActiveFilters && totalCompetitorCount > 0 && (
                   <div className="mt-4 flex justify-center">
-                    <Button variant="outline" onClick={onClearFilters}>
+                    <Button variant="ghost" size="sm" onClick={onClearFilters}>
                       Clear filters
                     </Button>
                   </div>
-                ) : null}
+                )}
               </div>
             }
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
+      {/* Competitor detail sheet */}
       <Sheet
         open={activeCompetitor !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            onSelectCompetitor(null);
-          }
+          if (!open) onSelectCompetitor(null);
         }}
       >
         <SheetContent
           side="right"
-          className="w-[min(98vw,84rem)] max-w-none sm:max-w-[84rem] overflow-y-auto border-l border-border/70 bg-background/98 p-0 backdrop-blur-xl"
+          showCloseButton
+          className="w-full sm:max-w-[720px] p-0 flex flex-col overflow-hidden gap-0"
         >
-          <SheetHeader className="border-b border-border/70 bg-muted/20 px-8 py-6 text-left">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge className="rounded-full px-3 py-1">
-                <Building2 className="size-3.5" />
-                Competitor focus
+          <SheetDescription className="sr-only">
+            View competitor details
+          </SheetDescription>
+
+          {/* Header */}
+          <div className="px-6 pt-14 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Badge variant="secondary" className="text-[11px] px-2 py-0.5">
+                <Building2 className="size-3 mr-1" />
+                Competitor
               </Badge>
-              {activeCompetitor ? (
-                <Badge variant="outline" className="rounded-full px-3 py-1">
-                  {selectedSite?.name}
+              {selectedSite && (
+                <Badge variant="outline" className="text-[11px] px-2 py-0.5">
+                  {selectedSite.name}
                 </Badge>
-              ) : null}
+              )}
             </div>
-            <SheetTitle className="text-2xl">
+            <SheetTitle className="font-display text-4xl font-normal">
               {activeCompetitor?.label ?? "Competitor details"}
             </SheetTitle>
-            <SheetDescription className="max-w-2xl">
-              {activeCompetitor
-                ? "Latest footprint and summary metrics for the selected competitor."
-                : "Choose a competitor from the table to inspect it here."}
-            </SheetDescription>
-          </SheetHeader>
+            {activeCompetitor && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {activeCompetitor.competitorDomain}
+              </p>
+            )}
+          </div>
 
-          <div className="p-8">
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
             {activeCompetitor ? (
               <CompetitorDetailCard competitor={activeCompetitor} />
             ) : (
-              <InlineEmptyState
-                title="Choose a competitor"
-                description="Select a competitor from the table to inspect its latest footprint and summary details."
-              />
+              <p className="text-sm text-muted-foreground/40 text-center py-12">
+                Select a competitor from the table to inspect.
+              </p>
             )}
           </div>
         </SheetContent>
@@ -248,12 +247,12 @@ function SortHeader({
     <Button
       variant="ghost"
       size="sm"
-      className="-ml-3 h-8 px-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground hover:bg-transparent hover:text-foreground"
+      className="-ml-3 h-8 px-3 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
       onClick={onClick}
     >
       {label}
       <ArrowUpDown
-        className={cn("size-3.5 opacity-45", isSorted && "opacity-100 text-foreground")}
+        className={cn("size-3 opacity-45", isSorted && "opacity-100 text-foreground")}
       />
     </Button>
   );
@@ -265,33 +264,27 @@ function CompetitorDetailCard({
   competitor: SeoCompetitor;
 }) {
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <div>
-          <div className="text-2xl font-semibold text-foreground">{competitor.label}</div>
-          <div className="mt-1 break-all text-sm text-muted-foreground">
-            {competitor.competitorDomain}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="rounded-full px-3 py-1">
-            {toTitleCase(competitor.competitorType)}
+    <div className="space-y-4">
+      {/* Badges */}
+      <div className="flex flex-wrap gap-1.5">
+        <Badge variant="outline" className="text-[11px] px-2 py-0.5">
+          {toTitleCase(competitor.competitorType)}
+        </Badge>
+        <Badge
+          variant={competitor.isActive ? "default" : "secondary"}
+          className="text-[11px] px-2 py-0.5"
+        >
+          {competitor.isActive ? "Active" : "Inactive"}
+        </Badge>
+        {competitor.latestFootprint && (
+          <Badge variant="secondary" className="text-[11px] px-2 py-0.5">
+            {competitor.latestFootprint.location} · {competitor.latestFootprint.languageCode}
           </Badge>
-          <Badge
-            variant={competitor.isActive ? "default" : "secondary"}
-            className="rounded-full px-3 py-1"
-          >
-            {competitor.isActive ? "Active competitor" : "Inactive competitor"}
-          </Badge>
-          {competitor.latestFootprint ? (
-            <Badge variant="secondary" className="rounded-full px-3 py-1">
-              {competitor.latestFootprint.location} · {competitor.latestFootprint.languageCode}
-            </Badge>
-          ) : null}
-        </div>
+        )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Properties */}
+      <div className="space-y-0">
         <InfoTile
           label="Organic traffic"
           value={formatOptionalNumber(competitor.latestFootprint?.estimatedOrganicTraffic)}
@@ -310,9 +303,6 @@ function CompetitorDetailCard({
             competitor.latestFootprint?.capturedAt ?? competitor.latestKeywordCapturedAt,
           )}
         />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <InfoTile
           label="Paid traffic"
           value={formatOptionalNumber(competitor.latestFootprint?.estimatedPaidTraffic)}
@@ -331,27 +321,27 @@ function CompetitorDetailCard({
         />
       </div>
 
-      <div className="rounded-[1.8rem] border border-border/60 bg-background/70 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold text-foreground">Latest ranked keyword capture</div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              {competitor.latestKeywordCapturedAt
-                ? `${formatNumber(competitor.latestKeywordCount)} keyword${competitor.latestKeywordCount !== 1 ? "s" : ""} from ${formatDate(competitor.latestKeywordCapturedAt)}`
-                : "No keyword capture stored yet."}
-            </div>
-          </div>
-          <Badge variant="outline" className="rounded-full px-3 py-1">
-            {formatNumber(competitor.keywordRowCount)} total rows
-          </Badge>
-        </div>
+      {/* Latest keyword capture */}
+      <div className="border-t border-border/50 pt-4">
+        <h4 className="text-sm font-normal mb-1 text-muted-foreground">Latest keyword capture</h4>
+        <p className="text-sm">
+          {competitor.latestKeywordCapturedAt
+            ? `${formatNumber(competitor.latestKeywordCount)} keyword${competitor.latestKeywordCount !== 1 ? "s" : ""} from ${formatDate(competitor.latestKeywordCapturedAt)}`
+            : "No keyword capture stored yet"}
+        </p>
+        <p className="text-xs text-muted-foreground/50 mt-1">
+          {formatNumber(competitor.keywordRowCount)} total rows
+        </p>
       </div>
 
-      <div className="rounded-[1.8rem] border border-border/60 bg-background/70 p-5">
-        <div className="text-sm font-semibold text-foreground">Notes</div>
-        <div className="mt-2 text-sm text-muted-foreground">
-          {competitor.notes?.trim() || "No notes saved for this competitor yet."}
-        </div>
+      {/* Notes */}
+      <div className="border-t border-border/50 pt-4">
+        <h4 className="text-sm font-normal mb-1 text-muted-foreground">Notes</h4>
+        <p className="text-sm leading-relaxed">
+          {competitor.notes?.trim() || (
+            <span className="text-muted-foreground/40">No notes saved yet</span>
+          )}
+        </p>
       </div>
     </div>
   );

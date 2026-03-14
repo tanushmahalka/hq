@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ApprovalCard } from "@/components/approvals/approval-card";
 import {
   Clock,
   Sparkles,
@@ -42,14 +41,9 @@ import {
   type TaskSubtaskStatus,
 } from "@shared/task-workflow";
 import { trpc } from "@/lib/trpc";
-import { useApprovals } from "@/hooks/use-approvals";
-import { useTaskSessions } from "@/hooks/use-task-sessions";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { useGateway } from "@/hooks/use-gateway";
-import { SessionMessageList } from "@/components/chat/session-blocks";
-import { MessageContent } from "@/components/messenger/message-content";
-import { MessengerComposer } from "@/components/messenger/messenger-panel";
-import { ChatSendProvider } from "@/hooks/use-chat-send";
+import { Session } from "@/components/messenger/messenger-panel";
 import {
   getAtQuery,
   parseContentSegments,
@@ -226,6 +220,9 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
   };
 
   if (!taskId) return null;
+  const taskSessionKey = task
+    ? `agent:${task.assignee ?? "main"}:task:${task.id}`
+    : "main";
 
   return (
     <Sheet open={!!taskId} onOpenChange={(open) => !open && onClose()}>
@@ -484,7 +481,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             {resolvedActiveTab === "comments" && task && (
               <CommentsPanel
                 taskId={task.id}
@@ -495,7 +492,9 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
               />
             )}
             {resolvedActiveTab === "session" && task && (
-              <SessionPanel task={task} workflowDetail={workflowDetail} />
+              <div className="h-full min-h-0">
+                <Session sessionKey={taskSessionKey} />
+              </div>
             )}
             {resolvedActiveTab === "workflow" &&
               task?.workflowMode === "complex" && (
@@ -1029,149 +1028,5 @@ function WorkflowPanel({
         </section>
       </div>
     </div>
-  );
-}
-
-// -- Session panel --
-
-function SessionPanel({
-  task,
-  workflowDetail,
-}: {
-  task: TaskSheetTask;
-  workflowDetail?: TaskWorkflowDetailData;
-}) {
-  const { agents, connected } = useGateway();
-  const fallbackAgentId = task.assignee || agents[0]?.id;
-  const agent = task.assignee
-    ? agents.find((a) => a.id === task.assignee)
-    : agents[0];
-  const emoji = agent?.identity?.emoji;
-  console.log(workflowDetail);
-  const primarySessionKey = workflowDetail?.sessions.find(
-    (session) => session.role === "root"
-  )?.sessionKey;
-
-  return (
-    <SessionChat
-      taskId={task.id}
-      fallbackAgentId={fallbackAgentId}
-      linkedSessionKeys={workflowDetail?.summary.sessionKeys}
-      primarySessionKey={primarySessionKey}
-      agentEmoji={emoji}
-      connected={connected}
-    />
-  );
-}
-
-function SessionChat({
-  taskId,
-  fallbackAgentId,
-  linkedSessionKeys,
-  primarySessionKey,
-  agentEmoji,
-  connected,
-}: {
-  taskId: string;
-  fallbackAgentId?: string;
-  linkedSessionKeys?: string[];
-  primarySessionKey?: string;
-  agentEmoji?: string;
-  connected: boolean;
-}) {
-  const { approvals } = useApprovals();
-  const {
-    messages,
-    sessionKeys,
-    stream,
-    isStreaming,
-    loading,
-    error,
-    sendMessage,
-  } = useTaskSessions(taskId, {
-    fallbackAgentId,
-    linkedSessionKeys,
-    primarySessionKey,
-  });
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const sessionApprovals = approvals.filter((approval) => {
-    return (
-      linkedSessionKeys?.includes(approval.request.sessionKey) ||
-      approval.request.sessionKey.includes(`:task:${taskId}`) ||
-      sessionKeys.includes(approval.request.sessionKey)
-    );
-  });
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
-  }, [messages, stream]);
-
-  return (
-    <ChatSendProvider sendMessage={(text) => void sendMessage(text)}>
-      <div className="flex flex-col h-full">
-        {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-          {sessionApprovals.map((approval) => (
-            <ApprovalCard key={approval.id} approval={approval} />
-          ))}
-
-          {loading && (
-            <div className="flex items-center justify-center py-8">
-              <LoaderFive text="Thinking..." />
-            </div>
-          )}
-
-          {!loading && messages.length === 0 && !error && (
-            <p className="text-xs text-muted-foreground/50 text-center py-8">
-              No messages in this session yet.
-            </p>
-          )}
-
-          <SessionMessageList messages={messages} agentEmoji={agentEmoji} />
-
-          {isStreaming && (
-            <div className="flex gap-2.5">
-              <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-[9px]">{agentEmoji ?? "🤖"}</span>
-              </div>
-              <div className="flex-1 min-w-0 space-y-1.5 pt-1">
-                <LoaderFive text="Thinking..." />
-                {stream ? (
-                  <div className="text-sm text-muted-foreground leading-relaxed">
-                    <MessageContent text={stream} />
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <p className="text-xs text-destructive text-center py-2">{error}</p>
-          )}
-        </div>
-
-        {/* Input */}
-        <div className="relative border-t bg-muted/30 shrink-0">
-          <MessengerComposer
-            connected={connected}
-            isBusy={isStreaming}
-            canAbort={false}
-            queue={[]}
-            allowAttachments={false}
-            allowQueueWhileBusy={false}
-            placeholder={connected ? "Message agent..." : "Connecting..."}
-            onSend={async (text) => {
-              if (isStreaming) {
-                return "ignored";
-              }
-              await sendMessage(text);
-              return "sent";
-            }}
-            onAbort={() => {}}
-            onRemoveQueuedMessage={() => {}}
-          />
-        </div>
-      </div>
-    </ChatSendProvider>
   );
 }

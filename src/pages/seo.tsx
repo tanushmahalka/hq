@@ -1,16 +1,11 @@
 import { useDeferredValue, useState } from "react";
 import {
-  BarChart3,
-  Building2,
   FileText,
   Globe,
-  Layers3,
   Search,
-  Target,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -22,7 +17,6 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,7 +24,6 @@ import { CompetitorsTab } from "@/features/seo/competitors-tab";
 import { OverviewTab, PageDetailCard } from "@/features/seo/overview-tab";
 import {
   EmptyState,
-  InlineEmptyState,
   SeoLoadingState,
   SeoTabButton,
   SummaryCard,
@@ -71,10 +64,6 @@ export default function Seo() {
   const pages = readArray<SeoPage>(rawOverview?.pages);
   const clusters = readArray<SeoCluster>(rawOverview?.clusters);
   const competitors = readArray<SeoCompetitor>(rawOverview?.competitors);
-  const summary =
-    rawOverview?.summary && typeof rawOverview.summary === "object"
-      ? rawOverview.summary
-      : null;
 
   const effectiveSelectedSiteId =
     selectedSiteId && sites.some((site) => site.id === selectedSiteId)
@@ -151,237 +140,188 @@ export default function Seo() {
     (sum, competitor) => sum + competitor.latestKeywordCount,
     0,
   );
-  const siteCount =
-    summary && "siteCount" in summary && typeof summary.siteCount === "number"
-      ? summary.siteCount
-      : sites.length;
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto bg-[radial-gradient(circle_at_top_left,var(--swarm-violet-dim),transparent_28%),radial-gradient(circle_at_top_right,var(--swarm-mint-dim),transparent_24%),linear-gradient(180deg,var(--color-background)_0%,color-mix(in_oklab,var(--color-background)_96%,var(--swarm-blue-dim))_100%)]">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-8 lg:p-10">
-        <Card className="relative overflow-hidden border-border/70 bg-card/95 shadow-sm">
-          <div
-            className="pointer-events-none absolute -left-20 top-0 size-72 rounded-full blur-3xl"
-            style={{ background: "var(--swarm-violet-dim)" }}
-          />
-          <div
-            className="pointer-events-none absolute bottom-0 right-0 size-72 rounded-full blur-3xl"
-            style={{ background: "var(--swarm-mint-dim)" }}
-          />
-          <CardHeader className="relative gap-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-1">
-                <CardTitle className="text-2xl">SEO Workspace</CardTitle>
-                <CardDescription className="text-sm">
-                  {siteCount
-                    ? `${formatNumber(siteCount)} site${siteCount !== 1 ? "s" : ""} available`
-                    : "Loading site summary"}
-                </CardDescription>
-              </div>
-              {sites.length ? (
-                <div className="w-full max-w-[320px]">
-                  <Select
-                    value={effectiveSelectedSiteId?.toString()}
-                    onValueChange={(value) => setSelectedSiteId(Number(value))}
-                  >
-                    <SelectTrigger className="h-11 w-full rounded-full bg-background/80 px-4">
-                      <SelectValue placeholder="Choose a site" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sites.map((site) => (
-                        <SelectItem key={site.id} value={site.id.toString()}>
-                          {site.name} · {site.domain}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <Skeleton className="h-11 w-full max-w-[320px] rounded-full" />
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <SeoTabButton
-                active={activeTab === "overview"}
-                label="Overview"
-                description="Pages and keyword clusters"
-                onClick={() => setActiveTab("overview")}
-              />
-              <SeoTabButton
-                active={activeTab === "competitors"}
-                label="Competitors"
-                description={`${formatNumber(siteCompetitors.length)} tracked for this site`}
-                onClick={() => setActiveTab("competitors")}
-              />
-            </div>
-
-            {overviewQuery.isLoading ? (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <Skeleton key={index} className="h-28 w-full rounded-3xl" />
+    <div className="flex flex-col h-full p-12">
+      {/* Page header */}
+      <div className="pt-4 pb-6">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-5xl font-normal text-foreground">
+            SEO
+          </h1>
+          {sites.length > 0 ? (
+            <Select
+              value={effectiveSelectedSiteId?.toString()}
+              onValueChange={(value) => setSelectedSiteId(Number(value))}
+            >
+              <SelectTrigger className="h-7 w-auto gap-1.5 border-none shadow-none px-2 text-sm font-medium">
+                <SelectValue placeholder="Choose a site" />
+              </SelectTrigger>
+              <SelectContent>
+                {sites.map((site) => (
+                  <SelectItem key={site.id} value={site.id.toString()}>
+                    {site.name} · {site.domain}
+                  </SelectItem>
                 ))}
-              </div>
-            ) : selectedSite ? (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {activeTab === "overview" ? (
-                  <>
-                    <SummaryCard
-                      icon={FileText}
-                      label="Pages"
-                      value={selectedSite.pageCount}
-                      hint="Tracked URLs in this site"
-                    />
-                    <SummaryCard
-                      icon={Layers3}
-                      label="Keyword clusters"
-                      value={selectedSite.clusterCount}
-                      hint="Topic groups to organize search demand"
-                    />
-                    <SummaryCard
-                      icon={Search}
-                      label="Keywords"
-                      value={selectedSite.keywordCount}
-                      hint="Search terms already grouped into clusters"
-                    />
-                    <SummaryCard
-                      icon={Target}
-                      label="Mapped pages"
-                      value={selectedSite.mappedPageCount}
-                      hint="Pages already connected to keyword themes"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <SummaryCard
-                      icon={Building2}
-                      label="Competitors"
-                      value={siteCompetitors.length}
-                      hint="Tracked domains for this site"
-                    />
-                    <SummaryCard
-                      icon={BarChart3}
-                      label="Latest ranked keywords"
-                      value={competitorLatestKeywordCount}
-                      hint="Keywords in each competitor's most recent capture"
-                    />
-                  </>
-                )}
-              </div>
-            ) : null}
-          </CardHeader>
-        </Card>
+              </SelectContent>
+            </Select>
+          ) : overviewQuery.isLoading ? (
+            <Skeleton className="h-7 w-48" />
+          ) : null}
+        </div>
+      </div>
 
-        {overviewQuery.isError ? (
-          <EmptyState
-            icon={Search}
-            title="We couldn't load the SEO overview"
-            description={overviewQuery.error.message}
+      {/* Tabs + summary stats */}
+      <div className="flex items-end justify-between border-b mb-6">
+        <div className="flex items-center gap-0">
+          <SeoTabButton
+            active={activeTab === "overview"}
+            label="Overview"
+            description={selectedSite ? `${formatNumber(sitePages.length)} pages` : ""}
+            onClick={() => setActiveTab("overview")}
           />
-        ) : overviewQuery.isLoading ? (
-          <SeoLoadingState />
-        ) : sites.length === 0 ? (
-          <EmptyState
-            icon={Globe}
-            title="No SEO sites are available yet"
-            description="Once pages and keyword clusters are stored in the main workspace database, this tab will start populating automatically."
+          <SeoTabButton
+            active={activeTab === "competitors"}
+            label="Competitors"
+            description={`${formatNumber(siteCompetitors.length)} tracked`}
+            onClick={() => setActiveTab("competitors")}
           />
-        ) : activeTab === "overview" ? (
-          <OverviewTab
-            selectedSite={selectedSite}
-            filteredPages={filteredPages}
-            filteredClusters={filteredClusters}
-            selectedPageType={selectedPageType}
-            onPageTypeChange={setSelectedPageType}
-            pageTypeOptions={pageTypeOptions}
-            pageSearch={pageSearch}
-            onPageSearchChange={setPageSearch}
-            selectedPageId={selectedPageId}
-            onSelectPage={setSelectedPageId}
-            activeCluster={activeCluster}
-            selectedIntent={selectedIntent}
-            onIntentChange={setSelectedIntent}
-            intentOptions={intentOptions}
-            clusterSearch={clusterSearch}
-            onClusterSearchChange={setClusterSearch}
-            selectedClusterId={selectedClusterId}
-            onSelectCluster={setSelectedClusterId}
-          />
-        ) : (
-          <CompetitorsTab
-            siteName={selectedSite?.name ?? "Selected site"}
-            selectedSite={selectedSite}
-            competitors={filteredCompetitors}
-            trendCompetitors={siteCompetitors}
-            competitorSearch={competitorSearch}
-            onCompetitorSearchChange={(value) => {
-              setCompetitorSearch(value);
+        </div>
 
-              const selectedCompetitor = siteCompetitors.find(
-                (competitor) => competitor.id === selectedCompetitorId,
-              );
-
-              if (
-                selectedCompetitor &&
-                !matchesCompetitorFilters(selectedCompetitor, value)
-              ) {
-                setSelectedCompetitorId(null);
-              }
-            }}
-            totalCompetitorCount={siteCompetitors.length}
-            hasActiveFilters={hasCompetitorFiltersApplied}
-            onClearFilters={() => {
-              setCompetitorSearch("");
-              setSelectedCompetitorId(null);
-            }}
-            activeCompetitor={activeCompetitor}
-            onSelectCompetitor={setSelectedCompetitorId}
-          />
+        {selectedSite && !overviewQuery.isLoading && (
+          <div className="flex items-center gap-8 pb-2.5">
+            {activeTab === "overview" ? (
+              <>
+                <SummaryCard label="Pages" value={selectedSite.pageCount} />
+                <SummaryCard label="Clusters" value={selectedSite.clusterCount} />
+                <SummaryCard label="Keywords" value={selectedSite.keywordCount} />
+                <SummaryCard label="Mapped" value={selectedSite.mappedPageCount} />
+              </>
+            ) : (
+              <>
+                <SummaryCard label="Competitors" value={siteCompetitors.length} />
+                <SummaryCard label="Ranked keywords" value={competitorLatestKeywordCount} />
+              </>
+            )}
+          </div>
         )}
       </div>
 
+      {/* Content */}
+      {overviewQuery.isError ? (
+        <EmptyState
+          icon={Search}
+          title="We couldn't load the SEO overview"
+          description={overviewQuery.error.message}
+        />
+      ) : overviewQuery.isLoading ? (
+        <SeoLoadingState />
+      ) : sites.length === 0 ? (
+        <EmptyState
+          icon={Globe}
+          title="No SEO sites available yet"
+          description="Once pages and keyword clusters are stored in the workspace database, this tab will populate automatically."
+        />
+      ) : activeTab === "overview" ? (
+        <OverviewTab
+          selectedSite={selectedSite}
+          filteredPages={filteredPages}
+          filteredClusters={filteredClusters}
+          selectedPageType={selectedPageType}
+          onPageTypeChange={setSelectedPageType}
+          pageTypeOptions={pageTypeOptions}
+          pageSearch={pageSearch}
+          onPageSearchChange={setPageSearch}
+          selectedPageId={selectedPageId}
+          onSelectPage={setSelectedPageId}
+          activeCluster={activeCluster}
+          selectedIntent={selectedIntent}
+          onIntentChange={setSelectedIntent}
+          intentOptions={intentOptions}
+          clusterSearch={clusterSearch}
+          onClusterSearchChange={setClusterSearch}
+          selectedClusterId={selectedClusterId}
+          onSelectCluster={setSelectedClusterId}
+        />
+      ) : (
+        <CompetitorsTab
+          siteName={selectedSite?.name ?? "Selected site"}
+          selectedSite={selectedSite}
+          competitors={filteredCompetitors}
+          trendCompetitors={siteCompetitors}
+          competitorSearch={competitorSearch}
+          onCompetitorSearchChange={(value) => {
+            setCompetitorSearch(value);
+
+            const selectedCompetitor = siteCompetitors.find(
+              (competitor) => competitor.id === selectedCompetitorId,
+            );
+
+            if (
+              selectedCompetitor &&
+              !matchesCompetitorFilters(selectedCompetitor, value)
+            ) {
+              setSelectedCompetitorId(null);
+            }
+          }}
+          totalCompetitorCount={siteCompetitors.length}
+          hasActiveFilters={hasCompetitorFiltersApplied}
+          onClearFilters={() => {
+            setCompetitorSearch("");
+            setSelectedCompetitorId(null);
+          }}
+          activeCompetitor={activeCompetitor}
+          onSelectCompetitor={setSelectedCompetitorId}
+        />
+      )}
+
+      {/* Page detail sheet */}
       <Sheet
         open={selectedPageId !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setSelectedPageId(null);
-          }
+          if (!open) setSelectedPageId(null);
         }}
       >
         <SheetContent
           side="right"
-          className="w-[min(94vw,64rem)] max-w-none overflow-y-auto border-l border-border/70 bg-background/98 p-0 backdrop-blur-xl"
+          showCloseButton
+          className="w-full sm:max-w-[720px] p-0 flex flex-col overflow-hidden gap-0"
         >
-          <SheetHeader className="border-b border-border/70 bg-muted/20 px-8 py-6 text-left">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge className="rounded-full px-3 py-1">
-                <FileText className="size-3.5" />
-                Page focus
+          <SheetDescription className="sr-only">
+            View page SEO details
+          </SheetDescription>
+
+          {/* Header */}
+          <div className="px-6 pt-14 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Badge variant="secondary" className="text-[11px] px-2 py-0.5">
+                <FileText className="size-3 mr-1" />
+                Page
               </Badge>
-              {activePage ? (
-                <Badge variant="outline" className="rounded-full px-3 py-1">
-                  {selectedSite?.name}
+              {selectedSite && (
+                <Badge variant="outline" className="text-[11px] px-2 py-0.5">
+                  {selectedSite.name}
                 </Badge>
-              ) : null}
+              )}
             </div>
-            <SheetTitle className="text-2xl">
+            <SheetTitle className="font-display text-4xl font-normal">
               {activePage?.displayTitle ?? "Page details"}
             </SheetTitle>
-            <SheetDescription className="max-w-2xl">
-              {activePage
-                ? "A larger, presentation-ready view of the selected page and its SEO context."
-                : "Choose a page from the overview list to inspect it here."}
-            </SheetDescription>
-          </SheetHeader>
+            {activePage && (
+              <p className="text-sm text-muted-foreground mt-1 break-all">
+                {activePage.url}
+              </p>
+            )}
+          </div>
 
-          <div className="p-8">
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
             {activePage ? (
               <PageDetailCard page={activePage} />
             ) : (
-              <InlineEmptyState
-                title="Choose a page"
-                description="Pick a page from the overview tab to inspect its details here."
-              />
+              <p className="text-sm text-muted-foreground/40 text-center py-12">
+                Choose a page from the overview to inspect it here.
+              </p>
             )}
           </div>
         </SheetContent>

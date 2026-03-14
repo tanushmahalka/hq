@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { axisClasses, LineChart } from "@mui/x-charts";
 import { lineElementClasses, markElementClasses } from "@mui/x-charts/LineChart";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { SeoCompetitor, SeoCompetitorHistoryPoint, SeoSite } from "./types";
 import { InlineEmptyState } from "./shared";
@@ -17,7 +16,6 @@ type MetricKey = "estimatedOrganicTraffic" | "rankedKeywordsCount";
 type MetricOption = {
   key: MetricKey;
   title: string;
-  description: string;
 };
 
 type MetricPoint = {
@@ -35,18 +33,8 @@ type MetricSeries = {
 };
 
 const METRIC_OPTIONS: MetricOption[] = [
-  {
-    key: "estimatedOrganicTraffic",
-    title: "Organic traffic",
-    description:
-      "Top tracked competitors by latest estimated organic traffic across captured footprint snapshots.",
-  },
-  {
-    key: "rankedKeywordsCount",
-    title: "Ranked keywords",
-    description:
-      "Top tracked competitors by latest ranked keyword count across captured footprint snapshots.",
-  },
+  { key: "estimatedOrganicTraffic", title: "Organic traffic" },
+  { key: "rankedKeywordsCount", title: "Ranked keywords" },
 ];
 
 export function CompetitorTrends({
@@ -70,83 +58,71 @@ export function CompetitorTrends({
 
   if (visibleSeries.length === 0) {
     return (
-      <Card className="border-border/70 bg-card/95 shadow-sm">
-        <CardHeader className="border-b border-border/60">
-          <div className="flex flex-wrap gap-2">
+      <section>
+        <div className="flex items-center gap-4 mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Trends</h2>
+          <div className="flex items-center gap-0 border-b">
             {METRIC_OPTIONS.map((option) => (
               <button
                 key={option.key}
                 type="button"
                 onClick={() => setSelectedMetric(option.key)}
                 className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+                  "px-3 py-2 text-xs transition-colors border-b-2 -mb-px",
                   selectedMetric === option.key
-                    ? "border-primary/20 bg-primary/10 text-primary"
-                    : "border-border/70 bg-background/75 text-muted-foreground hover:text-foreground",
+                    ? "border-foreground text-foreground font-medium"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
                 {option.title}
               </button>
             ))}
           </div>
-          <div className="space-y-1">
-            <CardTitle className="text-2xl">{metric.title}</CardTitle>
-            <CardDescription className="max-w-3xl text-sm">
-              {metric.description}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
+        </div>
+        <div className="rounded-xl border border-border/40 bg-card">
           <InlineEmptyState
             title={`No ${metric.title.toLowerCase()} history yet`}
-            description={`Run site and competitor footprint captures to start plotting this comparison over time.`}
+            description="Run site and competitor footprint captures to start plotting trends."
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     );
   }
 
   return (
-    <Card className="relative overflow-hidden border-border/70 bg-card/95 shadow-sm">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-28"
-        style={{
-          background:
-            "linear-gradient(135deg, color-mix(in oklab, var(--swarm-blue-dim) 50%, transparent), color-mix(in oklab, var(--swarm-mint-dim) 45%, transparent))",
-        }}
-      />
-      <CardHeader className="relative border-b border-border/60 pb-5">
-        <div className="flex flex-wrap gap-2">
-          {METRIC_OPTIONS.map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => setSelectedMetric(option.key)}
-              className={cn(
-                "rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
-                selectedMetric === option.key
-                  ? "border-primary/20 bg-primary/10 text-primary shadow-sm"
-                  : "border-border/70 bg-background/75 text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {option.title}
-            </button>
-          ))}
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-4">
+          <h2 className="text-sm font-medium text-muted-foreground">Trends</h2>
+          <div className="flex items-center gap-0">
+            {METRIC_OPTIONS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setSelectedMetric(option.key)}
+                className={cn(
+                  "px-3 py-1.5 text-xs rounded-full transition-colors",
+                  selectedMetric === option.key
+                    ? "bg-foreground/5 text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {option.title}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="space-y-1">
-          <CardTitle className="text-2xl">{metric.title}</CardTitle>
-          <CardDescription className="max-w-3xl text-sm">
-            {metric.description} {ownSeries ? "Your site is highlighted first." : ""} Showing{" "}
-            {formatNumber(visibleSeries.length)} of {formatNumber(totalComparableSeries)} comparable series.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="relative p-0">
-        <div className="h-[430px] w-full overflow-hidden bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-background)_92%,white)_0%,color-mix(in_oklab,var(--color-background)_98%,var(--swarm-blue-dim))_100%)]">
+        <span className="text-xs text-muted-foreground/50">
+          {formatNumber(visibleSeries.length)} of {formatNumber(totalComparableSeries)} series
+        </span>
+      </div>
+
+      <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
+        <div className="h-[360px] w-full">
           <LineChart
-            height={430}
+            height={360}
             hideLegend
-            margin={{ top: 0, right: 52, bottom: 26, left: 0 }}
+            margin={{ top: 12, right: 52, bottom: 26, left: 0 }}
             axisHighlight={{ x: "line" }}
             grid={{ horizontal: true }}
             xAxis={[
@@ -195,18 +171,18 @@ export function CompetitorTrends({
             }}
             sx={{
               [`& .${axisClasses.line}`]: {
-                stroke: "rgba(100, 116, 139, 0.18)",
+                stroke: "rgba(100, 116, 139, 0.12)",
               },
               [`& .${axisClasses.tick}`]: {
-                stroke: "rgba(100, 116, 139, 0.18)",
+                stroke: "rgba(100, 116, 139, 0.12)",
               },
               [`& .${axisClasses.tickLabel}`]: {
-                fill: "rgba(71, 85, 105, 0.9)",
+                fill: "rgba(71, 85, 105, 0.7)",
                 fontFamily: "inherit",
                 fontSize: 11,
               },
               [`& .${lineElementClasses.root}`]: {
-                strokeWidth: 1.9,
+                strokeWidth: 1.5,
               },
               [`& .${markElementClasses.root}`]: {
                 fill: "rgba(221, 214, 254, 0.95)",
@@ -214,28 +190,25 @@ export function CompetitorTrends({
                 strokeWidth: 2,
               },
               [`& .${lineElementClasses.series}-__self__`]: {
-                strokeWidth: 2.4,
+                strokeWidth: 2,
               },
               [`& .${markElementClasses.series}-__self__`]: {
                 fill: "rgba(216, 180, 254, 0.98)",
                 stroke: "rgba(88, 28, 135, 0.98)",
-                strokeWidth: 2.4,
+                strokeWidth: 2,
               },
               "& .MuiChartsGrid-line": {
-                stroke: "rgba(100, 116, 139, 0.14)",
+                stroke: "rgba(100, 116, 139, 0.08)",
               },
               "& .MuiChartsAxisHighlight-root": {
-                stroke: "rgba(37, 99, 235, 0.28)",
+                stroke: "rgba(37, 99, 235, 0.2)",
                 strokeDasharray: "6 6",
-              },
-              "& .MuiChartsTooltip-root": {
-                borderRadius: "16px",
               },
             }}
           />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
