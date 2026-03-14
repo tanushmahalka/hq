@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { router, orgProcedure } from "../init.ts";
-import { getSeoOverview, getAnalyticsSummary, getBacklinksData, updateOpportunityStatus } from "../../lib/seo.ts";
+import {
+  captureBacklinkFootprints,
+  getAnalyticsSummary,
+  getBacklinksData,
+  getSeoOverview,
+  updateOpportunityStatus,
+} from "../../lib/seo.ts";
 
 export const seoRouter = router({
   overview: orgProcedure.query(async ({ ctx }) => {
@@ -21,6 +27,11 @@ export const seoRouter = router({
     .input(z.object({ siteId: z.number() }))
     .query(async ({ ctx, input }) => {
       return getBacklinksData(ctx.db, input.siteId);
+    }),
+  captureBacklinkSnapshot: orgProcedure
+    .input(z.object({ siteId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      return captureBacklinkFootprints(ctx.db, input.siteId);
     }),
   updateOpportunityStatus: orgProcedure
     .input(

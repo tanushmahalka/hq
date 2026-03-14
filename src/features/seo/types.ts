@@ -184,6 +184,25 @@ export type BacklinksData = {
   existing: BacklinkSource[];
   competitor: CompetitorBacklink[];
   opportunities: LinkOpportunity[];
+  history: {
+    site: Array<{
+      capturedAt: string;
+      backlinksCount: number;
+      liveBacklinksCount: number;
+      referringDomainsCount: number;
+    }>;
+    competitors: Array<{
+      siteCompetitorId: number;
+      competitorLabel: string;
+      competitorDomain: string;
+      history: Array<{
+        capturedAt: string;
+        backlinksCount: number;
+        liveBacklinksCount: number;
+        referringDomainsCount: number;
+      }>;
+    }>;
+  };
   summary: {
     referringDomains: number;
     liveBacklinks: number;

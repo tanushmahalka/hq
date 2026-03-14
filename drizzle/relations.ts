@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, competitorBacklinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachProspects, linkOpportunities, outreachContacts, outreachThreads, outreachMessages, queryClusters, pageClusterTargets, queries, reviews, searchConsoleDaily, siteDomainFootprints } from "./schema";
+import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, competitorBacklinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachProspects, linkOpportunities, outreachContacts, outreachThreads, outreachMessages, queryClusters, pageClusterTargets, queries, reviews, searchConsoleDaily, siteDomainFootprints, siteBacklinkFootprints, competitorBacklinkFootprints } from "./schema";
 
 export const accountRelations = relations(account, ({one}) => ({
 	user: one(user, {
@@ -159,6 +159,7 @@ export const sitesRelations = relations(sites, ({many}) => ({
 	queryClusters: many(queryClusters),
 	reviews: many(reviews),
 	searchConsoleDailies: many(searchConsoleDaily),
+	siteBacklinkFootprints: many(siteBacklinkFootprints),
 	siteCompetitors: many(siteCompetitors),
 	siteDomainFootprints: many(siteDomainFootprints),
 }));
@@ -259,6 +260,7 @@ export const competitorDomainFootprintsRelations = relations(competitorDomainFoo
 
 export const siteCompetitorsRelations = relations(siteCompetitors, ({one, many}) => ({
 	competitorBacklinkSources: many(competitorBacklinkSources),
+	competitorBacklinkFootprints: many(competitorBacklinkFootprints),
 	competitorDomainFootprints: many(competitorDomainFootprints),
 	competitorRankedKeywords: many(competitorRankedKeywords),
 	linkOpportunities: many(linkOpportunities),
@@ -465,5 +467,19 @@ export const siteDomainFootprintsRelations = relations(siteDomainFootprints, ({o
 	site: one(sites, {
 		fields: [siteDomainFootprints.siteId],
 		references: [sites.id]
+	}),
+}));
+
+export const siteBacklinkFootprintsRelations = relations(siteBacklinkFootprints, ({one}) => ({
+	site: one(sites, {
+		fields: [siteBacklinkFootprints.siteId],
+		references: [sites.id]
+	}),
+}));
+
+export const competitorBacklinkFootprintsRelations = relations(competitorBacklinkFootprints, ({one}) => ({
+	siteCompetitor: one(siteCompetitors, {
+		fields: [competitorBacklinkFootprints.siteCompetitorId],
+		references: [siteCompetitors.id]
 	}),
 }));

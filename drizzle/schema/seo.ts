@@ -1178,3 +1178,75 @@ export const siteDomainFootprints = pgTable(
     }),
   ],
 );
+
+export const siteBacklinkFootprints = pgTable(
+  "site_backlink_footprints",
+  {
+    backlinksCount: integer("backlinks_count").notNull(),
+    liveBacklinksCount: integer("live_backlinks_count").notNull(),
+    referringDomainsCount: integer("referring_domains_count").notNull(),
+    capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "site_backlink_footprints_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    siteId: integer("site_id").notNull(),
+  },
+  (table) => [
+    index("idx_site_backlink_footprints_captured_at").using(
+      "btree",
+      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+    ),
+    index("idx_site_backlink_footprints_site").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops"),
+    ),
+    foreignKey({
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "site_backlink_footprints_site_id_sites_id_fk",
+    }),
+  ],
+);
+
+export const competitorBacklinkFootprints = pgTable(
+  "competitor_backlink_footprints",
+  {
+    backlinksCount: integer("backlinks_count").notNull(),
+    liveBacklinksCount: integer("live_backlinks_count").notNull(),
+    referringDomainsCount: integer("referring_domains_count").notNull(),
+    capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "competitor_backlink_footprints_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    siteCompetitorId: integer("site_competitor_id").notNull(),
+  },
+  (table) => [
+    index("idx_competitor_backlink_footprints_captured_at").using(
+      "btree",
+      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+    ),
+    index("idx_competitor_backlink_footprints_competitor").using(
+      "btree",
+      table.siteCompetitorId.asc().nullsLast().op("int4_ops"),
+    ),
+    foreignKey({
+      columns: [table.siteCompetitorId],
+      foreignColumns: [siteCompetitors.id],
+      name: "competitor_backlink_footprints_site_competitor_id_site_compet",
+    }),
+  ],
+);

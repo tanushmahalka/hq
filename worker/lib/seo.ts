@@ -4,6 +4,7 @@ import {
   analyticsDaily,
   backlinkSources,
   competitorBacklinkSources,
+  competitorBacklinkFootprints,
   competitorDomainFootprints,
   linkOpportunities,
   outreachProspects,
@@ -11,6 +12,7 @@ import {
   pages,
   queryClusters,
   queries,
+  siteBacklinkFootprints,
   siteDomainFootprints,
   siteCompetitors,
   sites,
@@ -923,6 +925,25 @@ export type BacklinksResult = {
     competitorLabel: string | null;
     brandMentionId: number | null;
   }>;
+  history: {
+    site: Array<{
+      capturedAt: string;
+      backlinksCount: number;
+      liveBacklinksCount: number;
+      referringDomainsCount: number;
+    }>;
+    competitors: Array<{
+      siteCompetitorId: number;
+      competitorLabel: string;
+      competitorDomain: string;
+      history: Array<{
+        capturedAt: string;
+        backlinksCount: number;
+        liveBacklinksCount: number;
+        referringDomainsCount: number;
+      }>;
+    }>;
+  };
   summary: {
     referringDomains: number;
     liveBacklinks: number;
@@ -955,7 +976,8 @@ export async function getBacklinksData(
   const competitorIds = siteCompetitorRows.map((c) => c.id);
   const competitorById = new Map(siteCompetitorRows.map((c) => [c.id, c]));
 
-  const [existingRows, competitorRows, opportunityRows] = await Promise.all([
+  const [existingRows, competitorRows, opportunityRows, siteHistoryRows, competitorHistoryRows] =
+    await Promise.all([
     // 1. Our backlinks
     db
       .select({
@@ -1010,37 +1032,65 @@ export async function getBacklinksData(
       : Promise.resolve([]),
 
     // 3. Opportunities
-    db
-      .select({
-        id: linkOpportunities.id,
-        siteId: linkOpportunities.siteId,
-        sourceDomain: linkOpportunities.sourceDomain,
-        sourceUrl: linkOpportunities.sourceUrl,
-        sourceTitle: linkOpportunities.sourceTitle,
-        targetPageId: linkOpportunities.targetPageId,
-        targetPageTitle: pages.titleTag,
-        targetPageUrl: pages.url,
-        opportunityType: linkOpportunities.opportunityType,
-        discoveredFrom: linkOpportunities.discoveredFrom,
-        whyThisFits: linkOpportunities.whyThisFits,
-        suggestedAnchorText: linkOpportunities.suggestedAnchorText,
-        relevanceScore: linkOpportunities.relevanceScore,
-        authorityScore: linkOpportunities.authorityScore,
-        confidenceScore: linkOpportunities.confidenceScore,
-        riskScore: linkOpportunities.riskScore,
-        status: linkOpportunities.status,
-        firstSeenAt: linkOpportunities.firstSeenAt,
-        lastReviewedAt: linkOpportunities.lastReviewedAt,
-        prospectId: linkOpportunities.prospectId,
-        prospectName: outreachProspects.organizationName,
-        siteCompetitorId: linkOpportunities.siteCompetitorId,
-        brandMentionId: linkOpportunities.brandMentionId,
-      })
-      .from(linkOpportunities)
-      .leftJoin(pages, eq(linkOpportunities.targetPageId, pages.id))
-      .leftJoin(outreachProspects, eq(linkOpportunities.prospectId, outreachProspects.id))
-      .where(eq(linkOpportunities.siteId, siteId)),
-  ]);
+      db
+        .select({
+          id: linkOpportunities.id,
+          siteId: linkOpportunities.siteId,
+          sourceDomain: linkOpportunities.sourceDomain,
+          sourceUrl: linkOpportunities.sourceUrl,
+          sourceTitle: linkOpportunities.sourceTitle,
+          targetPageId: linkOpportunities.targetPageId,
+          targetPageTitle: pages.titleTag,
+          targetPageUrl: pages.url,
+          opportunityType: linkOpportunities.opportunityType,
+          discoveredFrom: linkOpportunities.discoveredFrom,
+          whyThisFits: linkOpportunities.whyThisFits,
+          suggestedAnchorText: linkOpportunities.suggestedAnchorText,
+          relevanceScore: linkOpportunities.relevanceScore,
+          authorityScore: linkOpportunities.authorityScore,
+          confidenceScore: linkOpportunities.confidenceScore,
+          riskScore: linkOpportunities.riskScore,
+          status: linkOpportunities.status,
+          firstSeenAt: linkOpportunities.firstSeenAt,
+          lastReviewedAt: linkOpportunities.lastReviewedAt,
+          prospectId: linkOpportunities.prospectId,
+          prospectName: outreachProspects.organizationName,
+          siteCompetitorId: linkOpportunities.siteCompetitorId,
+          brandMentionId: linkOpportunities.brandMentionId,
+        })
+        .from(linkOpportunities)
+        .leftJoin(pages, eq(linkOpportunities.targetPageId, pages.id))
+        .leftJoin(outreachProspects, eq(linkOpportunities.prospectId, outreachProspects.id))
+        .where(eq(linkOpportunities.siteId, siteId)),
+
+      db
+        .select({
+          capturedAt: siteBacklinkFootprints.capturedAt,
+          backlinksCount: siteBacklinkFootprints.backlinksCount,
+          liveBacklinksCount: siteBacklinkFootprints.liveBacklinksCount,
+          referringDomainsCount: siteBacklinkFootprints.referringDomainsCount,
+        })
+        .from(siteBacklinkFootprints)
+        .where(eq(siteBacklinkFootprints.siteId, siteId)),
+
+      competitorIds.length > 0
+        ? db
+            .select({
+              siteCompetitorId: competitorBacklinkFootprints.siteCompetitorId,
+              capturedAt: competitorBacklinkFootprints.capturedAt,
+              backlinksCount: competitorBacklinkFootprints.backlinksCount,
+              liveBacklinksCount: competitorBacklinkFootprints.liveBacklinksCount,
+              referringDomainsCount: competitorBacklinkFootprints.referringDomainsCount,
+            })
+            .from(competitorBacklinkFootprints)
+            .where(
+              sql`${competitorBacklinkFootprints.siteCompetitorId} IN (${sql.join(
+                competitorIds.map((id) => sql`${id}`),
+                sql`, `,
+              )})`,
+            )
+        : Promise.resolve([]),
+    ]);
 
   // Enrich competitor backlinks with labels
   const enrichedCompetitorRows = competitorRows.map((row) => {
@@ -1083,6 +1133,24 @@ export async function getBacklinksData(
 
   // Competitor stats
   const competitorDomainSet = new Set(siteCompetitorRows.map((c) => c.domain));
+  const competitorBacklinkCounts = new Map<number, number>();
+  const competitorLiveBacklinkCounts = new Map<number, number>();
+  const competitorReferringDomainSets = new Map<number, Set<string>>();
+  for (const row of enrichedCompetitorRows) {
+    competitorBacklinkCounts.set(
+      row.siteCompetitorId,
+      (competitorBacklinkCounts.get(row.siteCompetitorId) ?? 0) + 1,
+    );
+    if (row.status === "live") {
+      competitorLiveBacklinkCounts.set(
+        row.siteCompetitorId,
+        (competitorLiveBacklinkCounts.get(row.siteCompetitorId) ?? 0) + 1,
+      );
+    }
+    const domains = competitorReferringDomainSets.get(row.siteCompetitorId) ?? new Set<string>();
+    domains.add(row.sourceDomain);
+    competitorReferringDomainSets.set(row.siteCompetitorId, domains);
+  }
 
   // Link gap: competitor backlink source domains we don't have
   const competitorSourceDomains = new Set(enrichedCompetitorRows.map((r) => r.sourceDomain));
@@ -1097,10 +1165,75 @@ export async function getBacklinksData(
   const approvedForOutreach = enrichedOpportunities.filter((r) => r.status === "approved").length;
   const rejectedOpportunities = enrichedOpportunities.filter((r) => r.status === "rejected").length;
 
+  const siteHistory = [...siteHistoryRows]
+    .sort((a, b) => new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime())
+    .map((row) => ({
+      capturedAt: row.capturedAt,
+      backlinksCount: row.backlinksCount,
+      liveBacklinksCount: row.liveBacklinksCount,
+      referringDomainsCount: row.referringDomainsCount,
+    }));
+
+  if (siteHistory.length === 0) {
+    siteHistory.push({
+      capturedAt: new Date().toISOString(),
+      backlinksCount: existingRows.length,
+      liveBacklinksCount: liveBacklinks,
+      referringDomainsCount: ownDomains.size,
+    });
+  }
+
+  const competitorHistoryById = new Map<
+    number,
+    Array<{
+      capturedAt: string;
+      backlinksCount: number;
+      liveBacklinksCount: number;
+      referringDomainsCount: number;
+    }>
+  >();
+
+  for (const row of competitorHistoryRows) {
+    const history = competitorHistoryById.get(row.siteCompetitorId) ?? [];
+    history.push({
+      capturedAt: row.capturedAt,
+      backlinksCount: row.backlinksCount,
+      liveBacklinksCount: row.liveBacklinksCount,
+      referringDomainsCount: row.referringDomainsCount,
+    });
+    competitorHistoryById.set(row.siteCompetitorId, history);
+  }
+
+  const competitorHistory = siteCompetitorRows.map((competitor) => {
+    const history = [...(competitorHistoryById.get(competitor.id) ?? [])].sort(
+      (a, b) => new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime(),
+    );
+
+    if (history.length === 0) {
+      history.push({
+        capturedAt: new Date().toISOString(),
+        backlinksCount: competitorBacklinkCounts.get(competitor.id) ?? 0,
+        liveBacklinksCount: competitorLiveBacklinkCounts.get(competitor.id) ?? 0,
+        referringDomainsCount: competitorReferringDomainSets.get(competitor.id)?.size ?? 0,
+      });
+    }
+
+    return {
+      siteCompetitorId: competitor.id,
+      competitorLabel: competitor.label,
+      competitorDomain: competitor.domain,
+      history,
+    };
+  });
+
   return {
     existing: existingRows,
     competitor: enrichedCompetitorRows,
     opportunities: enrichedOpportunities,
+    history: {
+      site: siteHistory,
+      competitors: competitorHistory,
+    },
     summary: {
       referringDomains: ownDomains.size,
       liveBacklinks,
@@ -1130,4 +1263,101 @@ export async function updateOpportunityStatus(
       updatedAt: new Date().toISOString(),
     })
     .where(eq(linkOpportunities.id, opportunityId));
+}
+
+export async function captureBacklinkFootprints(
+  db: Database,
+  siteId: number,
+): Promise<{
+  capturedAt: string;
+  siteBacklinksCount: number;
+  competitorCount: number;
+}> {
+  const capturedAt = new Date().toISOString();
+
+  const [siteRows, competitorRows, competitorBacklinkRows] = await Promise.all([
+    db
+      .select({
+        sourceDomain: backlinkSources.sourceDomain,
+        status: backlinkSources.status,
+      })
+      .from(backlinkSources)
+      .where(eq(backlinkSources.siteId, siteId)),
+    db
+      .select({
+        id: siteCompetitors.id,
+      })
+      .from(siteCompetitors)
+      .where(eq(siteCompetitors.siteId, siteId)),
+    db
+      .select({
+        siteCompetitorId: competitorBacklinkSources.siteCompetitorId,
+        sourceDomain: competitorBacklinkSources.sourceDomain,
+        status: competitorBacklinkSources.status,
+      })
+      .from(competitorBacklinkSources)
+      .innerJoin(
+        siteCompetitors,
+        eq(competitorBacklinkSources.siteCompetitorId, siteCompetitors.id),
+      )
+      .where(eq(siteCompetitors.siteId, siteId)),
+  ]);
+
+  const siteSnapshot = {
+    siteId,
+    capturedAt,
+    backlinksCount: siteRows.length,
+    liveBacklinksCount: siteRows.filter((row) => row.status === "live").length,
+    referringDomainsCount: new Set(siteRows.map((row) => row.sourceDomain)).size,
+  };
+
+  await db.insert(siteBacklinkFootprints).values(siteSnapshot);
+
+  const competitorStats = new Map<
+    number,
+    {
+      backlinksCount: number;
+      liveBacklinksCount: number;
+      referringDomains: Set<string>;
+    }
+  >();
+
+  for (const competitor of competitorRows) {
+    competitorStats.set(competitor.id, {
+      backlinksCount: 0,
+      liveBacklinksCount: 0,
+      referringDomains: new Set<string>(),
+    });
+  }
+
+  for (const row of competitorBacklinkRows) {
+    const stats = competitorStats.get(row.siteCompetitorId);
+    if (!stats) continue;
+    stats.backlinksCount += 1;
+    if (row.status === "live") {
+      stats.liveBacklinksCount += 1;
+    }
+    stats.referringDomains.add(row.sourceDomain);
+  }
+
+  const competitorSnapshots = competitorRows.map((competitor) => {
+    const stats = competitorStats.get(competitor.id);
+    return {
+      siteCompetitorId: competitor.id,
+      capturedAt,
+      backlinksCount: stats?.backlinksCount ?? 0,
+      liveBacklinksCount: stats?.liveBacklinksCount ?? 0,
+      referringDomainsCount: stats?.referringDomains.size ?? 0,
+    };
+  });
+
+  if (competitorSnapshots.length > 0) {
+    await db.insert(competitorBacklinkFootprints).values(competitorSnapshots);
+  }
+
+  return {
+    capturedAt,
+    siteBacklinksCount: siteSnapshot.backlinksCount,
+    competitorCount: competitorSnapshots.length,
+  };
 }

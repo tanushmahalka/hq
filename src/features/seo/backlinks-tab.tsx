@@ -4,10 +4,12 @@ import {
   Check,
   ExternalLink,
   Link2,
+  RefreshCw,
   Shield,
   X,
 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { toast } from "sonner";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -126,11 +128,25 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const deferredSearch = useDeferredValue(search);
+  const utils = trpc.useUtils();
 
   const query = trpc.seo.backlinks.useQuery(
     { siteId },
     { enabled: siteId > 0 },
   );
+  const captureSnapshot = trpc.seo.captureBacklinkSnapshot.useMutation({
+    onSuccess: (result) => {
+      utils.seo.backlinks.invalidate({ siteId });
+      toast.success("Backlink snapshot captured", {
+        description: `${formatNumber(result.siteBacklinksCount)} site backlinks saved for ${formatDate(result.capturedAt)}.`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Could not capture backlink snapshot", {
+        description: error.message,
+      });
+    },
+  });
 
   const data = query.data as BacklinksData | undefined;
   const summary = data?.summary;
@@ -155,31 +171,47 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Subtab bar */}
-      <div className="flex items-center gap-0 border-b mb-4">
-        {(
-          [
-            { key: "existing", label: "Existing", count: subviewCounts.existing },
-            { key: "competitors", label: "Competitors", count: subviewCounts.competitors },
-            { key: "opportunities", label: "Opportunities", count: subviewCounts.opportunities },
-          ] as const
-        ).map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => handleSubviewChange(tab.key)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px",
-              subview === tab.key
-                ? "border-foreground text-foreground font-medium"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {tab.label}
-            <span className="text-[11px] text-muted-foreground font-normal">
-              {query.isLoading ? "" : formatNumber(tab.count)}
-            </span>
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-4 border-b mb-4">
+        <div className="flex items-center gap-0">
+          {(
+            [
+              { key: "existing", label: "Existing", count: subviewCounts.existing },
+              { key: "competitors", label: "Competitors", count: subviewCounts.competitors },
+              { key: "opportunities", label: "Opportunities", count: subviewCounts.opportunities },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => handleSubviewChange(tab.key)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px",
+                subview === tab.key
+                  ? "border-foreground text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {tab.label}
+              <span className="text-[11px] text-muted-foreground font-normal">
+                {query.isLoading ? "" : formatNumber(tab.count)}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mb-2"
+          disabled={captureSnapshot.isPending || siteId <= 0}
+          onClick={() => captureSnapshot.mutate({ siteId })}
+        >
+          <RefreshCw
+            className={cn("size-3.5", captureSnapshot.isPending && "animate-spin")}
+          />
+          Capture snapshot
+        </Button>
       </div>
 
       {/* Summary strip */}
@@ -191,6 +223,10 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
         </div>
       ) : summary ? (
         <SummaryStrip subview={subview} summary={summary} />
+      ) : null}
+
+      {!query.isLoading && data && subview !== "opportunities" ? (
+        <BacklinkTrends subview={subview} data={data} />
       ) : null}
 
       {/* Loading */}
@@ -301,6 +337,259 @@ function SummaryStrip({
           <SummaryCard label="Rejected" value={summary.rejectedOpportunities} />
         </>
       )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Backlink trends
+ * --------------------------------------------------------------------------- */
+
+type BacklinkTrendSeries = {
+  id: string | number;
+  label: string;
+  color: string;
+  points: Array<{ date: Date; value: number }>;
+};
+
+const TREND_COLORS = [
+  "var(--swarm-violet)",
+  "#f97316",
+  "#06b6d4",
+  "#f43f5e",
+  "#84cc16",
+  "#a855f7",
+];
+
+function buildTrendPath(points: Array<{ x: number; y: number }>) {
+  if (points.length < 2) return "";
+  return points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
+}
+
+function BacklinkTrends({
+  subview,
+  data,
+}: {
+  subview: BacklinksSubview;
+  data: BacklinksData;
+}) {
+  const series = useMemo<BacklinkTrendSeries[]>(() => {
+    const siteSeries: BacklinkTrendSeries = {
+      id: "site",
+      label: "Your site",
+      color: TREND_COLORS[0],
+      points: data.history.site
+        .map((point) => ({
+          date: new Date(point.capturedAt),
+          value: point.backlinksCount,
+        }))
+        .filter((point) => !Number.isNaN(point.date.getTime())),
+    };
+
+    if (subview === "existing") {
+      return siteSeries.points.length > 0 ? [siteSeries] : [];
+    }
+
+    const competitorSeries = [...data.history.competitors]
+      .map((competitor, index) => ({
+        id: competitor.siteCompetitorId,
+        label: competitor.competitorLabel,
+        color: TREND_COLORS[(index + 1) % TREND_COLORS.length],
+        points: competitor.history
+          .map((point) => ({
+            date: new Date(point.capturedAt),
+            value: point.backlinksCount,
+          }))
+          .filter((point) => !Number.isNaN(point.date.getTime())),
+      }))
+      .filter((competitor) => competitor.points.length > 0)
+      .sort((a, b) => {
+        const aLatest = a.points[a.points.length - 1]?.value ?? 0;
+        const bLatest = b.points[b.points.length - 1]?.value ?? 0;
+        return bLatest - aLatest;
+      })
+      .slice(0, 5);
+
+    return siteSeries.points.length > 0
+      ? [siteSeries, ...competitorSeries]
+      : competitorSeries;
+  }, [data, subview]);
+
+  if (series.length === 0) {
+    return (
+      <div className="rounded-xl border border-border/40 bg-card mb-4">
+        <InlineEmptyState
+          title="No backlink history yet"
+          description="Once backlink snapshots are captured over time, trend lines will appear here."
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border/40 bg-card mb-4 p-5 swarm-card">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h2 className="text-sm font-medium text-muted-foreground">Backlink trends</h2>
+          <p className="text-xs text-muted-foreground/50 mt-0.5">
+            {subview === "existing"
+              ? "Your backlink count over time"
+              : "Your backlink count compared with top tracked competitors"}
+          </p>
+        </div>
+      </div>
+
+      <BacklinkTrendChart series={series} />
+    </div>
+  );
+}
+
+function BacklinkTrendChart({ series }: { series: BacklinkTrendSeries[] }) {
+  const W = 820;
+  const H = 230;
+  const PAD = { top: 14, right: 16, bottom: 28, left: 20 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  const domain = useMemo(() => {
+    let minTime = Infinity;
+    let maxTime = -Infinity;
+    let maxValue = 0;
+
+    for (const line of series) {
+      for (const point of line.points) {
+        const time = point.date.getTime();
+        minTime = Math.min(minTime, time);
+        maxTime = Math.max(maxTime, time);
+        maxValue = Math.max(maxValue, point.value);
+      }
+    }
+
+    if (!Number.isFinite(minTime) || !Number.isFinite(maxTime)) {
+      minTime = Date.now() - 86400000;
+      maxTime = Date.now();
+    }
+
+    if (minTime === maxTime) {
+      minTime -= 86400000;
+      maxTime += 86400000;
+    }
+
+    return {
+      minTime,
+      maxTime,
+      maxValue: Math.max(maxValue, 1),
+    };
+  }, [series]);
+
+  const x = (time: number) =>
+    PAD.left + ((time - domain.minTime) / (domain.maxTime - domain.minTime)) * chartW;
+  const y = (value: number) =>
+    PAD.top + chartH - (value / domain.maxValue) * chartH;
+
+  return (
+    <div className="space-y-4">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto overflow-visible">
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+          const lineY = PAD.top + chartH - chartH * ratio;
+          const label = Math.round(domain.maxValue * ratio);
+          return (
+            <g key={ratio}>
+              <line
+                x1={PAD.left}
+                x2={PAD.left + chartW}
+                y1={lineY}
+                y2={lineY}
+                stroke="currentColor"
+                className="text-border/40"
+                strokeDasharray={ratio === 0 ? "0" : "3 4"}
+              />
+              <text
+                x={PAD.left + chartW + 8}
+                y={lineY + 4}
+                className="fill-muted-foreground/50"
+                fontSize="11"
+              >
+                {formatNumber(label)}
+              </text>
+            </g>
+          );
+        })}
+
+        {series.map((line) => {
+          const plotted = line.points.map((point) => ({
+            x: x(point.date.getTime()),
+            y: y(point.value),
+          }));
+
+          return (
+            <g key={line.id}>
+              {plotted.length === 1 ? (
+                <circle cx={plotted[0].x} cy={plotted[0].y} r="3.5" fill={line.color} />
+              ) : (
+                <>
+                  <path
+                    d={buildTrendPath(plotted)}
+                    fill="none"
+                    stroke={line.color}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {plotted.map((point, index) => (
+                    <circle
+                      key={`${line.id}-${index}`}
+                      cx={point.x}
+                      cy={point.y}
+                      r="2.5"
+                      fill={line.color}
+                    />
+                  ))}
+                </>
+              )}
+            </g>
+          );
+        })}
+
+        <text
+          x={PAD.left}
+          y={H - 8}
+          className="fill-muted-foreground/50"
+          fontSize="11"
+        >
+          {formatDate(series[0]?.points[0]?.date.toISOString() ?? null)}
+        </text>
+        <text
+          x={PAD.left + chartW}
+          y={H - 8}
+          textAnchor="end"
+          className="fill-muted-foreground/50"
+          fontSize="11"
+        >
+          {formatDate(
+            series
+              .flatMap((line) => line.points)
+              .sort((a, b) => a.date.getTime() - b.date.getTime())
+              .at(-1)?.date.toISOString() ?? null,
+          )}
+        </text>
+      </svg>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {series.map((line) => {
+          const latest = line.points[line.points.length - 1]?.value ?? 0;
+          return (
+            <div key={line.id} className="flex items-center gap-2 min-w-0">
+              <span
+                className="size-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: line.color }}
+              />
+              <span className="text-xs text-muted-foreground truncate">{line.label}</span>
+              <span className="text-xs tabular-nums text-foreground">{formatNumber(latest)}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
