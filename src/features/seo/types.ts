@@ -1,5 +1,5 @@
 export type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
-export type SeoViewTab = "overview" | "competitors";
+export type SeoViewTab = "overview" | "competitors" | "analytics";
 
 export type SeoSite = {
   id: number;

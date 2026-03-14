@@ -1,5 +1,7 @@
+import { and, between, desc, eq, isNotNull, sql, sum } from "drizzle-orm";
 import type { Database } from "../db/client.ts";
 import {
+  analyticsDaily,
   competitorDomainFootprints,
   competitorRankedKeywords,
   pageClusterTargets,
@@ -562,5 +564,189 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     competitors: competitorsResult,
     pages: pagesResult,
     clusters: clustersResult,
+  };
+}
+
+export type AnalyticsSummary = {
+  headline: {
+    current: {
+      sessions: number;
+      users: number;
+      engagedSessions: number;
+      conversions: number;
+      revenue: number;
+      avgEngagementSeconds: number;
+    };
+    prior: {
+      sessions: number;
+      users: number;
+      engagedSessions: number;
+      conversions: number;
+      revenue: number;
+      avgEngagementSeconds: number;
+    };
+  };
+  channels: Array<{
+    channel: string;
+    sessions: number;
+    users: number;
+    conversions: number;
+    revenue: number;
+  }>;
+  topPages: Array<{
+    pageId: number;
+    title: string;
+    url: string;
+    sessions: number;
+  }>;
+  devices: Array<{
+    device: string;
+    sessions: number;
+  }>;
+};
+
+function n(val: string | number | null | undefined): number {
+  if (val === null || val === undefined) return 0;
+  const num = typeof val === "number" ? val : Number(val);
+  return Number.isNaN(num) ? 0 : num;
+}
+
+export async function getAnalyticsSummary(
+  db: Database,
+  siteId: number,
+  startDate: string,
+  endDate: string,
+): Promise<AnalyticsSummary> {
+  // Compute prior period: same duration ending the day before startDate
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const durationMs = end.getTime() - start.getTime();
+  const priorEnd = new Date(start.getTime() - 86400000); // day before start
+  const priorStart = new Date(priorEnd.getTime() - durationMs);
+  const priorStartStr = priorStart.toISOString().slice(0, 10);
+  const priorEndStr = priorEnd.toISOString().slice(0, 10);
+
+  const siteFilter = eq(analyticsDaily.siteId, siteId);
+  const currentRange = between(analyticsDaily.eventDate, startDate, endDate);
+  const priorRange = between(analyticsDaily.eventDate, priorStartStr, priorEndStr);
+
+  const [currentTotals, priorTotals, channelRows, topPageRows, deviceRows] =
+    await Promise.all([
+      // 1. Headline totals — current
+      db
+        .select({
+          sessions: sum(analyticsDaily.sessions),
+          users: sum(analyticsDaily.users),
+          engagedSessions: sum(analyticsDaily.engagedSessions),
+          conversions: sum(analyticsDaily.conversions),
+          revenue: sum(analyticsDaily.revenue),
+          avgEngagement: sql<string>`
+            CASE WHEN SUM(${analyticsDaily.sessions}) > 0
+              THEN SUM(COALESCE(${analyticsDaily.avgEngagementSeconds}, 0) * ${analyticsDaily.sessions}) / SUM(${analyticsDaily.sessions})
+              ELSE 0
+            END`,
+        })
+        .from(analyticsDaily)
+        .where(and(siteFilter, currentRange)),
+
+      // 2. Headline totals — prior
+      db
+        .select({
+          sessions: sum(analyticsDaily.sessions),
+          users: sum(analyticsDaily.users),
+          engagedSessions: sum(analyticsDaily.engagedSessions),
+          conversions: sum(analyticsDaily.conversions),
+          revenue: sum(analyticsDaily.revenue),
+          avgEngagement: sql<string>`
+            CASE WHEN SUM(${analyticsDaily.sessions}) > 0
+              THEN SUM(COALESCE(${analyticsDaily.avgEngagementSeconds}, 0) * ${analyticsDaily.sessions}) / SUM(${analyticsDaily.sessions})
+              ELSE 0
+            END`,
+        })
+        .from(analyticsDaily)
+        .where(and(siteFilter, priorRange)),
+
+      // 3. Channel breakdown (current)
+      db
+        .select({
+          channel: analyticsDaily.channel,
+          sessions: sum(analyticsDaily.sessions),
+          users: sum(analyticsDaily.users),
+          conversions: sum(analyticsDaily.conversions),
+          revenue: sum(analyticsDaily.revenue),
+        })
+        .from(analyticsDaily)
+        .where(and(siteFilter, currentRange))
+        .groupBy(analyticsDaily.channel)
+        .orderBy(desc(sum(analyticsDaily.sessions))),
+
+      // 4. Top pages by sessions (current, top 8)
+      db
+        .select({
+          pageId: analyticsDaily.pageId,
+          title: pages.titleTag,
+          url: pages.url,
+          sessions: sum(analyticsDaily.sessions),
+        })
+        .from(analyticsDaily)
+        .innerJoin(pages, eq(analyticsDaily.pageId, pages.id))
+        .where(and(siteFilter, currentRange, isNotNull(analyticsDaily.pageId)))
+        .groupBy(analyticsDaily.pageId, pages.titleTag, pages.url)
+        .orderBy(desc(sum(analyticsDaily.sessions)))
+        .limit(8),
+
+      // 5. Device split (current)
+      db
+        .select({
+          device: analyticsDaily.device,
+          sessions: sum(analyticsDaily.sessions),
+        })
+        .from(analyticsDaily)
+        .where(and(siteFilter, currentRange))
+        .groupBy(analyticsDaily.device)
+        .orderBy(desc(sum(analyticsDaily.sessions))),
+    ]);
+
+  const cur = currentTotals[0];
+  const pri = priorTotals[0];
+
+  return {
+    headline: {
+      current: {
+        sessions: n(cur?.sessions),
+        users: n(cur?.users),
+        engagedSessions: n(cur?.engagedSessions),
+        conversions: n(cur?.conversions),
+        revenue: n(cur?.revenue),
+        avgEngagementSeconds: n(cur?.avgEngagement),
+      },
+      prior: {
+        sessions: n(pri?.sessions),
+        users: n(pri?.users),
+        engagedSessions: n(pri?.engagedSessions),
+        conversions: n(pri?.conversions),
+        revenue: n(pri?.revenue),
+        avgEngagementSeconds: n(pri?.avgEngagement),
+      },
+    },
+    channels: channelRows.map((row) => ({
+      channel: row.channel,
+      sessions: n(row.sessions),
+      users: n(row.users),
+      conversions: n(row.conversions),
+      revenue: n(row.revenue),
+    })),
+    topPages: topPageRows.map((row) => ({
+      pageId: row.pageId!,
+      title: row.title?.trim() || row.url,
+      url: row.url,
+      sessions: n(row.sessions),
+    })),
+    devices: deviceRows
+      .filter((row) => row.device != null)
+      .map((row) => ({
+        device: row.device!,
+        sessions: n(row.sessions),
+      })),
   };
 }

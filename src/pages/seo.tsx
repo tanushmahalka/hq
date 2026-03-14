@@ -20,6 +20,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AnalyticsTab } from "@/features/seo/analytics-tab";
 import { CompetitorsTab } from "@/features/seo/competitors-tab";
 import { OverviewTab, PageDetailCard } from "@/features/seo/overview-tab";
 import {
@@ -186,9 +187,15 @@ export default function Seo() {
             description={`${formatNumber(siteCompetitors.length)} tracked`}
             onClick={() => setActiveTab("competitors")}
           />
+          <SeoTabButton
+            active={activeTab === "analytics"}
+            label="Analytics"
+            description=""
+            onClick={() => setActiveTab("analytics")}
+          />
         </div>
 
-        {selectedSite && !overviewQuery.isLoading && (
+        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && (
           <div className="flex items-center gap-8 pb-2.5">
             {activeTab === "overview" ? (
               <>
@@ -222,6 +229,10 @@ export default function Seo() {
           title="No SEO sites available yet"
           description="Once pages and keyword clusters are stored in the workspace database, this tab will populate automatically."
         />
+      ) : activeTab === "analytics" ? (
+        effectiveSelectedSiteId ? (
+          <AnalyticsTab siteId={effectiveSelectedSiteId} />
+        ) : null
       ) : activeTab === "overview" ? (
         <OverviewTab
           selectedSite={selectedSite}

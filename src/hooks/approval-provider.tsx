@@ -36,17 +36,13 @@ export function ApprovalProvider({ children }: { children: ReactNode }) {
   const [resolvingIds, setResolvingIds] = useState<Record<string, boolean>>({});
   const resolveMutation = trpc.approval.resolve.useMutation();
 
-  useEffect(() => {
+  const reloadApprovals = useCallback(() => {
     if (!client || !connected) {
-      return;
+      return Promise.resolve();
     }
-    let stale = false;
-    client
+    return client
       .request<ApprovalListPayload>("approval.list", {})
       .then((result) => {
-        if (stale) {
-          return;
-        }
         const next: Record<string, PendingApproval> = {};
         for (const approval of result.approvals ?? []) {
           next[approval.id] = approval;
@@ -54,10 +50,29 @@ export function ApprovalProvider({ children }: { children: ReactNode }) {
         setApprovalsById(next);
       })
       .catch(() => {});
+  }, [client, connected]);
+
+  useEffect(() => {
+    if (!connected) {
+      return;
+    }
+    let stale = false;
+    void reloadApprovals().then(() => {
+      if (stale) {
+        return;
+      }
+    });
+    const intervalId = window.setInterval(() => {
+      if (stale) {
+        return;
+      }
+      void reloadApprovals();
+    }, 5000);
     return () => {
       stale = true;
+      window.clearInterval(intervalId);
     };
-  }, [client, connected]);
+  }, [connected, reloadApprovals]);
 
   useEffect(() => {
     return subscribe((evt: EventFrame) => {

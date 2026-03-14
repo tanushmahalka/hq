@@ -178,6 +178,37 @@ export function getVisibilityStatus(
   };
 }
 
+export function formatCurrency(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+export function formatPercent(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+export function formatDuration(seconds: number) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
+}
+
+export function computeDelta(current: number, prior: number): { value: number; direction: "up" | "down" | "flat" } {
+  if (prior === 0) return { value: 0, direction: "flat" };
+  const change = (current - prior) / prior;
+  if (Math.abs(change) < 0.001) return { value: 0, direction: "flat" };
+  return { value: change, direction: change > 0 ? "up" : "down" };
+}
+
 export function getPriorityStatus(priorityScore: string | null): {
   label: string;
   variant: BadgeVariant;

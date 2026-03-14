@@ -1,7 +1,6 @@
 import path from "node:path";
 import { timingSafeEqual } from "node:crypto";
 import { ApprovalStore } from "./store";
-import { callLocalGatewayMethod } from "./local-gateway";
 import type { ApprovalDecision, PendingApproval } from "./types";
 
 const HIDDEN_CONTINUATION_MARKER = "[[openclaw_hidden_approval_continuation]]";
@@ -196,27 +195,19 @@ const plugin = {
               ],
             };
           }
-          const result = await callLocalGatewayMethod<{
-            status?: string;
-            approval?: { id?: string };
-          }>({
-            config: api.config,
-            pluginConfig: api.pluginConfig,
-            method: "approval.request",
-            payload: {
-              title,
-              body,
-              sessionKey: ctx.sessionKey,
-              agentId: ctx.agentId ?? null,
-            },
+          const approval = await store.create({
+            title,
+            body,
+            sessionKey: ctx.sessionKey,
+            agentId: ctx.agentId ?? null,
           });
           return {
             content: [
               {
                 type: "text",
                 text: JSON.stringify({
-                  status: result.status ?? "pending",
-                  approvalId: result.approval?.id,
+                  status: "pending",
+                  approvalId: approval.id,
                   message:
                     "Approval requested. Wait for the human decision in this session before continuing.",
                 }),
@@ -339,20 +330,35 @@ const plugin = {
         }
 
         try {
-          const approval = await callLocalGatewayMethod<{ approval?: PendingApproval }>({
-            config: api.config,
-            pluginConfig: api.pluginConfig,
-            method: "approval.resolve",
-            payload: {
-              id: readNonEmptyString(parsed, "id"),
-              decision: readNonEmptyString(parsed, "decision"),
-              feedback: readOptionalString(parsed, "feedback", { trim: false }) ?? null,
-              resolvedBy: readOptionalString(parsed, "resolvedBy") ?? null,
-            },
+          const id = readNonEmptyString(parsed, "id");
+          const decisionRaw = readNonEmptyString(parsed, "decision");
+          if (decisionRaw !== "approve" && decisionRaw !== "deny") {
+            throw new Error("decision must be approve or deny");
+          }
+          const decision = decisionRaw as ApprovalDecision;
+          const feedback = readOptionalString(parsed, "feedback", { trim: false }) ?? null;
+          const resolvedBy = readOptionalString(parsed, "resolvedBy") ?? null;
+          const approval = await store.resolve({
+            id,
+            decision,
+            feedback,
+            resolvedBy,
+          });
+          if (!approval) {
+            res.statusCode = 404;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify({ ok: false, error: `unknown approval: ${id}` }));
+            return true;
+          }
+          await api.runtime.subagent.run({
+            sessionKey: approval.request.sessionKey,
+            message: buildContinuationMessage(approval),
+            deliver: false,
+            idempotencyKey: `hq-approval:${approval.id}:${approval.resolvedAtMs ?? Date.now()}`,
           });
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json; charset=utf-8");
-          res.end(JSON.stringify({ ok: true, approval: approval.approval ?? null }));
+          res.end(JSON.stringify({ ok: true, approval }));
           return true;
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
