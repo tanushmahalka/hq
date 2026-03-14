@@ -1183,8 +1183,14 @@ export const siteBacklinkFootprints = pgTable(
   "site_backlink_footprints",
   {
     backlinksCount: integer("backlinks_count").notNull(),
+    newBacklinksCount: integer("new_backlinks_count"),
+    lostBacklinksCount: integer("lost_backlinks_count"),
     liveBacklinksCount: integer("live_backlinks_count").notNull(),
     referringDomainsCount: integer("referring_domains_count").notNull(),
+    newReferringDomainsCount: integer("new_referring_domains_count"),
+    lostReferringDomainsCount: integer("lost_referring_domains_count"),
+    brokenBacklinksCount: integer("broken_backlinks_count"),
+    rank: integer("rank"),
     capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
     id: integer()
       .primaryKey()
@@ -1219,8 +1225,14 @@ export const competitorBacklinkFootprints = pgTable(
   "competitor_backlink_footprints",
   {
     backlinksCount: integer("backlinks_count").notNull(),
+    newBacklinksCount: integer("new_backlinks_count"),
+    lostBacklinksCount: integer("lost_backlinks_count"),
     liveBacklinksCount: integer("live_backlinks_count").notNull(),
     referringDomainsCount: integer("referring_domains_count").notNull(),
+    newReferringDomainsCount: integer("new_referring_domains_count"),
+    lostReferringDomainsCount: integer("lost_referring_domains_count"),
+    brokenBacklinksCount: integer("broken_backlinks_count"),
+    rank: integer("rank"),
     capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
     id: integer()
       .primaryKey()

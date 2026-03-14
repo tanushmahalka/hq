@@ -1,17 +1,32 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import {
   ArrowUpDown,
   Check,
+  ChevronsUpDown,
   ExternalLink,
   Link2,
   RefreshCw,
   Shield,
+  Users,
   X,
 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -225,9 +240,7 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
         <SummaryStrip subview={subview} summary={summary} />
       ) : null}
 
-      {!query.isLoading && data && subview !== "opportunities" ? (
-        <BacklinkTrends subview={subview} data={data} />
-      ) : null}
+      {!query.isLoading && data && subview !== "opportunities" ? <BacklinkTrends data={data} /> : null}
 
       {/* Loading */}
       {query.isLoading ? (
@@ -342,13 +355,88 @@ function SummaryStrip({
 }
 
 /* ---------------------------------------------------------------------------
- * Backlink trends
+ * Smooth monotone cubic spline (shared with competitor-trends)
+ * --------------------------------------------------------------------------- */
+
+function smoothPath(points: Array<{ x: number; y: number }>): string {
+  if (points.length < 2) return "";
+  if (points.length === 2)
+    return `M${points[0].x},${points[0].y}L${points[1].x},${points[1].y}`;
+
+  const n = points.length;
+  const d: number[] = [];
+  const m: number[] = [];
+
+  for (let i = 0; i < n - 1; i++) {
+    d[i] = (points[i + 1].y - points[i].y) / (points[i + 1].x - points[i].x || 1);
+  }
+
+  m[0] = d[0];
+  for (let i = 1; i < n - 1; i++) {
+    m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+  }
+  m[n - 1] = d[n - 2];
+
+  for (let i = 0; i < n - 1; i++) {
+    if (Math.abs(d[i]) < 1e-12) {
+      m[i] = 0;
+      m[i + 1] = 0;
+    } else {
+      const alpha = m[i] / d[i];
+      const beta = m[i + 1] / d[i];
+      const mag = alpha * alpha + beta * beta;
+      if (mag > 9) {
+        const tau = 3 / Math.sqrt(mag);
+        m[i] = tau * alpha * d[i];
+        m[i + 1] = tau * beta * d[i];
+      }
+    }
+  }
+
+  let path = `M${points[0].x},${points[0].y}`;
+  for (let i = 0; i < n - 1; i++) {
+    const dx = (points[i + 1].x - points[i].x) / 3;
+    const cp1x = points[i].x + dx;
+    const cp1y = points[i].y + m[i] * dx;
+    const cp2x = points[i + 1].x - dx;
+    const cp2y = points[i + 1].y - m[i + 1] * dx;
+    path += `C${cp1x},${cp1y},${cp2x},${cp2y},${points[i + 1].x},${points[i + 1].y}`;
+  }
+  return path;
+}
+
+function niceStep(range: number, targetTicks: number): number {
+  const rough = range / targetTicks;
+  const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+  const frac = rough / pow;
+  let nice: number;
+  if (frac <= 1.5) nice = 1;
+  else if (frac <= 3) nice = 2;
+  else if (frac <= 7) nice = 5;
+  else nice = 10;
+  return nice * pow;
+}
+
+function formatCompactNumber(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: value >= 1000 ? 1 : 0,
+    notation: value >= 1000 ? "compact" : "standard",
+  }).format(value);
+}
+
+function formatShortDate(d: Date) {
+  return new Intl.DateTimeFormat(undefined, { month: "short", year: "2-digit" }).format(d);
+}
+
+/* ---------------------------------------------------------------------------
+ * Backlink trends — smooth chart with competitor toggle + combobox
  * --------------------------------------------------------------------------- */
 
 type BacklinkTrendSeries = {
   id: string | number;
   label: string;
   color: string;
+  isPrimary: boolean;
   points: Array<{ date: Date; value: number }>;
 };
 
@@ -361,66 +449,98 @@ const TREND_COLORS = [
   "#a855f7",
 ];
 
-function buildTrendPath(points: Array<{ x: number; y: number }>) {
-  if (points.length < 2) return "";
-  return points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
-}
+const PRIMARY_COLOR = "#dc2626";
 
-function BacklinkTrends({
-  subview,
-  data,
-}: {
-  subview: BacklinksSubview;
-  data: BacklinksData;
-}) {
+type CompetitorOption = {
+  id: number;
+  label: string;
+  domain: string;
+  latestValue: number;
+};
+
+function BacklinkTrends({ data }: { data: BacklinksData }) {
+  const [showCompetitors, setShowCompetitors] = useState(false);
+  const [selectedCompetitorIds, setSelectedCompetitorIds] = useState<Set<number>>(new Set());
+  const [comboOpen, setComboOpen] = useState(false);
+
+  // Build competitor options for the combobox
+  const competitorOptions = useMemo<CompetitorOption[]>(() => {
+    return data.history.competitors
+      .map((c) => {
+        const points = c.history
+          .map((p) => ({ date: new Date(p.capturedAt), value: p.backlinksCount }))
+          .filter((p) => !Number.isNaN(p.date.getTime()));
+        return {
+          id: c.siteCompetitorId,
+          label: c.competitorLabel,
+          domain: c.competitorDomain,
+          latestValue: points[points.length - 1]?.value ?? 0,
+        };
+      })
+      .sort((a, b) => b.latestValue - a.latestValue);
+  }, [data.history.competitors]);
+
+  const toggleCompetitor = useCallback((id: number) => {
+    setSelectedCompetitorIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Build series
   const series = useMemo<BacklinkTrendSeries[]>(() => {
     const siteSeries: BacklinkTrendSeries = {
       id: "site",
-      label: "Your site",
-      color: TREND_COLORS[0],
+      label: "You",
+      color: PRIMARY_COLOR,
+      isPrimary: true,
       points: data.history.site
-        .map((point) => ({
-          date: new Date(point.capturedAt),
-          value: point.backlinksCount,
-        }))
-        .filter((point) => !Number.isNaN(point.date.getTime())),
+        .map((p) => ({ date: new Date(p.capturedAt), value: p.backlinksCount }))
+        .filter((p) => !Number.isNaN(p.date.getTime())),
     };
 
-    if (subview === "existing") {
-      return siteSeries.points.length > 0 ? [siteSeries] : [];
+    const result: BacklinkTrendSeries[] = siteSeries.points.length > 0 ? [siteSeries] : [];
+
+    if (showCompetitors) {
+      const activeIds = selectedCompetitorIds.size > 0
+        ? selectedCompetitorIds
+        : new Set(competitorOptions.slice(0, 3).map((c) => c.id));
+
+      let colorIdx = 0;
+      for (const comp of data.history.competitors) {
+        if (!activeIds.has(comp.siteCompetitorId)) continue;
+        const points = comp.history
+          .map((p) => ({ date: new Date(p.capturedAt), value: p.backlinksCount }))
+          .filter((p) => !Number.isNaN(p.date.getTime()));
+        if (points.length === 0) continue;
+        result.push({
+          id: comp.siteCompetitorId,
+          label: comp.competitorLabel,
+          color: TREND_COLORS[colorIdx % TREND_COLORS.length],
+          isPrimary: false,
+          points,
+        });
+        colorIdx++;
+      }
     }
 
-    const competitorSeries = [...data.history.competitors]
-      .map((competitor, index) => ({
-        id: competitor.siteCompetitorId,
-        label: competitor.competitorLabel,
-        color: TREND_COLORS[(index + 1) % TREND_COLORS.length],
-        points: competitor.history
-          .map((point) => ({
-            date: new Date(point.capturedAt),
-            value: point.backlinksCount,
-          }))
-          .filter((point) => !Number.isNaN(point.date.getTime())),
-      }))
-      .filter((competitor) => competitor.points.length > 0)
-      .sort((a, b) => {
-        const aLatest = a.points[a.points.length - 1]?.value ?? 0;
-        const bLatest = b.points[b.points.length - 1]?.value ?? 0;
-        return bLatest - aLatest;
-      })
-      .slice(0, 5);
+    return result;
+  }, [data.history, showCompetitors, selectedCompetitorIds, competitorOptions]);
 
-    return siteSeries.points.length > 0
-      ? [siteSeries, ...competitorSeries]
-      : competitorSeries;
-  }, [data, subview]);
+  // Determine effective selected set for combobox display
+  const effectiveSelectedIds = useMemo(() => {
+    if (selectedCompetitorIds.size > 0) return selectedCompetitorIds;
+    return new Set(competitorOptions.slice(0, 3).map((c) => c.id));
+  }, [selectedCompetitorIds, competitorOptions]);
 
   if (series.length === 0) {
     return (
       <div className="rounded-xl border border-border/40 bg-card mb-4">
         <InlineEmptyState
           title="No backlink history yet"
-          description="Once backlink snapshots are captured over time, trend lines will appear here."
+          description="Capture snapshots over time to see your backlink growth here."
         />
       </div>
     );
@@ -428,168 +548,421 @@ function BacklinkTrends({
 
   return (
     <div className="rounded-xl border border-border/40 bg-card mb-4 p-5 swarm-card">
-      <div className="flex items-center justify-between mb-3">
+      {/* Header with toggle + combobox */}
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground">Backlink trends</h2>
           <p className="text-xs text-muted-foreground/50 mt-0.5">
-            {subview === "existing"
-              ? "Your backlink count over time"
-              : "Your backlink count compared with top tracked competitors"}
+            {showCompetitors
+              ? "Your backlinks compared with competitors"
+              : "Your backlink count over time"}
           </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Competitor combobox — shown when toggle is on */}
+          {showCompetitors && competitorOptions.length > 0 && (
+            <Popover open={comboOpen} onOpenChange={setComboOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 border-border/50 text-xs font-normal"
+                >
+                  {effectiveSelectedIds.size} competitor{effectiveSelectedIds.size !== 1 ? "s" : ""}
+                  <ChevronsUpDown className="size-3 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-0" align="end">
+                <Command>
+                  <CommandInput placeholder="Search competitors..." className="h-8 text-xs" />
+                  <CommandList>
+                    <CommandEmpty>
+                      <span className="text-xs text-muted-foreground/50">No competitors found</span>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {competitorOptions.map((opt) => {
+                        const selected = effectiveSelectedIds.has(opt.id);
+                        return (
+                          <CommandItem
+                            key={opt.id}
+                            value={`${opt.label} ${opt.domain}`}
+                            onSelect={() => toggleCompetitor(opt.id)}
+                            className="text-xs"
+                          >
+                            <div className={cn(
+                              "size-3.5 rounded border flex items-center justify-center mr-1.5 shrink-0",
+                              selected ? "bg-foreground border-foreground" : "border-border",
+                            )}>
+                              {selected && <Check className="size-2.5 text-background" />}
+                            </div>
+                            <span className="truncate flex-1">{opt.label}</span>
+                            <span className="text-muted-foreground/50 tabular-nums ml-2">
+                              {formatCompactNumber(opt.latestValue)}
+                            </span>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          )}
+
+          {/* Compare toggle */}
+          {competitorOptions.length > 0 && (
+            <Button
+              variant={showCompetitors ? "default" : "outline"}
+              size="sm"
+              className={cn(
+                "h-7 gap-1.5 text-xs font-normal",
+                !showCompetitors && "border-border/50",
+              )}
+              onClick={() => setShowCompetitors((v) => !v)}
+            >
+              <Users className="size-3" />
+              Compare
+            </Button>
+          )}
         </div>
       </div>
 
+      {/* Chart */}
       <BacklinkTrendChart series={series} />
     </div>
   );
 }
 
+/* ---------------------------------------------------------------------------
+ * BacklinkTrendChart — smooth curves, gradient fill, hover interaction
+ * --------------------------------------------------------------------------- */
+
+const CHART_W_TOTAL = 820;
+const CHART_H_TOTAL = 260;
+const CHART_PAD = { top: 16, right: 56, bottom: 32, left: 8 };
+const INNER_W = CHART_W_TOTAL - CHART_PAD.left - CHART_PAD.right;
+const INNER_H = CHART_H_TOTAL - CHART_PAD.top - CHART_PAD.bottom;
+
 function BacklinkTrendChart({ series }: { series: BacklinkTrendSeries[] }) {
-  const W = 820;
-  const H = 230;
-  const PAD = { top: 14, right: 16, bottom: 28, left: 20 };
-  const chartW = W - PAD.left - PAD.right;
-  const chartH = H - PAD.top - PAD.bottom;
+  const [hoveredSeriesId, setHoveredSeriesId] = useState<string | number | null>(null);
+  const [hoveredX, setHoveredX] = useState<number | null>(null);
 
-  const domain = useMemo(() => {
-    let minTime = Infinity;
-    let maxTime = -Infinity;
-    let maxValue = 0;
-
-    for (const line of series) {
-      for (const point of line.points) {
-        const time = point.date.getTime();
-        minTime = Math.min(minTime, time);
-        maxTime = Math.max(maxTime, time);
-        maxValue = Math.max(maxValue, point.value);
+  // Domains
+  const { minTime, maxTime } = useMemo(() => {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const s of series) {
+      for (const p of s.points) {
+        const t = p.date.getTime();
+        if (t < min) min = t;
+        if (t > max) max = t;
       }
     }
-
-    if (!Number.isFinite(minTime) || !Number.isFinite(maxTime)) {
-      minTime = Date.now() - 86400000;
-      maxTime = Date.now();
-    }
-
-    if (minTime === maxTime) {
-      minTime -= 86400000;
-      maxTime += 86400000;
-    }
-
-    return {
-      minTime,
-      maxTime,
-      maxValue: Math.max(maxValue, 1),
-    };
+    const span = Math.max(max - min, 86_400_000);
+    return { minTime: min - span * 0.04, maxTime: max + span * 0.04 };
   }, [series]);
 
-  const x = (time: number) =>
-    PAD.left + ((time - domain.minTime) / (domain.maxTime - domain.minTime)) * chartW;
-  const y = (value: number) =>
-    PAD.top + chartH - (value / domain.maxValue) * chartH;
+  const { minVal, maxVal } = useMemo(() => {
+    let max = 0;
+    for (const s of series) {
+      for (const p of s.points) {
+        if (p.value > max) max = p.value;
+      }
+    }
+    const span = Math.max(max * 0.12, 1);
+    return { minVal: 0, maxVal: max + span };
+  }, [series]);
+
+  const xScale = useCallback(
+    (t: number) => CHART_PAD.left + ((t - minTime) / (maxTime - minTime)) * INNER_W,
+    [minTime, maxTime],
+  );
+  const yScale = useCallback(
+    (v: number) => CHART_PAD.top + INNER_H - ((v - minVal) / (maxVal - minVal)) * INNER_H,
+    [minVal, maxVal],
+  );
+
+  // Ticks
+  const yTicks = useMemo(() => {
+    const range = maxVal - minVal;
+    const step = niceStep(range, 4);
+    const ticks: number[] = [];
+    let tick = 0;
+    while (tick <= maxVal) {
+      ticks.push(tick);
+      tick += step;
+    }
+    return ticks;
+  }, [minVal, maxVal]);
+
+  const xTicks = useMemo(() => {
+    const span = maxTime - minTime;
+    const count = 5;
+    const step = span / count;
+    return Array.from({ length: count + 1 }, (_, i) => new Date(minTime + step * i));
+  }, [minTime, maxTime]);
+
+  // Paths
+  const seriesPaths = useMemo(() => {
+    return series.map((s) => {
+      const pts = s.points.map((p) => ({
+        x: xScale(p.date.getTime()),
+        y: yScale(p.value),
+      }));
+      const linePath = smoothPath(pts);
+      // Close area path for primary (gradient fill)
+      let areaPath = "";
+      if (s.isPrimary && linePath) {
+        const lastPt = pts[pts.length - 1];
+        const firstPt = pts[0];
+        areaPath = `${linePath}L${lastPt.x},${yScale(0)}L${firstPt.x},${yScale(0)}Z`;
+      }
+      return { ...s, linePath, areaPath, screenPoints: pts };
+    });
+  }, [series, xScale, yScale]);
+
+  // Hover nearest
+  const hoveredPoints = useMemo(() => {
+    if (hoveredX === null) return null;
+    const t = minTime + ((hoveredX - CHART_PAD.left) / INNER_W) * (maxTime - minTime);
+
+    return seriesPaths.map((s) => {
+      let nearest = s.points[0];
+      let nearestDist = Infinity;
+      for (const p of s.points) {
+        const dist = Math.abs(p.date.getTime() - t);
+        if (dist < nearestDist) { nearestDist = dist; nearest = p; }
+      }
+      return {
+        seriesId: s.id,
+        label: s.label,
+        color: s.color,
+        isPrimary: s.isPrimary,
+        value: nearest?.value ?? 0,
+        cx: nearest ? xScale(nearest.date.getTime()) : 0,
+        cy: nearest ? yScale(nearest.value) : 0,
+        date: nearest?.date ?? new Date(),
+      };
+    });
+  }, [hoveredX, seriesPaths, minTime, maxTime, xScale, yScale]);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const svgX = ((e.clientX - rect.left) / rect.width) * CHART_W_TOTAL;
+      if (svgX >= CHART_PAD.left && svgX <= CHART_W_TOTAL - CHART_PAD.right) {
+        setHoveredX(svgX);
+      } else {
+        setHoveredX(null);
+      }
+    },
+    [],
+  );
+
+  // Legend value map for hover
+  const hoveredValueMap = useMemo(() => {
+    if (!hoveredPoints) return null;
+    const map = new Map<string | number, number>();
+    for (const p of hoveredPoints) map.set(p.seriesId, p.value);
+    return map;
+  }, [hoveredPoints]);
+
+  const isHovering = hoveredX !== null;
 
   return (
-    <div className="space-y-4">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto overflow-visible">
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-          const lineY = PAD.top + chartH - chartH * ratio;
-          const label = Math.round(domain.maxValue * ratio);
+    <div className="w-full">
+      {/* Legend — updates values on hover */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-3">
+        {isHovering && hoveredPoints && (
+          <span className="text-[11px] text-muted-foreground/50 tabular-nums mr-1">
+            {formatShortDate(hoveredPoints[0]?.date)}
+          </span>
+        )}
+        {series.map((s) => {
+          const dimmed = hoveredSeriesId !== null && hoveredSeriesId !== s.id;
+          const displayValue = isHovering && hoveredValueMap
+            ? (hoveredValueMap.get(s.id) ?? s.points[s.points.length - 1]?.value ?? 0)
+            : s.points[s.points.length - 1]?.value ?? 0;
           return (
-            <g key={ratio}>
-              <line
-                x1={PAD.left}
-                x2={PAD.left + chartW}
-                y1={lineY}
-                y2={lineY}
-                stroke="currentColor"
-                className="text-border/40"
-                strokeDasharray={ratio === 0 ? "0" : "3 4"}
-              />
-              <text
-                x={PAD.left + chartW + 8}
-                y={lineY + 4}
-                className="fill-muted-foreground/50"
-                fontSize="11"
-              >
-                {formatNumber(label)}
-              </text>
-            </g>
-          );
-        })}
-
-        {series.map((line) => {
-          const plotted = line.points.map((point) => ({
-            x: x(point.date.getTime()),
-            y: y(point.value),
-          }));
-
-          return (
-            <g key={line.id}>
-              {plotted.length === 1 ? (
-                <circle cx={plotted[0].x} cy={plotted[0].y} r="3.5" fill={line.color} />
-              ) : (
-                <>
-                  <path
-                    d={buildTrendPath(plotted)}
-                    fill="none"
-                    stroke={line.color}
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  {plotted.map((point, index) => (
-                    <circle
-                      key={`${line.id}-${index}`}
-                      cx={point.x}
-                      cy={point.y}
-                      r="2.5"
-                      fill={line.color}
-                    />
-                  ))}
-                </>
+            <button
+              key={s.id}
+              type="button"
+              className={cn(
+                "flex items-center gap-1.5 text-xs transition-opacity duration-200 hover:opacity-100",
+                dimmed ? "opacity-30" : "opacity-100",
               )}
-            </g>
-          );
-        })}
-
-        <text
-          x={PAD.left}
-          y={H - 8}
-          className="fill-muted-foreground/50"
-          fontSize="11"
-        >
-          {formatDate(series[0]?.points[0]?.date.toISOString() ?? null)}
-        </text>
-        <text
-          x={PAD.left + chartW}
-          y={H - 8}
-          textAnchor="end"
-          className="fill-muted-foreground/50"
-          fontSize="11"
-        >
-          {formatDate(
-            series
-              .flatMap((line) => line.points)
-              .sort((a, b) => a.date.getTime() - b.date.getTime())
-              .at(-1)?.date.toISOString() ?? null,
-          )}
-        </text>
-      </svg>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {series.map((line) => {
-          const latest = line.points[line.points.length - 1]?.value ?? 0;
-          return (
-            <div key={line.id} className="flex items-center gap-2 min-w-0">
+              onMouseEnter={() => setHoveredSeriesId(s.id)}
+              onMouseLeave={() => setHoveredSeriesId(null)}
+            >
               <span
-                className="size-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: line.color }}
+                className={cn("shrink-0 rounded-full", s.isPrimary ? "size-2.5" : "size-2")}
+                style={{ backgroundColor: s.color }}
               />
-              <span className="text-xs text-muted-foreground truncate">{line.label}</span>
-              <span className="text-xs tabular-nums text-foreground">{formatNumber(latest)}</span>
-            </div>
+              <span className={cn(s.isPrimary && "font-medium")}>{s.label}</span>
+              <span className="text-muted-foreground/50 tabular-nums">
+                {formatCompactNumber(displayValue)}
+              </span>
+            </button>
           );
         })}
       </div>
+
+      {/* SVG */}
+      <svg
+        viewBox={`0 0 ${CHART_W_TOTAL} ${CHART_H_TOTAL}`}
+        className="w-full h-auto"
+        preserveAspectRatio="xMidYMid meet"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => { setHoveredX(null); setHoveredSeriesId(null); }}
+      >
+        <defs>
+          <linearGradient id="bl-area-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={PRIMARY_COLOR} stopOpacity="0.12" />
+            <stop offset="100%" stopColor={PRIMARY_COLOR} stopOpacity="0.01" />
+          </linearGradient>
+          <filter id="bl-dot-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Grid */}
+        {yTicks.map((tick) => (
+          <line
+            key={tick}
+            x1={CHART_PAD.left}
+            x2={CHART_W_TOTAL - CHART_PAD.right}
+            y1={yScale(tick)}
+            y2={yScale(tick)}
+            stroke="currentColor"
+            className="text-border/20"
+            strokeWidth={0.5}
+            strokeDasharray="4 4"
+          />
+        ))}
+
+        {/* Y labels */}
+        {yTicks.map((tick) => (
+          <text
+            key={tick}
+            x={CHART_W_TOTAL - CHART_PAD.right + 8}
+            y={yScale(tick)}
+            dominantBaseline="central"
+            className="fill-muted-foreground/40 text-[9px]"
+          >
+            {formatCompactNumber(tick)}
+          </text>
+        ))}
+
+        {/* X labels */}
+        {xTicks.map((tick, i) => (
+          <text
+            key={tick.getTime()}
+            x={xScale(tick.getTime())}
+            y={CHART_H_TOTAL - 6}
+            textAnchor={i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle"}
+            className="fill-muted-foreground/40 text-[9px]"
+          >
+            {formatShortDate(tick)}
+          </text>
+        ))}
+
+        {/* Area fill for primary */}
+        {seriesPaths.map((s) =>
+          s.isPrimary && s.areaPath ? (
+            <path
+              key={`area-${s.id}`}
+              d={s.areaPath}
+              fill="url(#bl-area-gradient)"
+              className="analytics-area-fade"
+            />
+          ) : null,
+        )}
+
+        {/* Lines + dots */}
+        {seriesPaths.map((s) => {
+          const dimmed = hoveredSeriesId !== null && hoveredSeriesId !== s.id;
+          const highlighted = hoveredSeriesId === s.id;
+
+          if (s.screenPoints.length === 1) {
+            return (
+              <circle
+                key={s.id}
+                cx={s.screenPoints[0].x}
+                cy={s.screenPoints[0].y}
+                r={4}
+                fill={s.color}
+                className={cn("transition-opacity duration-200", dimmed ? "opacity-15" : "opacity-100")}
+              />
+            );
+          }
+
+          return (
+            <g key={s.id}>
+              <path
+                d={s.linePath}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={s.isPrimary || highlighted ? 2.5 : 1.5}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+                className={cn("transition-all duration-200", dimmed ? "opacity-15" : "opacity-100")}
+                onMouseEnter={() => setHoveredSeriesId(s.id)}
+                onMouseLeave={() => setHoveredSeriesId(null)}
+              />
+              {s.screenPoints.map((pt, j) => (
+                <circle
+                  key={j}
+                  cx={pt.x}
+                  cy={pt.y}
+                  r={highlighted ? 3 : 2}
+                  fill={s.color}
+                  vectorEffect="non-scaling-stroke"
+                  className={cn(
+                    "transition-all duration-200",
+                    dimmed ? "opacity-0" : highlighted ? "opacity-100" : "opacity-40",
+                  )}
+                />
+              ))}
+            </g>
+          );
+        })}
+
+        {/* Hover crosshair */}
+        {hoveredX !== null && (
+          <line
+            x1={hoveredX}
+            x2={hoveredX}
+            y1={CHART_PAD.top}
+            y2={CHART_PAD.top + INNER_H}
+            stroke="currentColor"
+            className="text-border"
+            strokeWidth={0.5}
+          />
+        )}
+
+        {/* Hover dots */}
+        {hoveredPoints?.map((p) => {
+          const dimmed = hoveredSeriesId !== null && hoveredSeriesId !== p.seriesId;
+          if (dimmed) return null;
+          return (
+            <circle
+              key={p.seriesId}
+              cx={p.cx}
+              cy={p.cy}
+              r={5}
+              fill={p.color}
+              filter="url(#bl-dot-glow)"
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        })}
+      </svg>
     </div>
   );
 }

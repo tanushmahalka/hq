@@ -652,8 +652,8 @@ function formatTimelineLabel(value: Date | string | null) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
     month: "short",
+    year: "2-digit",
   }).format(date);
 }
 
