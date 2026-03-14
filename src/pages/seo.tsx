@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnalyticsTab } from "@/features/seo/analytics-tab";
+import { BacklinksTab } from "@/features/seo/backlinks-tab";
 import { CompetitorsTab } from "@/features/seo/competitors-tab";
 import { OverviewTab, PageDetailCard } from "@/features/seo/overview-tab";
 import {
@@ -188,6 +189,12 @@ export default function Seo() {
             onClick={() => setActiveTab("competitors")}
           />
           <SeoTabButton
+            active={activeTab === "backlinks"}
+            label="Backlinks"
+            description=""
+            onClick={() => setActiveTab("backlinks")}
+          />
+          <SeoTabButton
             active={activeTab === "analytics"}
             label="Analytics"
             description=""
@@ -195,7 +202,7 @@ export default function Seo() {
           />
         </div>
 
-        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && (
+        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && activeTab !== "backlinks" && (
           <div className="flex items-center gap-8 pb-2.5">
             {activeTab === "overview" ? (
               <>
@@ -229,6 +236,10 @@ export default function Seo() {
           title="No SEO sites available yet"
           description="Once pages and keyword clusters are stored in the workspace database, this tab will populate automatically."
         />
+      ) : activeTab === "backlinks" ? (
+        effectiveSelectedSiteId ? (
+          <BacklinksTab siteId={effectiveSelectedSiteId} />
+        ) : null
       ) : activeTab === "analytics" ? (
         effectiveSelectedSiteId ? (
           <AnalyticsTab siteId={effectiveSelectedSiteId} />

@@ -1,5 +1,5 @@
 export type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
-export type SeoViewTab = "overview" | "competitors" | "analytics";
+export type SeoViewTab = "overview" | "competitors" | "analytics" | "backlinks";
 
 export type SeoSite = {
   id: number;
@@ -109,6 +109,97 @@ export type SeoCompetitor = {
   history: SeoCompetitorHistoryPoint[];
   topKeywords: SeoCompetitorKeyword[];
 };
+
+/* ---------------------------------------------------------------------------
+ * Backlinks
+ * --------------------------------------------------------------------------- */
+
+export type BacklinkSource = {
+  id: number;
+  siteId: number;
+  sourceDomain: string;
+  sourceUrl: string | null;
+  sourceTitle: string | null;
+  targetUrl: string;
+  targetPageId: number | null;
+  targetPageTitle: string | null;
+  anchorText: string | null;
+  relAttr: string | null;
+  linkType: string | null;
+  relevanceScore: string | null;
+  authorityScore: string | null;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+  verifiedAt: string | null;
+  status: string;
+};
+
+export type CompetitorBacklink = {
+  id: number;
+  siteCompetitorId: number;
+  competitorLabel: string;
+  competitorDomain: string;
+  sourceDomain: string;
+  sourceUrl: string | null;
+  sourceTitle: string | null;
+  targetUrl: string;
+  anchorText: string | null;
+  relAttr: string | null;
+  linkType: string | null;
+  relevanceScore: string | null;
+  authorityScore: string | null;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+  status: string;
+};
+
+export type LinkOpportunity = {
+  id: number;
+  siteId: number;
+  sourceDomain: string;
+  sourceUrl: string;
+  sourceTitle: string | null;
+  targetPageId: number;
+  targetPageTitle: string | null;
+  targetPageUrl: string | null;
+  opportunityType: string;
+  discoveredFrom: string;
+  whyThisFits: string;
+  suggestedAnchorText: string | null;
+  relevanceScore: string | null;
+  authorityScore: string | null;
+  confidenceScore: string | null;
+  riskScore: string | null;
+  status: string;
+  firstSeenAt: string | null;
+  lastReviewedAt: string | null;
+  prospectId: number | null;
+  prospectName: string | null;
+  siteCompetitorId: number | null;
+  competitorLabel: string | null;
+  brandMentionId: number | null;
+};
+
+export type BacklinksData = {
+  existing: BacklinkSource[];
+  competitor: CompetitorBacklink[];
+  opportunities: LinkOpportunity[];
+  summary: {
+    referringDomains: number;
+    liveBacklinks: number;
+    moneyPagesLinked: number;
+    avgAuthority: number;
+    competitorDomainsTracked: number;
+    competitorBacklinksTracked: number;
+    linkGapCount: number;
+    newOpportunities: number;
+    highConfidenceOpportunities: number;
+    approvedForOutreach: number;
+    rejectedOpportunities: number;
+  };
+};
+
+export type BacklinksSubview = "existing" | "competitors" | "opportunities";
 
 export type SeoOverviewData = {
   summary: {

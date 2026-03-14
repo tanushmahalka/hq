@@ -13,6 +13,10 @@ function createDb(results: unknown[]) {
         },
       };
     },
+    execute() {
+      const result = results[index++];
+      return Promise.resolve({ rows: result });
+    },
   };
 }
 
@@ -88,6 +92,14 @@ describe("getSeoOverview", () => {
           top100KeywordsCount: 180,
           visibilityScore: "9.87",
           capturedAt: "2026-03-10T00:00:00.000Z",
+        },
+      ],
+      [
+        {
+          siteCompetitorId: 31,
+          keywordRowCount: 1,
+          latestKeywordCount: 1,
+          latestKeywordCapturedAt: "2026-03-11T00:00:00.000Z",
         },
       ],
       [

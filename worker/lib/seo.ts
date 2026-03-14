@@ -2,8 +2,12 @@ import { and, between, desc, eq, isNotNull, sql, sum } from "drizzle-orm";
 import type { Database } from "../db/client.ts";
 import {
   analyticsDaily,
+  backlinkSources,
+  competitorBacklinkSources,
   competitorDomainFootprints,
   competitorRankedKeywords,
+  linkOpportunities,
+  outreachProspects,
   pageClusterTargets,
   pages,
   queryClusters,
@@ -141,6 +145,28 @@ export type SeoOverview = {
   }>;
 };
 
+type CompetitorKeywordStatsRow = {
+  siteCompetitorId: number;
+  keywordRowCount: number;
+  latestKeywordCount: number;
+  latestKeywordCapturedAt: Date | string | null;
+};
+
+type CompetitorTopKeywordRow = {
+  siteCompetitorId: number;
+  keyword: string;
+  location: string;
+  languageCode: string;
+  rank: number;
+  searchVolume: number;
+  keywordDifficulty: string | null;
+  searchIntent: string | null;
+  rankingUrl: string;
+  serpItemType: string | null;
+  estimatedTraffic: string | null;
+  capturedAt: Date | string;
+};
+
 export async function getSeoOverview(db: Database): Promise<SeoOverview> {
   const [
     siteRows,
@@ -151,7 +177,8 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     competitorRows,
     footprintRows,
     siteFootprintRows,
-    competitorKeywordRows,
+    competitorKeywordStatsResult,
+    competitorTopKeywordsResult,
   ] = await Promise.all([
     db
       .select({
@@ -241,22 +268,74 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
         capturedAt: siteDomainFootprints.capturedAt,
       })
       .from(siteDomainFootprints),
-    db
-      .select({
-        siteCompetitorId: competitorRankedKeywords.siteCompetitorId,
-        keyword: competitorRankedKeywords.keyword,
-        location: competitorRankedKeywords.location,
-        languageCode: competitorRankedKeywords.languageCode,
-        rank: competitorRankedKeywords.rank,
-        searchVolume: competitorRankedKeywords.searchVolume,
-        keywordDifficulty: competitorRankedKeywords.keywordDifficulty,
-        searchIntent: competitorRankedKeywords.searchIntent,
-        rankingUrl: competitorRankedKeywords.rankingUrl,
-        serpItemType: competitorRankedKeywords.serpItemType,
-        estimatedTraffic: competitorRankedKeywords.estimatedTraffic,
-        capturedAt: competitorRankedKeywords.capturedAt,
-      })
-      .from(competitorRankedKeywords),
+    db.execute(sql<CompetitorKeywordStatsRow>`
+      WITH latest_snapshots AS (
+        SELECT
+          site_competitor_id,
+          MAX(captured_at) AS captured_at
+        FROM competitor_ranked_keywords
+        GROUP BY site_competitor_id
+      )
+      SELECT
+        crk.site_competitor_id AS "siteCompetitorId",
+        COUNT(*)::integer AS "keywordRowCount",
+        COUNT(*) FILTER (
+          WHERE crk.captured_at = latest_snapshots.captured_at
+        )::integer AS "latestKeywordCount",
+        latest_snapshots.captured_at AS "latestKeywordCapturedAt"
+      FROM competitor_ranked_keywords crk
+      INNER JOIN latest_snapshots
+        ON latest_snapshots.site_competitor_id = crk.site_competitor_id
+      GROUP BY crk.site_competitor_id, latest_snapshots.captured_at
+    `),
+    db.execute(sql<CompetitorTopKeywordRow>`
+      WITH latest_snapshots AS (
+        SELECT
+          site_competitor_id,
+          MAX(captured_at) AS captured_at
+        FROM competitor_ranked_keywords
+        GROUP BY site_competitor_id
+      ),
+      ranked_latest AS (
+        SELECT
+          crk.site_competitor_id AS "siteCompetitorId",
+          crk.keyword,
+          crk.location,
+          crk.language_code AS "languageCode",
+          crk.rank,
+          crk.search_volume AS "searchVolume",
+          crk.keyword_difficulty AS "keywordDifficulty",
+          crk.search_intent AS "searchIntent",
+          crk.ranking_url AS "rankingUrl",
+          crk.serp_item_type AS "serpItemType",
+          crk.estimated_traffic AS "estimatedTraffic",
+          crk.captured_at AS "capturedAt",
+          ROW_NUMBER() OVER (
+            PARTITION BY crk.site_competitor_id
+            ORDER BY crk.rank ASC, crk.search_volume DESC, crk.keyword ASC
+          ) AS keyword_rank
+        FROM competitor_ranked_keywords crk
+        INNER JOIN latest_snapshots
+          ON latest_snapshots.site_competitor_id = crk.site_competitor_id
+         AND latest_snapshots.captured_at = crk.captured_at
+      )
+      SELECT
+        "siteCompetitorId",
+        keyword,
+        location,
+        "languageCode",
+        rank,
+        "searchVolume",
+        "keywordDifficulty",
+        "searchIntent",
+        "rankingUrl",
+        "serpItemType",
+        "estimatedTraffic",
+        "capturedAt"
+      FROM ranked_latest
+      WHERE keyword_rank <= 8
+      ORDER BY "siteCompetitorId", keyword_rank
+    `),
   ]);
 
   const normalizedPageRows = pageRows.map((page) => ({
@@ -277,7 +356,18 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     capturedAt: parseRequiredDate(row.capturedAt, "site_domain_footprints.capturedAt"),
   }));
 
-  const normalizedCompetitorKeywordRows = competitorKeywordRows.map((row) => ({
+  const competitorKeywordStatsRows = competitorKeywordStatsResult.rows;
+  const competitorTopKeywordRows = competitorTopKeywordsResult.rows;
+
+  const normalizedCompetitorKeywordStatsRows = competitorKeywordStatsRows.map((row) => ({
+    ...row,
+    latestKeywordCapturedAt: parseOptionalDate(
+      row.latestKeywordCapturedAt,
+      "competitor_ranked_keywords.capturedAt",
+    ),
+  }));
+
+  const normalizedCompetitorTopKeywordRows = competitorTopKeywordRows.map((row) => ({
     ...row,
     capturedAt: parseRequiredDate(
       row.capturedAt,
@@ -354,14 +444,22 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     footprintsBySite.set(row.siteId, existing);
   }
 
-  const keywordsByCompetitor = new Map<
+  const keywordStatsByCompetitor = new Map<
     number,
-    Array<(typeof normalizedCompetitorKeywordRows)[number]>
+    (typeof normalizedCompetitorKeywordStatsRows)[number]
   >();
-  for (const row of normalizedCompetitorKeywordRows) {
-    const existing = keywordsByCompetitor.get(row.siteCompetitorId) ?? [];
+  for (const row of normalizedCompetitorKeywordStatsRows) {
+    keywordStatsByCompetitor.set(row.siteCompetitorId, row);
+  }
+
+  const topKeywordsByCompetitor = new Map<
+    number,
+    Array<(typeof normalizedCompetitorTopKeywordRows)[number]>
+  >();
+  for (const row of normalizedCompetitorTopKeywordRows) {
+    const existing = topKeywordsByCompetitor.get(row.siteCompetitorId) ?? [];
     existing.push(row);
-    keywordsByCompetitor.set(row.siteCompetitorId, existing);
+    topKeywordsByCompetitor.set(row.siteCompetitorId, existing);
   }
 
   const competitorsResult = competitorRows
@@ -378,26 +476,8 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
           capturedAt: footprint.capturedAt,
         }));
 
-      const competitorKeywords = [...(keywordsByCompetitor.get(competitor.id) ?? [])].sort(
-        (a, b) => {
-          if (a.capturedAt.getTime() !== b.capturedAt.getTime()) {
-            return b.capturedAt.getTime() - a.capturedAt.getTime();
-          }
-          if (a.rank !== b.rank) return a.rank - b.rank;
-          if (a.searchVolume !== b.searchVolume) {
-            return b.searchVolume - a.searchVolume;
-          }
-          return a.keyword.localeCompare(b.keyword);
-        },
-      );
-
-      const latestKeywordCapturedAt = competitorKeywords[0]?.capturedAt ?? null;
-      const latestKeywordTime = latestKeywordCapturedAt?.getTime() ?? null;
-      const latestKeywordSnapshot = latestKeywordTime
-        ? competitorKeywords.filter(
-            (row) => row.capturedAt.getTime() === latestKeywordTime,
-          )
-        : [];
+      const competitorKeywordStats = keywordStatsByCompetitor.get(competitor.id);
+      const topKeywords = topKeywordsByCompetitor.get(competitor.id) ?? [];
 
       return {
         id: competitor.id,
@@ -408,9 +488,10 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
         isActive: competitor.isActive,
         notes: competitor.notes,
         footprintSnapshotCount: competitorFootprints.length,
-        keywordRowCount: competitorKeywords.length,
-        latestKeywordCount: latestKeywordSnapshot.length,
-        latestKeywordCapturedAt,
+        keywordRowCount: competitorKeywordStats?.keywordRowCount ?? 0,
+        latestKeywordCount: competitorKeywordStats?.latestKeywordCount ?? 0,
+        latestKeywordCapturedAt:
+          competitorKeywordStats?.latestKeywordCapturedAt ?? null,
         latestFootprint: latestFootprint
           ? {
               location: latestFootprint.location,
@@ -426,7 +507,7 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
             }
           : null,
         history,
-        topKeywords: latestKeywordSnapshot.slice(0, 8),
+        topKeywords,
       };
     })
     .sort((a, b) => {
@@ -603,6 +684,11 @@ export type AnalyticsSummary = {
     device: string;
     sessions: number;
   }>;
+  daily: Array<{
+    date: string;
+    sessions: number;
+    users: number;
+  }>;
 };
 
 function n(val: string | number | null | undefined): number {
@@ -630,7 +716,7 @@ export async function getAnalyticsSummary(
   const currentRange = between(analyticsDaily.eventDate, startDate, endDate);
   const priorRange = between(analyticsDaily.eventDate, priorStartStr, priorEndStr);
 
-  const [currentTotals, priorTotals, channelRows, topPageRows, deviceRows] =
+  const [currentTotals, priorTotals, channelRows, topPageRows, deviceRows, dailyRows] =
     await Promise.all([
       // 1. Headline totals — current
       db
@@ -705,6 +791,18 @@ export async function getAnalyticsSummary(
         .where(and(siteFilter, currentRange))
         .groupBy(analyticsDaily.device)
         .orderBy(desc(sum(analyticsDaily.sessions))),
+
+      // 6. Daily time series (current)
+      db
+        .select({
+          date: analyticsDaily.eventDate,
+          sessions: sum(analyticsDaily.sessions),
+          users: sum(analyticsDaily.users),
+        })
+        .from(analyticsDaily)
+        .where(and(siteFilter, currentRange))
+        .groupBy(analyticsDaily.eventDate)
+        .orderBy(analyticsDaily.eventDate),
     ]);
 
   const cur = currentTotals[0];
@@ -748,5 +846,287 @@ export async function getAnalyticsSummary(
         device: row.device!,
         sessions: n(row.sessions),
       })),
+    daily: dailyRows.map((row) => ({
+      date: row.date,
+      sessions: n(row.sessions),
+      users: n(row.users),
+    })),
   };
+}
+
+/* ---------------------------------------------------------------------------
+ * Backlinks
+ * --------------------------------------------------------------------------- */
+
+export type BacklinksResult = {
+  existing: Array<{
+    id: number;
+    siteId: number;
+    sourceDomain: string;
+    sourceUrl: string | null;
+    sourceTitle: string | null;
+    targetUrl: string;
+    targetPageId: number | null;
+    targetPageTitle: string | null;
+    anchorText: string | null;
+    relAttr: string | null;
+    linkType: string | null;
+    relevanceScore: string | null;
+    authorityScore: string | null;
+    firstSeenAt: string | null;
+    lastSeenAt: string | null;
+    verifiedAt: string | null;
+    status: string;
+  }>;
+  competitor: Array<{
+    id: number;
+    siteCompetitorId: number;
+    competitorLabel: string;
+    competitorDomain: string;
+    sourceDomain: string;
+    sourceUrl: string | null;
+    sourceTitle: string | null;
+    targetUrl: string;
+    anchorText: string | null;
+    relAttr: string | null;
+    linkType: string | null;
+    relevanceScore: string | null;
+    authorityScore: string | null;
+    firstSeenAt: string | null;
+    lastSeenAt: string | null;
+    status: string;
+  }>;
+  opportunities: Array<{
+    id: number;
+    siteId: number;
+    sourceDomain: string;
+    sourceUrl: string;
+    sourceTitle: string | null;
+    targetPageId: number;
+    targetPageTitle: string | null;
+    targetPageUrl: string | null;
+    opportunityType: string;
+    discoveredFrom: string;
+    whyThisFits: string;
+    suggestedAnchorText: string | null;
+    relevanceScore: string | null;
+    authorityScore: string | null;
+    confidenceScore: string | null;
+    riskScore: string | null;
+    status: string;
+    firstSeenAt: string | null;
+    lastReviewedAt: string | null;
+    prospectId: number | null;
+    prospectName: string | null;
+    siteCompetitorId: number | null;
+    competitorLabel: string | null;
+    brandMentionId: number | null;
+  }>;
+  summary: {
+    referringDomains: number;
+    liveBacklinks: number;
+    moneyPagesLinked: number;
+    avgAuthority: number;
+    competitorDomainsTracked: number;
+    competitorBacklinksTracked: number;
+    linkGapCount: number;
+    newOpportunities: number;
+    highConfidenceOpportunities: number;
+    approvedForOutreach: number;
+    rejectedOpportunities: number;
+  };
+};
+
+export async function getBacklinksData(
+  db: Database,
+  siteId: number,
+): Promise<BacklinksResult> {
+  // Get competitor IDs for this site
+  const siteCompetitorRows = await db
+    .select({
+      id: siteCompetitors.id,
+      label: siteCompetitors.label,
+      domain: siteCompetitors.competitorDomain,
+    })
+    .from(siteCompetitors)
+    .where(eq(siteCompetitors.siteId, siteId));
+
+  const competitorIds = siteCompetitorRows.map((c) => c.id);
+  const competitorById = new Map(siteCompetitorRows.map((c) => [c.id, c]));
+
+  const [existingRows, competitorRows, opportunityRows] = await Promise.all([
+    // 1. Our backlinks
+    db
+      .select({
+        id: backlinkSources.id,
+        siteId: backlinkSources.siteId,
+        sourceDomain: backlinkSources.sourceDomain,
+        sourceUrl: backlinkSources.sourceUrl,
+        sourceTitle: backlinkSources.sourceTitle,
+        targetUrl: backlinkSources.targetUrl,
+        targetPageId: backlinkSources.targetPageId,
+        targetPageTitle: pages.titleTag,
+        anchorText: backlinkSources.anchorText,
+        relAttr: backlinkSources.relAttr,
+        linkType: backlinkSources.linkType,
+        relevanceScore: backlinkSources.relevanceScore,
+        authorityScore: backlinkSources.authorityScore,
+        firstSeenAt: backlinkSources.firstSeenAt,
+        lastSeenAt: backlinkSources.lastSeenAt,
+        verifiedAt: backlinkSources.verifiedAt,
+        status: backlinkSources.status,
+      })
+      .from(backlinkSources)
+      .leftJoin(pages, eq(backlinkSources.targetPageId, pages.id))
+      .where(eq(backlinkSources.siteId, siteId)),
+
+    // 2. Competitor backlinks
+    competitorIds.length > 0
+      ? db
+          .select({
+            id: competitorBacklinkSources.id,
+            siteCompetitorId: competitorBacklinkSources.siteCompetitorId,
+            sourceDomain: competitorBacklinkSources.sourceDomain,
+            sourceUrl: competitorBacklinkSources.sourceUrl,
+            sourceTitle: competitorBacklinkSources.sourceTitle,
+            targetUrl: competitorBacklinkSources.targetUrl,
+            anchorText: competitorBacklinkSources.anchorText,
+            relAttr: competitorBacklinkSources.relAttr,
+            linkType: competitorBacklinkSources.linkType,
+            relevanceScore: competitorBacklinkSources.relevanceScore,
+            authorityScore: competitorBacklinkSources.authorityScore,
+            firstSeenAt: competitorBacklinkSources.firstSeenAt,
+            lastSeenAt: competitorBacklinkSources.lastSeenAt,
+            status: competitorBacklinkSources.status,
+          })
+          .from(competitorBacklinkSources)
+          .where(
+            sql`${competitorBacklinkSources.siteCompetitorId} IN (${sql.join(
+              competitorIds.map((id) => sql`${id}`),
+              sql`, `,
+            )})`,
+          )
+      : Promise.resolve([]),
+
+    // 3. Opportunities
+    db
+      .select({
+        id: linkOpportunities.id,
+        siteId: linkOpportunities.siteId,
+        sourceDomain: linkOpportunities.sourceDomain,
+        sourceUrl: linkOpportunities.sourceUrl,
+        sourceTitle: linkOpportunities.sourceTitle,
+        targetPageId: linkOpportunities.targetPageId,
+        targetPageTitle: pages.titleTag,
+        targetPageUrl: pages.url,
+        opportunityType: linkOpportunities.opportunityType,
+        discoveredFrom: linkOpportunities.discoveredFrom,
+        whyThisFits: linkOpportunities.whyThisFits,
+        suggestedAnchorText: linkOpportunities.suggestedAnchorText,
+        relevanceScore: linkOpportunities.relevanceScore,
+        authorityScore: linkOpportunities.authorityScore,
+        confidenceScore: linkOpportunities.confidenceScore,
+        riskScore: linkOpportunities.riskScore,
+        status: linkOpportunities.status,
+        firstSeenAt: linkOpportunities.firstSeenAt,
+        lastReviewedAt: linkOpportunities.lastReviewedAt,
+        prospectId: linkOpportunities.prospectId,
+        prospectName: outreachProspects.organizationName,
+        siteCompetitorId: linkOpportunities.siteCompetitorId,
+        brandMentionId: linkOpportunities.brandMentionId,
+      })
+      .from(linkOpportunities)
+      .leftJoin(pages, eq(linkOpportunities.targetPageId, pages.id))
+      .leftJoin(outreachProspects, eq(linkOpportunities.prospectId, outreachProspects.id))
+      .where(eq(linkOpportunities.siteId, siteId)),
+  ]);
+
+  // Enrich competitor backlinks with labels
+  const enrichedCompetitorRows = competitorRows.map((row) => {
+    const comp = competitorById.get(row.siteCompetitorId);
+    return {
+      ...row,
+      competitorLabel: comp?.label ?? "Unknown",
+      competitorDomain: comp?.domain ?? "",
+    };
+  });
+
+  // Enrich opportunities with competitor labels
+  const enrichedOpportunities = opportunityRows.map((row) => {
+    const comp = row.siteCompetitorId ? competitorById.get(row.siteCompetitorId) : null;
+    return {
+      ...row,
+      competitorLabel: comp?.label ?? null,
+    };
+  });
+
+  // Compute our referring domains (unique source domains from existing)
+  const ownDomains = new Set(existingRows.map((r) => r.sourceDomain));
+  const liveBacklinks = existingRows.filter((r) => r.status === "live").length;
+
+  // Money pages linked — pages that are target of backlinks and are money pages
+  const linkedTargetPageIds = new Set(
+    existingRows.map((r) => r.targetPageId).filter((id): id is number => id !== null),
+  );
+  // We don't have isMoneyPage join here, so approximate with count of distinct target pages
+  const moneyPagesLinked = linkedTargetPageIds.size;
+
+  // Avg authority
+  const authorityValues = existingRows
+    .map((r) => (r.authorityScore ? Number(r.authorityScore) : null))
+    .filter((v): v is number => v !== null && !Number.isNaN(v));
+  const avgAuthority =
+    authorityValues.length > 0
+      ? authorityValues.reduce((s, v) => s + v, 0) / authorityValues.length
+      : 0;
+
+  // Competitor stats
+  const competitorDomainSet = new Set(siteCompetitorRows.map((c) => c.domain));
+
+  // Link gap: competitor backlink source domains we don't have
+  const competitorSourceDomains = new Set(enrichedCompetitorRows.map((r) => r.sourceDomain));
+  const linkGapCount = [...competitorSourceDomains].filter((d) => !ownDomains.has(d)).length;
+
+  // Opportunity stats
+  const newOpportunities = enrichedOpportunities.filter((r) => r.status === "new").length;
+  const highConfidenceOpportunities = enrichedOpportunities.filter((r) => {
+    const score = r.confidenceScore ? Number(r.confidenceScore) : 0;
+    return score >= 70;
+  }).length;
+  const approvedForOutreach = enrichedOpportunities.filter((r) => r.status === "approved").length;
+  const rejectedOpportunities = enrichedOpportunities.filter((r) => r.status === "rejected").length;
+
+  return {
+    existing: existingRows,
+    competitor: enrichedCompetitorRows,
+    opportunities: enrichedOpportunities,
+    summary: {
+      referringDomains: ownDomains.size,
+      liveBacklinks,
+      moneyPagesLinked,
+      avgAuthority: Math.round(avgAuthority * 10) / 10,
+      competitorDomainsTracked: competitorDomainSet.size,
+      competitorBacklinksTracked: enrichedCompetitorRows.length,
+      linkGapCount,
+      newOpportunities,
+      highConfidenceOpportunities,
+      approvedForOutreach,
+      rejectedOpportunities,
+    },
+  };
+}
+
+export async function updateOpportunityStatus(
+  db: Database,
+  opportunityId: number,
+  status: string,
+): Promise<void> {
+  await db
+    .update(linkOpportunities)
+    .set({
+      status,
+      lastReviewedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(linkOpportunities.id, opportunityId));
 }

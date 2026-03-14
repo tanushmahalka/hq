@@ -317,6 +317,7 @@ export const backlinkSources = pgTable(
   {
     sourceDomain: text("source_domain").notNull(),
     sourceUrl: text("source_url"),
+    sourceTitle: text("source_title"),
     targetUrl: text("target_url").notNull(),
     anchorText: text("anchor_text"),
     relAttr: text("rel_attr"),
@@ -325,6 +326,7 @@ export const backlinkSources = pgTable(
     authorityScore: numeric("authority_score", { precision: 5, scale: 2 }),
     firstSeenAt: timestamp("first_seen_at", { mode: "string" }),
     lastSeenAt: timestamp("last_seen_at", { mode: "string" }),
+    verifiedAt: timestamp("verified_at", { mode: "string" }),
     status: text().notNull(),
     id: integer()
       .primaryKey()
@@ -364,6 +366,59 @@ export const backlinkSources = pgTable(
       columns: [table.targetPageId],
       foreignColumns: [pages.id],
       name: "backlink_sources_target_page_id_pages_id_fk",
+    }),
+  ],
+);
+
+export const competitorBacklinkSources = pgTable(
+  "competitor_backlink_sources",
+  {
+    sourceDomain: text("source_domain").notNull(),
+    sourceUrl: text("source_url"),
+    sourceTitle: text("source_title"),
+    targetUrl: text("target_url").notNull(),
+    anchorText: text("anchor_text"),
+    relAttr: text("rel_attr"),
+    linkType: text("link_type"),
+    relevanceScore: numeric("relevance_score", { precision: 5, scale: 2 }),
+    authorityScore: numeric("authority_score", { precision: 5, scale: 2 }),
+    firstSeenAt: timestamp("first_seen_at", { mode: "string" }),
+    lastSeenAt: timestamp("last_seen_at", { mode: "string" }),
+    status: text().notNull(),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "competitor_backlink_sources_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    siteCompetitorId: integer("site_competitor_id").notNull(),
+  },
+  (table) => [
+    uniqueIndex("competitor_backlink_sources_unique").using(
+      "btree",
+      table.siteCompetitorId.asc().nullsLast().op("int4_ops"),
+      table.sourceUrl.asc().nullsLast().op("text_ops"),
+      table.targetUrl.asc().nullsLast().op("text_ops"),
+      table.anchorText.asc().nullsLast().op("text_ops"),
+    ),
+    index("idx_competitor_backlink_sources_domain").using(
+      "btree",
+      table.sourceDomain.asc().nullsLast().op("text_ops"),
+    ),
+    index("idx_competitor_backlink_sources_competitor").using(
+      "btree",
+      table.siteCompetitorId.asc().nullsLast().op("int4_ops"),
+    ),
+    foreignKey({
+      columns: [table.siteCompetitorId],
+      foreignColumns: [siteCompetitors.id],
+      name: "competitor_backlink_sources_site_competitor_id_site_competito",
     }),
   ],
 );
@@ -655,9 +710,11 @@ export const outreachProspects = pgTable(
     contactName: text("contact_name"),
     contactEmail: text("contact_email"),
     domain: text(),
+    homepageUrl: text("homepage_url"),
     prospectType: text("prospect_type").notNull(),
     relationshipStrength: text("relationship_strength"),
     relevanceScore: numeric("relevance_score", { precision: 5, scale: 2 }),
+    status: text().notNull(),
     notes: text(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
@@ -682,19 +739,29 @@ export const outreachProspects = pgTable(
   ],
 );
 
-export const outreachCampaigns = pgTable(
-  "outreach_campaigns",
+export const linkOpportunities = pgTable(
+  "link_opportunities",
   {
-    name: text().notNull(),
-    campaignType: text("campaign_type").notNull(),
-    startDate: date("start_date"),
-    endDate: date("end_date"),
+    sourceDomain: text("source_domain").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    sourceTitle: text("source_title"),
+    opportunityType: text("opportunity_type").notNull(),
+    discoveredFrom: text("discovered_from").notNull(),
+    whyThisFits: text("why_this_fits").notNull(),
+    suggestedAnchorText: text("suggested_anchor_text"),
+    relevanceScore: numeric("relevance_score", { precision: 5, scale: 2 }),
+    authorityScore: numeric("authority_score", { precision: 5, scale: 2 }),
+    confidenceScore: numeric("confidence_score", { precision: 5, scale: 2 }),
+    riskScore: numeric("risk_score", { precision: 5, scale: 2 }),
     status: text().notNull(),
+    firstSeenAt: timestamp("first_seen_at", { mode: "string" }).notNull(),
+    lastReviewedAt: timestamp("last_reviewed_at", { mode: "string" }),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
     id: integer()
       .primaryKey()
       .generatedByDefaultAsIdentity({
-        name: "outreach_campaigns_id_seq",
+        name: "link_opportunities_id_seq",
         startWith: 1,
         increment: 1,
         minValue: 1,
@@ -702,68 +769,217 @@ export const outreachCampaigns = pgTable(
         cache: 1,
       }),
     siteId: integer("site_id").notNull(),
-    targetAssetPageId: integer("target_asset_page_id"),
-    targetPageId: integer("target_page_id"),
+    targetPageId: integer("target_page_id").notNull(),
+    prospectId: integer("prospect_id"),
+    siteCompetitorId: integer("site_competitor_id"),
+    brandMentionId: integer("brand_mention_id"),
   },
   (table) => [
+    uniqueIndex("link_opportunities_unique").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops"),
+      table.sourceUrl.asc().nullsLast().op("text_ops"),
+      table.targetPageId.asc().nullsLast().op("int4_ops"),
+      table.opportunityType.asc().nullsLast().op("text_ops"),
+    ),
+    index("idx_link_opportunities_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+    index("idx_link_opportunities_target_page").using(
+      "btree",
+      table.targetPageId.asc().nullsLast().op("int4_ops"),
+    ),
+    index("idx_link_opportunities_prospect").using(
+      "btree",
+      table.prospectId.asc().nullsLast().op("int4_ops"),
+    ),
     foreignKey({
       columns: [table.siteId],
       foreignColumns: [sites.id],
-      name: "outreach_campaigns_site_id_sites_id_fk",
-    }),
-    foreignKey({
-      columns: [table.targetAssetPageId],
-      foreignColumns: [pages.id],
-      name: "outreach_campaigns_target_asset_page_id_pages_id_fk",
+      name: "link_opportunities_site_id_sites_id_fk",
     }),
     foreignKey({
       columns: [table.targetPageId],
       foreignColumns: [pages.id],
-      name: "outreach_campaigns_target_page_id_pages_id_fk",
+      name: "link_opportunities_target_page_id_pages_id_fk",
+    }),
+    foreignKey({
+      columns: [table.prospectId],
+      foreignColumns: [outreachProspects.id],
+      name: "link_opportunities_prospect_id_outreach_prospects_id_fk",
+    }),
+    foreignKey({
+      columns: [table.siteCompetitorId],
+      foreignColumns: [siteCompetitors.id],
+      name: "link_opportunities_site_competitor_id_site_competitors_id_fk",
+    }),
+    foreignKey({
+      columns: [table.brandMentionId],
+      foreignColumns: [brandMentions.id],
+      name: "link_opportunities_brand_mention_id_brand_mentions_id_fk",
     }),
   ],
 );
 
-export const outreachActions = pgTable(
-  "outreach_actions",
+export const outreachContacts = pgTable(
+  "outreach_contacts",
   {
-    actionType: text("action_type").notNull(),
-    actionDate: timestamp("action_date", { mode: "string" }).notNull(),
-    outcome: text(),
-    notes: text(),
+    name: text().notNull(),
+    role: text(),
+    email: text().notNull(),
+    linkedinUrl: text("linkedin_url"),
+    isPrimary: boolean("is_primary").default(false).notNull(),
+    confidenceScore: numeric("confidence_score", { precision: 5, scale: 2 }),
+    lastValidatedAt: timestamp("last_validated_at", { mode: "string" }),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
     id: integer()
       .primaryKey()
       .generatedByDefaultAsIdentity({
-        name: "outreach_actions_id_seq",
+        name: "outreach_contacts_id_seq",
         startWith: 1,
         increment: 1,
         minValue: 1,
         maxValue: 2147483647,
         cache: 1,
       }),
-    campaignId: integer("campaign_id").notNull(),
-    linkedBacklinkSourceId: integer("linked_backlink_source_id"),
     prospectId: integer("prospect_id").notNull(),
   },
   (table) => [
-    index("idx_outreach_actions_campaign").using(
+    uniqueIndex("outreach_contacts_prospect_email_unique").using(
       "btree",
-      table.campaignId.asc().nullsLast().op("int4_ops"),
+      table.prospectId.asc().nullsLast().op("int4_ops"),
+      table.email.asc().nullsLast().op("text_ops"),
+    ),
+    index("idx_outreach_contacts_prospect").using("btree", table.prospectId.asc().nullsLast().op("int4_ops")),
+    foreignKey({
+      columns: [table.prospectId],
+      foreignColumns: [outreachProspects.id],
+      name: "outreach_contacts_prospect_id_outreach_prospects_id_fk",
+    }),
+  ],
+);
+
+export const outreachThreads = pgTable(
+  "outreach_threads",
+  {
+    channel: text().notNull(),
+    status: text().notNull(),
+    subject: text(),
+    summary: text(),
+    ownerLabel: text("owner_label"),
+    lastMessageAt: timestamp("last_message_at", { mode: "string" }),
+    lastInboundAt: timestamp("last_inbound_at", { mode: "string" }),
+    lastOutboundAt: timestamp("last_outbound_at", { mode: "string" }),
+    followUpDueAt: timestamp("follow_up_due_at", { mode: "string" }),
+    outcome: text(),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "outreach_threads_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    siteId: integer("site_id").notNull(),
+    opportunityId: integer("opportunity_id").notNull(),
+    prospectId: integer("prospect_id").notNull(),
+    primaryContactId: integer("primary_contact_id"),
+    wonBacklinkSourceId: integer("won_backlink_source_id"),
+  },
+  (table) => [
+    index("idx_outreach_threads_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_outreach_threads_opportunity").using(
+      "btree",
+      table.opportunityId.asc().nullsLast().op("int4_ops"),
+    ),
+    index("idx_outreach_threads_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+    index("idx_outreach_threads_follow_up_due_at").using(
+      "btree",
+      table.followUpDueAt.asc().nullsLast().op("timestamp_ops"),
     ),
     foreignKey({
-      columns: [table.campaignId],
-      foreignColumns: [outreachCampaigns.id],
-      name: "outreach_actions_campaign_id_outreach_campaigns_id_fk",
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "outreach_threads_site_id_sites_id_fk",
     }),
     foreignKey({
-      columns: [table.linkedBacklinkSourceId],
-      foreignColumns: [backlinkSources.id],
-      name: "outreach_actions_linked_backlink_source_id_backlink_sources_id_",
+      columns: [table.opportunityId],
+      foreignColumns: [linkOpportunities.id],
+      name: "outreach_threads_opportunity_id_link_opportunities_id_fk",
     }),
     foreignKey({
       columns: [table.prospectId],
       foreignColumns: [outreachProspects.id],
-      name: "outreach_actions_prospect_id_outreach_prospects_id_fk",
+      name: "outreach_threads_prospect_id_outreach_prospects_id_fk",
+    }),
+    foreignKey({
+      columns: [table.primaryContactId],
+      foreignColumns: [outreachContacts.id],
+      name: "outreach_threads_primary_contact_id_outreach_contacts_id_fk",
+    }),
+    foreignKey({
+      columns: [table.wonBacklinkSourceId],
+      foreignColumns: [backlinkSources.id],
+      name: "outreach_threads_won_backlink_source_id_backlink_sources_id_fk",
+    }),
+  ],
+);
+
+export const outreachMessages = pgTable(
+  "outreach_messages",
+  {
+    direction: text().notNull(),
+    messageType: text("message_type").notNull(),
+    status: text().notNull(),
+    subject: text(),
+    bodyText: text("body_text").notNull(),
+    bodyHtml: text("body_html"),
+    fromAddress: text("from_address"),
+    toAddress: text("to_address").notNull(),
+    ccAddresses: text("cc_addresses").array(),
+    providerMessageId: text("provider_message_id"),
+    providerThreadId: text("provider_thread_id"),
+    inReplyToMessageId: integer("in_reply_to_message_id"),
+    sentAt: timestamp("sent_at", { mode: "string" }),
+    receivedAt: timestamp("received_at", { mode: "string" }),
+    createdByAgent: text("created_by_agent"),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "outreach_messages_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    threadId: integer("thread_id").notNull(),
+  },
+  (table) => [
+    index("idx_outreach_messages_thread").using("btree", table.threadId.asc().nullsLast().op("int4_ops")),
+    index("idx_outreach_messages_provider_message").using(
+      "btree",
+      table.providerMessageId.asc().nullsLast().op("text_ops"),
+    ),
+    index("idx_outreach_messages_sent_at").using("btree", table.sentAt.asc().nullsLast().op("timestamp_ops")),
+    index("idx_outreach_messages_received_at").using(
+      "btree",
+      table.receivedAt.asc().nullsLast().op("timestamp_ops"),
+    ),
+    foreignKey({
+      columns: [table.threadId],
+      foreignColumns: [outreachThreads.id],
+      name: "outreach_messages_thread_id_outreach_threads_id_fk",
+    }),
+    foreignKey({
+      columns: [table.inReplyToMessageId],
+      foreignColumns: [table.id],
+      name: "outreach_messages_in_reply_to_message_id_outreach_messages_id_fk",
     }),
   ],
 );

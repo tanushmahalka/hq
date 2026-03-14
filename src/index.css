@@ -316,3 +316,47 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Analytics chart animations */
+@keyframes analytics-draw {
+  from { stroke-dashoffset: var(--path-length); }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes analytics-fill-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes analytics-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes analytics-bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.analytics-line-draw {
+  animation: analytics-draw 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.analytics-area-fade {
+  animation: analytics-fill-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+.analytics-fade-up {
+  animation: analytics-fade-up 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.analytics-bar-grow {
+  animation: analytics-bar-grow 0.8s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: left center;
+}

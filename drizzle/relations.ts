@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachCampaigns, outreachActions, outreachProspects, queryClusters, pageClusterTargets, queries, reviews, searchConsoleDaily, siteDomainFootprints } from "./schema";
+import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, competitorBacklinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachProspects, linkOpportunities, outreachContacts, outreachThreads, outreachMessages, queryClusters, pageClusterTargets, queries, reviews, searchConsoleDaily, siteDomainFootprints } from "./schema";
 
 export const accountRelations = relations(account, ({one}) => ({
 	user: one(user, {
@@ -135,12 +135,7 @@ export const pagesRelations = relations(pages, ({one, many}) => ({
 	internalLinks_targetPageId: many(internalLinks, {
 		relationName: "internalLinks_targetPageId_pages_id"
 	}),
-	outreachCampaigns_targetAssetPageId: many(outreachCampaigns, {
-		relationName: "outreachCampaigns_targetAssetPageId_pages_id"
-	}),
-	outreachCampaigns_targetPageId: many(outreachCampaigns, {
-		relationName: "outreachCampaigns_targetPageId_pages_id"
-	}),
+	linkOpportunities: many(linkOpportunities),
 	pageClusterTargets: many(pageClusterTargets),
 	site: one(sites, {
 		fields: [pages.siteId],
@@ -157,8 +152,9 @@ export const sitesRelations = relations(sites, ({many}) => ({
 	businessProfiles: many(businessProfiles),
 	crawlRuns: many(crawlRuns),
 	internalLinks: many(internalLinks),
-	outreachCampaigns: many(outreachCampaigns),
+	linkOpportunities: many(linkOpportunities),
 	outreachProspects: many(outreachProspects),
+	outreachThreads: many(outreachThreads),
 	pages: many(pages),
 	queryClusters: many(queryClusters),
 	reviews: many(reviews),
@@ -187,10 +183,18 @@ export const backlinkSourcesRelations = relations(backlinkSources, ({one, many})
 		fields: [backlinkSources.targetPageId],
 		references: [pages.id]
 	}),
-	outreachActions: many(outreachActions),
+	outreachThreads: many(outreachThreads),
 }));
 
-export const brandMentionsRelations = relations(brandMentions, ({one}) => ({
+export const competitorBacklinkSourcesRelations = relations(competitorBacklinkSources, ({one}) => ({
+	siteCompetitor: one(siteCompetitors, {
+		fields: [competitorBacklinkSources.siteCompetitorId],
+		references: [siteCompetitors.id]
+	}),
+}));
+
+export const brandMentionsRelations = relations(brandMentions, ({one, many}) => ({
+	linkOpportunities: many(linkOpportunities),
 	site: one(sites, {
 		fields: [brandMentions.siteId],
 		references: [sites.id]
@@ -254,8 +258,10 @@ export const competitorDomainFootprintsRelations = relations(competitorDomainFoo
 }));
 
 export const siteCompetitorsRelations = relations(siteCompetitors, ({one, many}) => ({
+	competitorBacklinkSources: many(competitorBacklinkSources),
 	competitorDomainFootprints: many(competitorDomainFootprints),
 	competitorRankedKeywords: many(competitorRankedKeywords),
+	linkOpportunities: many(linkOpportunities),
 	site: one(sites, {
 		fields: [siteCompetitors.siteId],
 		references: [sites.id]
@@ -324,44 +330,84 @@ export const missionsRelations = relations(missions, ({many}) => ({
 	objectives: many(objectives),
 }));
 
-export const outreachActionsRelations = relations(outreachActions, ({one}) => ({
-	outreachCampaign: one(outreachCampaigns, {
-		fields: [outreachActions.campaignId],
-		references: [outreachCampaigns.id]
+export const outreachProspectsRelations = relations(outreachProspects, ({one, many}) => ({
+	linkOpportunities: many(linkOpportunities),
+	outreachContacts: many(outreachContacts),
+	outreachThreads: many(outreachThreads),
+	site: one(sites, {
+		fields: [outreachProspects.siteId],
+		references: [sites.id]
 	}),
-	backlinkSource: one(backlinkSources, {
-		fields: [outreachActions.linkedBacklinkSourceId],
-		references: [backlinkSources.id]
+}));
+
+export const linkOpportunitiesRelations = relations(linkOpportunities, ({one, many}) => ({
+	brandMention: one(brandMentions, {
+		fields: [linkOpportunities.brandMentionId],
+		references: [brandMentions.id]
 	}),
 	outreachProspect: one(outreachProspects, {
-		fields: [outreachActions.prospectId],
+		fields: [linkOpportunities.prospectId],
+		references: [outreachProspects.id]
+	}),
+	page: one(pages, {
+		fields: [linkOpportunities.targetPageId],
+		references: [pages.id]
+	}),
+	site: one(sites, {
+		fields: [linkOpportunities.siteId],
+		references: [sites.id]
+	}),
+	siteCompetitor: one(siteCompetitors, {
+		fields: [linkOpportunities.siteCompetitorId],
+		references: [siteCompetitors.id]
+	}),
+	outreachThreads: many(outreachThreads),
+}));
+
+export const outreachContactsRelations = relations(outreachContacts, ({one, many}) => ({
+	primaryThreads: many(outreachThreads),
+	outreachProspect: one(outreachProspects, {
+		fields: [outreachContacts.prospectId],
 		references: [outreachProspects.id]
 	}),
 }));
 
-export const outreachCampaignsRelations = relations(outreachCampaigns, ({one, many}) => ({
-	outreachActions: many(outreachActions),
+export const outreachThreadsRelations = relations(outreachThreads, ({one, many}) => ({
+	backlinkSource: one(backlinkSources, {
+		fields: [outreachThreads.wonBacklinkSourceId],
+		references: [backlinkSources.id]
+	}),
+	linkOpportunity: one(linkOpportunities, {
+		fields: [outreachThreads.opportunityId],
+		references: [linkOpportunities.id]
+	}),
+	outreachMessages: many(outreachMessages),
+	primaryContact: one(outreachContacts, {
+		fields: [outreachThreads.primaryContactId],
+		references: [outreachContacts.id]
+	}),
+	outreachProspect: one(outreachProspects, {
+		fields: [outreachThreads.prospectId],
+		references: [outreachProspects.id]
+	}),
 	site: one(sites, {
-		fields: [outreachCampaigns.siteId],
+		fields: [outreachThreads.siteId],
 		references: [sites.id]
-	}),
-	page_targetAssetPageId: one(pages, {
-		fields: [outreachCampaigns.targetAssetPageId],
-		references: [pages.id],
-		relationName: "outreachCampaigns_targetAssetPageId_pages_id"
-	}),
-	page_targetPageId: one(pages, {
-		fields: [outreachCampaigns.targetPageId],
-		references: [pages.id],
-		relationName: "outreachCampaigns_targetPageId_pages_id"
 	}),
 }));
 
-export const outreachProspectsRelations = relations(outreachProspects, ({one, many}) => ({
-	outreachActions: many(outreachActions),
-	site: one(sites, {
-		fields: [outreachProspects.siteId],
-		references: [sites.id]
+export const outreachMessagesRelations = relations(outreachMessages, ({one, many}) => ({
+	inReplyTo: one(outreachMessages, {
+		fields: [outreachMessages.inReplyToMessageId],
+		references: [outreachMessages.id],
+		relationName: "outreachMessages_inReplyToMessageId_outreachMessages_id"
+	}),
+	outreachMessages: many(outreachMessages, {
+		relationName: "outreachMessages_inReplyToMessageId_outreachMessages_id"
+	}),
+	outreachThread: one(outreachThreads, {
+		fields: [outreachMessages.threadId],
+		references: [outreachThreads.id]
 	}),
 }));
 

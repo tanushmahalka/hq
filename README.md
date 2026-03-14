@@ -44,4 +44,9 @@ Commonly used optional variables:
 - `VITE_GATEWAY_URL`
 - `VITE_GATEWAY_TOKEN`
 
+Database tuning variables:
+- `HQ_DB_FORCE_IPV4` to force IPv4-only Postgres sockets. Defaults to `true` outside production and `false` in production.
+- `HQ_DB_POOL_MAX` / `HQ_DB_POOL_MIN` to tune the Node Postgres pool size. Defaults to `1/1` outside production and `10/1` in production.
+- `HQ_DB_CONNECT_TIMEOUT_MS` and `HQ_DB_IDLE_TIMEOUT_MS` to tune connect and idle timeouts.
+
 See [EC2_RUNBOOK.md](/Users/tanushmahalka/Desktop/Programs/psx/hq/EC2_RUNBOOK.md) for the EC2 deployment flow.

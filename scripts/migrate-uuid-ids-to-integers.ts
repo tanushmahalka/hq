@@ -57,8 +57,6 @@ const MIGRATED_TABLES = [
   "backlink_sources",
   "brand_mentions",
   "outreach_prospects",
-  "outreach_campaigns",
-  "outreach_actions",
   "reviews",
   "business_profiles",
   "assets",
