@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import type { RawMessage, ContentBlock } from "@/hooks/use-chat";
 import { useChat } from "@/hooks/use-chat";
-import { useGateway } from "@/hooks/use-gateway";
 import { useApprovals } from "@/hooks/use-approvals";
 import { ApprovalCard } from "@/components/approvals/approval-card";
 import { LoaderFive } from "@/components/ui/loader";
@@ -168,7 +167,9 @@ function isSubagentPreamble(text: string): boolean {
 
 function collectText(blocks: ContentBlock[]): string {
   return blocks
-    .filter((block): block is ContentBlock & { type: "text" } => block.type === "text")
+    .filter(
+      (block): block is ContentBlock & { type: "text" } => block.type === "text"
+    )
     .map((block) => block.text)
     .join("");
 }
@@ -293,7 +294,9 @@ export function SessionMessageRow({
       }
     }
 
-    return <UserMessage text={text} images={images} timestamp={msg.timestamp} />;
+    return (
+      <UserMessage text={text} images={images} timestamp={msg.timestamp} />
+    );
   }
 
   if (msg.role === "toolResult") {
@@ -357,7 +360,7 @@ export function SessionMessageRow({
           );
         }
         const { block, index } = item;
-          switch (block.type) {
+        switch (block.type) {
           case "thinking":
             return (
               <div key={index} className="px-4 py-0.5">
@@ -794,7 +797,9 @@ function StepsAccordion({
                       : "text-muted-foreground/30"
                   }`}
                 >
-                  {step.kind === "tools" ? step.summary ?? step.text : step.text}
+                  {step.kind === "tools"
+                    ? step.summary ?? step.text
+                    : step.text}
                 </p>
               </div>
             );
@@ -811,14 +816,26 @@ function StepsAccordion({
    ═══════════════════════════════════════════════════════════════ */
 
 type UXBlock =
-  | { kind: "steps"; steps: Array<{ kind: "thinking" | "tools"; text: string; summary?: string }> }
+  | {
+      kind: "steps";
+      steps: Array<{
+        kind: "thinking" | "tools";
+        text: string;
+        summary?: string;
+      }>;
+    }
   | { kind: "text"; text: string; timestamp: number; isFirst: boolean }
   | { kind: "raw"; msg: RawMessage }
-  | { kind: "spawn"; childSessionKey: string; agentName: string; timestamp: number };
+  | {
+      kind: "spawn";
+      childSessionKey: string;
+      agentName: string;
+      timestamp: number;
+    };
 
 function buildUXBlocks(messages: RawMessage[]): UXBlock[] {
   const blocks: UXBlock[] = [];
-  let pendingSteps: UXBlock & { kind: "steps" } | null = null;
+  let pendingSteps: (UXBlock & { kind: "steps" }) | null = null;
 
   const flushSteps = () => {
     if (pendingSteps && pendingSteps.steps.length > 0) {
@@ -968,12 +985,22 @@ function parseSpawnResult(
       typeof parsed.childSessionKey === "string"
         ? parsed.childSessionKey
         : null;
-    console.log("[parseSpawnResult] content:", block.content.slice(0, 200), "childSessionKey:", childSessionKey);
+    console.log(
+      "[parseSpawnResult] content:",
+      block.content.slice(0, 200),
+      "childSessionKey:",
+      childSessionKey
+    );
     if (!childSessionKey) return null;
     const agentName = extractAgentName(childSessionKey);
     return { childSessionKey, agentName };
   } catch (e) {
-    console.log("[parseSpawnResult] JSON parse failed:", e, "content:", block.content.slice(0, 200));
+    console.log(
+      "[parseSpawnResult] JSON parse failed:",
+      e,
+      "content:",
+      block.content.slice(0, 200)
+    );
     return null;
   }
 }
@@ -999,16 +1026,17 @@ function SpawnedSessionInline({
             className="size-5 rounded-full flex items-center justify-center shrink-0"
             style={{ backgroundColor: "var(--swarm-blue-dim)" }}
           >
-            <GitBranch className="size-2.5" style={{ color: "var(--swarm-blue)" }} />
+            <GitBranch
+              className="size-2.5"
+              style={{ color: "var(--swarm-blue)" }}
+            />
           </div>
           <div className="flex-1 min-w-0">
             <span className="text-[11px] text-muted-foreground/50">
               Spawned sub-session
             </span>
             <span className="text-[11px] text-muted-foreground/30 mx-1">·</span>
-            <span className="text-[11px] text-foreground/70">
-              {agentName}
-            </span>
+            <span className="text-[11px] text-foreground/70">{agentName}</span>
           </div>
           <ChevronRight className="size-3 text-muted-foreground/25 shrink-0" />
         </button>
@@ -1045,7 +1073,10 @@ function SubSessionDialog({
               className="size-5 rounded-full flex items-center justify-center shrink-0"
               style={{ backgroundColor: "var(--swarm-blue-dim)" }}
             >
-              <GitBranch className="size-2.5" style={{ color: "var(--swarm-blue)" }} />
+              <GitBranch
+                className="size-2.5"
+                style={{ color: "var(--swarm-blue)" }}
+              />
             </div>
             <DialogTitle className="text-sm font-normal">
               {agentName}
@@ -1055,9 +1086,7 @@ function SubSessionDialog({
             Sub-session messages for {agentName}
           </DialogDescription>
         </DialogHeader>
-        {open && (
-          <SubSessionContent sessionKey={sessionKey} />
-        )}
+        {open && <SubSessionContent sessionKey={sessionKey} />}
       </DialogContent>
     </Dialog>
   );
@@ -1067,7 +1096,14 @@ function SubSessionDialog({
 function SubSessionContent({ sessionKey }: { sessionKey: string }) {
   console.log("[SubSessionContent] sessionKey:", sessionKey);
   const { rawMessages, stream, isBusy, loading, error } = useChat(sessionKey);
-  console.log("[SubSessionContent] loading:", loading, "rawMessages:", rawMessages.length, "error:", error);
+  console.log(
+    "[SubSessionContent] loading:",
+    loading,
+    "rawMessages:",
+    rawMessages.length,
+    "error:",
+    error
+  );
   const { approvals } = useApprovals();
   const sessionApprovals = approvals.filter(
     (approval) => approval.request.sessionKey === sessionKey
