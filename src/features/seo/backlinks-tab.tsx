@@ -1,5 +1,6 @@
 import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   ArrowUpDown,
   Check,
   ChevronsUpDown,
@@ -38,6 +39,7 @@ import {
   toTitleCase,
 } from "./utils";
 import type {
+  BacklinkHistoryPoint,
   BacklinksData,
   BacklinkSource,
   BacklinksSubview,
@@ -320,6 +322,17 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
  * Summary strip
  * --------------------------------------------------------------------------- */
 
+function NetBadge({ gained, lost }: { gained: number; lost: number }) {
+  if (gained === 0 && lost === 0) return null;
+  return (
+    <span className="text-[11px] tabular-nums text-muted-foreground/60 mt-0.5 inline-block">
+      <span className="text-emerald-500">+{gained}</span>
+      {" / "}
+      <span className="text-red-400">-{lost}</span>
+    </span>
+  );
+}
+
 function SummaryStrip({
   subview,
   summary,
@@ -328,27 +341,45 @@ function SummaryStrip({
   summary: BacklinksData["summary"];
 }) {
   return (
-    <div className="flex items-center gap-8 mb-4">
-      {subview === "existing" ? (
-        <>
-          <SummaryCard label="Referring domains" value={summary.referringDomains} />
-          <SummaryCard label="Live backlinks" value={summary.liveBacklinks} />
-          <SummaryCard label="Pages linked" value={summary.moneyPagesLinked} />
-          <SummaryCard label="Avg authority" value={summary.avgAuthority} />
-        </>
-      ) : subview === "competitors" ? (
-        <>
-          <SummaryCard label="Competitors tracked" value={summary.competitorDomainsTracked} />
-          <SummaryCard label="Backlinks tracked" value={summary.competitorBacklinksTracked} />
-          <SummaryCard label="Link gap" value={summary.linkGapCount} />
-        </>
-      ) : (
-        <>
-          <SummaryCard label="New" value={summary.newOpportunities} />
-          <SummaryCard label="High confidence" value={summary.highConfidenceOpportunities} />
-          <SummaryCard label="Approved" value={summary.approvedForOutreach} />
-          <SummaryCard label="Rejected" value={summary.rejectedOpportunities} />
-        </>
+    <div className="space-y-3 mb-4">
+      <div className="flex items-center gap-8">
+        {subview === "existing" ? (
+          <>
+            <div className="flex flex-col">
+              <span className="text-2xl font-normal text-foreground tabular-nums">
+                {formatNumber(summary.referringDomains)}
+              </span>
+              <span className="text-xs text-muted-foreground/60">Referring domains</span>
+              <NetBadge gained={summary.newBacklinks} lost={summary.lostBacklinks} />
+            </div>
+            <SummaryCard label="Live backlinks" value={summary.liveBacklinks} />
+            <SummaryCard label="Pages linked" value={summary.moneyPagesLinked} />
+            <SummaryCard label="Avg authority" value={summary.avgAuthority} />
+          </>
+        ) : subview === "competitors" ? (
+          <>
+            <SummaryCard label="Competitors tracked" value={summary.competitorDomainsTracked} />
+            <SummaryCard label="Backlinks tracked" value={summary.competitorBacklinksTracked} />
+            <SummaryCard label="Link gap" value={summary.linkGapCount} />
+          </>
+        ) : (
+          <>
+            <SummaryCard label="New" value={summary.newOpportunities} />
+            <SummaryCard label="High confidence" value={summary.highConfidenceOpportunities} />
+            <SummaryCard label="Approved" value={summary.approvedForOutreach} />
+            <SummaryCard label="Rejected" value={summary.rejectedOpportunities} />
+          </>
+        )}
+      </div>
+
+      {/* Broken backlinks callout */}
+      {subview === "existing" && summary.brokenBacklinks > 0 && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 px-3.5 py-2">
+          <AlertTriangle className="size-3.5 text-red-500 shrink-0" />
+          <p className="text-xs text-red-700 dark:text-red-300">
+            {formatNumber(summary.brokenBacklinks)} broken backlink{summary.brokenBacklinks !== 1 ? "s" : ""} detected — these are returning errors and losing value.
+          </p>
+        </div>
       )}
     </div>
   );
@@ -432,6 +463,22 @@ function formatShortDate(d: Date) {
  * Backlink trends — smooth chart with competitor toggle + combobox
  * --------------------------------------------------------------------------- */
 
+type TrendMetric = "backlinks" | "referringDomains";
+
+const TREND_METRICS: { key: TrendMetric; title: string }[] = [
+  { key: "backlinks", title: "Backlinks" },
+  { key: "referringDomains", title: "Referring domains" },
+];
+
+function extractMetricValue(point: BacklinkHistoryPoint, metric: TrendMetric): number {
+  switch (metric) {
+    case "backlinks":
+      return point.backlinksCount ?? 0;
+    case "referringDomains":
+      return point.referringDomainsCount ?? 0;
+  }
+}
+
 type BacklinkTrendSeries = {
   id: string | number;
   label: string;
@@ -462,13 +509,14 @@ function BacklinkTrends({ data }: { data: BacklinksData }) {
   const [showCompetitors, setShowCompetitors] = useState(false);
   const [selectedCompetitorIds, setSelectedCompetitorIds] = useState<Set<number>>(new Set());
   const [comboOpen, setComboOpen] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<TrendMetric>("backlinks");
 
   // Build competitor options for the combobox
   const competitorOptions = useMemo<CompetitorOption[]>(() => {
     return data.history.competitors
       .map((c) => {
         const points = c.history
-          .map((p) => ({ date: new Date(p.capturedAt), value: p.backlinksCount }))
+          .map((p) => ({ date: new Date(p.capturedAt), value: extractMetricValue(p, selectedMetric) }))
           .filter((p) => !Number.isNaN(p.date.getTime()));
         return {
           id: c.siteCompetitorId,
@@ -478,7 +526,7 @@ function BacklinkTrends({ data }: { data: BacklinksData }) {
         };
       })
       .sort((a, b) => b.latestValue - a.latestValue);
-  }, [data.history.competitors]);
+  }, [data.history.competitors, selectedMetric]);
 
   const toggleCompetitor = useCallback((id: number) => {
     setSelectedCompetitorIds((prev) => {
@@ -497,7 +545,7 @@ function BacklinkTrends({ data }: { data: BacklinksData }) {
       color: PRIMARY_COLOR,
       isPrimary: true,
       points: data.history.site
-        .map((p) => ({ date: new Date(p.capturedAt), value: p.backlinksCount }))
+        .map((p) => ({ date: new Date(p.capturedAt), value: extractMetricValue(p, selectedMetric) }))
         .filter((p) => !Number.isNaN(p.date.getTime())),
     };
 
@@ -512,7 +560,7 @@ function BacklinkTrends({ data }: { data: BacklinksData }) {
       for (const comp of data.history.competitors) {
         if (!activeIds.has(comp.siteCompetitorId)) continue;
         const points = comp.history
-          .map((p) => ({ date: new Date(p.capturedAt), value: p.backlinksCount }))
+          .map((p) => ({ date: new Date(p.capturedAt), value: extractMetricValue(p, selectedMetric) }))
           .filter((p) => !Number.isNaN(p.date.getTime()));
         if (points.length === 0) continue;
         result.push({
@@ -527,7 +575,7 @@ function BacklinkTrends({ data }: { data: BacklinksData }) {
     }
 
     return result;
-  }, [data.history, showCompetitors, selectedCompetitorIds, competitorOptions]);
+  }, [data.history, showCompetitors, selectedCompetitorIds, competitorOptions, selectedMetric]);
 
   // Determine effective selected set for combobox display
   const effectiveSelectedIds = useMemo(() => {
@@ -548,15 +596,27 @@ function BacklinkTrends({ data }: { data: BacklinksData }) {
 
   return (
     <div className="rounded-xl border border-border/40 bg-card mb-4 p-5 swarm-card">
-      {/* Header with toggle + combobox */}
+      {/* Header with metric toggle + competitor controls */}
       <div className="flex items-center justify-between mb-4">
-        <div>
+        <div className="flex items-center gap-4">
           <h2 className="text-sm font-medium text-muted-foreground">Backlink trends</h2>
-          <p className="text-xs text-muted-foreground/50 mt-0.5">
-            {showCompetitors
-              ? "Your backlinks compared with competitors"
-              : "Your backlink count over time"}
-          </p>
+          <div className="flex items-center gap-0">
+            {TREND_METRICS.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setSelectedMetric(m.key)}
+                className={cn(
+                  "px-3 py-1.5 text-xs rounded-full transition-colors",
+                  selectedMetric === m.key
+                    ? "bg-foreground/5 text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {m.title}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -664,14 +724,21 @@ function BacklinkTrendChart({ series }: { series: BacklinkTrendSeries[] }) {
   }, [series]);
 
   const { minVal, maxVal } = useMemo(() => {
-    let max = 0;
+    let min = Infinity;
+    let max = -Infinity;
     for (const s of series) {
       for (const p of s.points) {
+        if (p.value < min) min = p.value;
         if (p.value > max) max = p.value;
       }
     }
-    const span = Math.max(max * 0.12, 1);
-    return { minVal: 0, maxVal: max + span };
+    if (!Number.isFinite(min)) min = 0;
+    if (!Number.isFinite(max)) max = 1;
+    if (min === max) { min -= 1; max += 1; }
+    const span = Math.max(max - min, 1);
+    // For metrics that are always positive (backlinks, referring domains), floor at 0
+    const flooredMin = min < 0 ? min - span * 0.08 : 0;
+    return { minVal: flooredMin, maxVal: max + span * 0.08 };
   }, [series]);
 
   const xScale = useCallback(

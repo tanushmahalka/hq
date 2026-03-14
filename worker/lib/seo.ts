@@ -949,6 +949,9 @@ export type BacklinksResult = {
     liveBacklinks: number;
     moneyPagesLinked: number;
     avgAuthority: number;
+    newBacklinks: number;
+    lostBacklinks: number;
+    brokenBacklinks: number;
     competitorDomainsTracked: number;
     competitorBacklinksTracked: number;
     linkGapCount: number;
@@ -1067,8 +1070,13 @@ export async function getBacklinksData(
         .select({
           capturedAt: siteBacklinkFootprints.capturedAt,
           backlinksCount: siteBacklinkFootprints.backlinksCount,
+          newBacklinksCount: siteBacklinkFootprints.newBacklinksCount,
+          lostBacklinksCount: siteBacklinkFootprints.lostBacklinksCount,
           liveBacklinksCount: siteBacklinkFootprints.liveBacklinksCount,
           referringDomainsCount: siteBacklinkFootprints.referringDomainsCount,
+          newReferringDomainsCount: siteBacklinkFootprints.newReferringDomainsCount,
+          lostReferringDomainsCount: siteBacklinkFootprints.lostReferringDomainsCount,
+          brokenBacklinksCount: siteBacklinkFootprints.brokenBacklinksCount,
         })
         .from(siteBacklinkFootprints)
         .where(eq(siteBacklinkFootprints.siteId, siteId)),
@@ -1079,8 +1087,13 @@ export async function getBacklinksData(
               siteCompetitorId: competitorBacklinkFootprints.siteCompetitorId,
               capturedAt: competitorBacklinkFootprints.capturedAt,
               backlinksCount: competitorBacklinkFootprints.backlinksCount,
+              newBacklinksCount: competitorBacklinkFootprints.newBacklinksCount,
+              lostBacklinksCount: competitorBacklinkFootprints.lostBacklinksCount,
               liveBacklinksCount: competitorBacklinkFootprints.liveBacklinksCount,
               referringDomainsCount: competitorBacklinkFootprints.referringDomainsCount,
+              newReferringDomainsCount: competitorBacklinkFootprints.newReferringDomainsCount,
+              lostReferringDomainsCount: competitorBacklinkFootprints.lostReferringDomainsCount,
+              brokenBacklinksCount: competitorBacklinkFootprints.brokenBacklinksCount,
             })
             .from(competitorBacklinkFootprints)
             .where(
@@ -1165,41 +1178,52 @@ export async function getBacklinksData(
   const approvedForOutreach = enrichedOpportunities.filter((r) => r.status === "approved").length;
   const rejectedOpportunities = enrichedOpportunities.filter((r) => r.status === "rejected").length;
 
+  const mapHistoryRow = (row: typeof siteHistoryRows[number]) => ({
+    capturedAt: row.capturedAt,
+    backlinksCount: row.backlinksCount,
+    newBacklinksCount: row.newBacklinksCount ?? 0,
+    lostBacklinksCount: row.lostBacklinksCount ?? 0,
+    liveBacklinksCount: row.liveBacklinksCount,
+    referringDomainsCount: row.referringDomainsCount,
+    newReferringDomainsCount: row.newReferringDomainsCount ?? 0,
+    lostReferringDomainsCount: row.lostReferringDomainsCount ?? 0,
+    brokenBacklinksCount: row.brokenBacklinksCount ?? 0,
+  });
+
   const siteHistory = [...siteHistoryRows]
     .sort((a, b) => new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime())
-    .map((row) => ({
-      capturedAt: row.capturedAt,
-      backlinksCount: row.backlinksCount,
-      liveBacklinksCount: row.liveBacklinksCount,
-      referringDomainsCount: row.referringDomainsCount,
-    }));
+    .map(mapHistoryRow);
 
   if (siteHistory.length === 0) {
     siteHistory.push({
       capturedAt: new Date().toISOString(),
       backlinksCount: existingRows.length,
+      newBacklinksCount: 0,
+      lostBacklinksCount: 0,
       liveBacklinksCount: liveBacklinks,
       referringDomainsCount: ownDomains.size,
+      newReferringDomainsCount: 0,
+      lostReferringDomainsCount: 0,
+      brokenBacklinksCount: existingRows.filter((r) => r.status === "broken").length,
     });
   }
 
-  const competitorHistoryById = new Map<
-    number,
-    Array<{
-      capturedAt: string;
-      backlinksCount: number;
-      liveBacklinksCount: number;
-      referringDomainsCount: number;
-    }>
-  >();
+  type HistoryPoint = typeof siteHistory[number];
+
+  const competitorHistoryById = new Map<number, HistoryPoint[]>();
 
   for (const row of competitorHistoryRows) {
     const history = competitorHistoryById.get(row.siteCompetitorId) ?? [];
     history.push({
       capturedAt: row.capturedAt,
       backlinksCount: row.backlinksCount,
+      newBacklinksCount: row.newBacklinksCount ?? 0,
+      lostBacklinksCount: row.lostBacklinksCount ?? 0,
       liveBacklinksCount: row.liveBacklinksCount,
       referringDomainsCount: row.referringDomainsCount,
+      newReferringDomainsCount: row.newReferringDomainsCount ?? 0,
+      lostReferringDomainsCount: row.lostReferringDomainsCount ?? 0,
+      brokenBacklinksCount: row.brokenBacklinksCount ?? 0,
     });
     competitorHistoryById.set(row.siteCompetitorId, history);
   }
@@ -1213,8 +1237,13 @@ export async function getBacklinksData(
       history.push({
         capturedAt: new Date().toISOString(),
         backlinksCount: competitorBacklinkCounts.get(competitor.id) ?? 0,
+        newBacklinksCount: 0,
+        lostBacklinksCount: 0,
         liveBacklinksCount: competitorLiveBacklinkCounts.get(competitor.id) ?? 0,
         referringDomainsCount: competitorReferringDomainSets.get(competitor.id)?.size ?? 0,
+        newReferringDomainsCount: 0,
+        lostReferringDomainsCount: 0,
+        brokenBacklinksCount: 0,
       });
     }
 
@@ -1239,6 +1268,9 @@ export async function getBacklinksData(
       liveBacklinks,
       moneyPagesLinked,
       avgAuthority: Math.round(avgAuthority * 10) / 10,
+      newBacklinks: siteHistory[siteHistory.length - 1]?.newBacklinksCount ?? 0,
+      lostBacklinks: siteHistory[siteHistory.length - 1]?.lostBacklinksCount ?? 0,
+      brokenBacklinks: siteHistory[siteHistory.length - 1]?.brokenBacklinksCount ?? 0,
       competitorDomainsTracked: competitorDomainSet.size,
       competitorBacklinksTracked: enrichedCompetitorRows.length,
       linkGapCount,

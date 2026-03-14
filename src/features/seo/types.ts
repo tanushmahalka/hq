@@ -180,27 +180,29 @@ export type LinkOpportunity = {
   brandMentionId: number | null;
 };
 
+export type BacklinkHistoryPoint = {
+  capturedAt: string;
+  backlinksCount: number;
+  newBacklinksCount: number;
+  lostBacklinksCount: number;
+  liveBacklinksCount: number;
+  referringDomainsCount: number;
+  newReferringDomainsCount: number;
+  lostReferringDomainsCount: number;
+  brokenBacklinksCount: number;
+};
+
 export type BacklinksData = {
   existing: BacklinkSource[];
   competitor: CompetitorBacklink[];
   opportunities: LinkOpportunity[];
   history: {
-    site: Array<{
-      capturedAt: string;
-      backlinksCount: number;
-      liveBacklinksCount: number;
-      referringDomainsCount: number;
-    }>;
+    site: BacklinkHistoryPoint[];
     competitors: Array<{
       siteCompetitorId: number;
       competitorLabel: string;
       competitorDomain: string;
-      history: Array<{
-        capturedAt: string;
-        backlinksCount: number;
-        liveBacklinksCount: number;
-        referringDomainsCount: number;
-      }>;
+      history: BacklinkHistoryPoint[];
     }>;
   };
   summary: {
@@ -208,6 +210,9 @@ export type BacklinksData = {
     liveBacklinks: number;
     moneyPagesLinked: number;
     avgAuthority: number;
+    newBacklinks: number;
+    lostBacklinks: number;
+    brokenBacklinks: number;
     competitorDomainsTracked: number;
     competitorBacklinksTracked: number;
     linkGapCount: number;

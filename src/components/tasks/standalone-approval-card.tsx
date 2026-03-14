@@ -5,14 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useApprovals, type PendingApproval } from "@/hooks/use-approvals";
 import { ShieldAlert } from "lucide-react";
 
-function getPreviewText(markdown: string): string {
-  return markdown
-    .replace(/[`*_>#-]/g, " ")
-    .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function formatTimestamp(timestamp: number): string {
   return new Date(timestamp).toLocaleString("en-US", {
     month: "short",
@@ -73,14 +65,7 @@ export function StandaloneApprovalCard({
                 <span className="font-mono">{formatTimestamp(approval.createdAtMs)}</span>
               </div>
             </div>
-            <span className="max-w-[120px] truncate text-[10px] font-mono text-muted-foreground/45">
-              {approval.id}
-            </span>
           </div>
-
-          <p className="mt-3 line-clamp-4 text-[13px] leading-relaxed text-muted-foreground">
-            {getPreviewText(approval.request.body)}
-          </p>
 
           <div className="mt-4 flex items-center justify-between gap-2">
             <Button
