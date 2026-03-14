@@ -367,8 +367,8 @@ export function buildComplexTaskRootPrompt(task: {
     "",
     "Use the HQ complex task workflow contract for this session.",
     `1. Plan first and write ${buildTaskPlanPath(task.id)}.`,
-    "2. Record the plan and subtask list in HQ before execution.",
-    "3. Execute subtasks one by one with worker and validator subagents.",
+    "2. Have the planner record the plan and subtask list in HQ before execution.",
+    "3. Execute subtasks one by one with worker subagents.",
     "4. Complete the workflow in HQ when every subtask is finished.",
   ].filter(Boolean);
 

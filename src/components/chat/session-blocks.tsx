@@ -7,6 +7,7 @@ import {
   Info,
   BrainCircuit,
   Bot,
+  GitBranch,
   Image as ImageIcon,
 } from "lucide-react";
 import { MessageContent } from "@/components/messenger/message-content";
@@ -18,6 +19,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import type { RawMessage, ContentBlock } from "@/hooks/use-chat";
+import { useChat } from "@/hooks/use-chat";
+import { useGateway } from "@/hooks/use-gateway";
+import { useApprovals } from "@/hooks/use-approvals";
+import { ApprovalCard } from "@/components/approvals/approval-card";
+import { LoaderFive } from "@/components/ui/loader";
 import { useAdminView } from "@/hooks/use-admin-view";
 import {
   parseNotification,
@@ -134,7 +140,10 @@ function cleanMessageText(text: string): {
  */
 function isSystemDeliveryMessage(text: string): boolean {
   const stripped = text.replace(DATE_PREFIX_RE, "").trim();
-  return stripped.startsWith("[System Message]");
+  return (
+    stripped.startsWith("[System Message]") ||
+    stripped.includes("[Internal task completion event]")
+  );
 }
 
 /**
@@ -804,7 +813,8 @@ function StepsAccordion({
 type UXBlock =
   | { kind: "steps"; steps: Array<{ kind: "thinking" | "tools"; text: string; summary?: string }> }
   | { kind: "text"; text: string; timestamp: number; isFirst: boolean }
-  | { kind: "raw"; msg: RawMessage };
+  | { kind: "raw"; msg: RawMessage }
+  | { kind: "spawn"; childSessionKey: string; agentName: string; timestamp: number };
 
 function buildUXBlocks(messages: RawMessage[]): UXBlock[] {
   const blocks: UXBlock[] = [];
@@ -818,9 +828,21 @@ function buildUXBlocks(messages: RawMessage[]): UXBlock[] {
   };
 
   for (const msg of messages) {
-    // Skip tool results — they're hidden in UX mode and must not
-    // break the step accumulation chain between assistant messages
-    if (msg.role === "toolResult") continue;
+    // Tool results: detect sessions_spawn to show inline sub-session indicator,
+    // skip all other tool results in UX mode
+    if (msg.role === "toolResult") {
+      const spawnInfo = parseSpawnResult(msg);
+      if (spawnInfo) {
+        flushSteps();
+        blocks.push({
+          kind: "spawn",
+          childSessionKey: spawnInfo.childSessionKey,
+          agentName: spawnInfo.agentName,
+          timestamp: msg.timestamp,
+        });
+      }
+      continue;
+    }
 
     if (msg.role === "user") {
       flushSteps();
@@ -912,10 +934,188 @@ export function UXMessageList({ messages }: { messages: RawMessage[] }) {
             />
           );
         }
+        if (block.kind === "spawn") {
+          return (
+            <SpawnedSessionInline
+              key={`sp${i}`}
+              childSessionKey={block.childSessionKey}
+              agentName={block.agentName}
+            />
+          );
+        }
         // raw — user messages, tool results, etc.
         return <SessionMessageRow key={`r${i}`} msg={block.msg} />;
       })}
     </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Spawned sub-session — inline indicator + read-only dialog
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Parse a sessions_spawn tool result to extract the child session key */
+function parseSpawnResult(
+  msg: RawMessage
+): { childSessionKey: string; agentName: string } | null {
+  const block = msg.blocks[0];
+  if (!block || block.type !== "toolResult") return null;
+  if (block.toolName !== "sessions_spawn") return null;
+
+  try {
+    const parsed = JSON.parse(block.content);
+    const childSessionKey =
+      typeof parsed.childSessionKey === "string"
+        ? parsed.childSessionKey
+        : null;
+    console.log("[parseSpawnResult] content:", block.content.slice(0, 200), "childSessionKey:", childSessionKey);
+    if (!childSessionKey) return null;
+    const agentName = extractAgentName(childSessionKey);
+    return { childSessionKey, agentName };
+  } catch (e) {
+    console.log("[parseSpawnResult] JSON parse failed:", e, "content:", block.content.slice(0, 200));
+    return null;
+  }
+}
+
+/** Inline indicator shown between messages when a sub-session is spawned */
+function SpawnedSessionInline({
+  childSessionKey,
+  agentName,
+}: {
+  childSessionKey: string;
+  agentName: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <div className="px-4 py-1.5">
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2 rounded-lg border border-border/30 bg-card px-3 py-2 w-full text-left hover:bg-muted/20 transition-colors swarm-card"
+        >
+          <div
+            className="size-5 rounded-full flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "var(--swarm-blue-dim)" }}
+          >
+            <GitBranch className="size-2.5" style={{ color: "var(--swarm-blue)" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="text-[11px] text-muted-foreground/50">
+              Spawned sub-session
+            </span>
+            <span className="text-[11px] text-muted-foreground/30 mx-1">·</span>
+            <span className="text-[11px] text-foreground/70">
+              {agentName}
+            </span>
+          </div>
+          <ChevronRight className="size-3 text-muted-foreground/25 shrink-0" />
+        </button>
+      </div>
+
+      <SubSessionDialog
+        open={open}
+        onOpenChange={setOpen}
+        sessionKey={childSessionKey}
+        agentName={agentName}
+      />
+    </>
+  );
+}
+
+/** Read-only dialog showing a sub-session's messages */
+function SubSessionDialog({
+  open,
+  onOpenChange,
+  sessionKey,
+  agentName,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  sessionKey: string;
+  agentName: string;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-4 py-3 border-b border-border/50 shrink-0">
+          <div className="flex items-center gap-2">
+            <div
+              className="size-5 rounded-full flex items-center justify-center shrink-0"
+              style={{ backgroundColor: "var(--swarm-blue-dim)" }}
+            >
+              <GitBranch className="size-2.5" style={{ color: "var(--swarm-blue)" }} />
+            </div>
+            <DialogTitle className="text-sm font-normal">
+              {agentName}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="sr-only">
+            Sub-session messages for {agentName}
+          </DialogDescription>
+        </DialogHeader>
+        {open && (
+          <SubSessionContent sessionKey={sessionKey} />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Loads and renders messages for a sub-session (read-only, no input) */
+function SubSessionContent({ sessionKey }: { sessionKey: string }) {
+  console.log("[SubSessionContent] sessionKey:", sessionKey);
+  const { rawMessages, stream, isBusy, loading, error } = useChat(sessionKey);
+  console.log("[SubSessionContent] loading:", loading, "rawMessages:", rawMessages.length, "error:", error);
+  const { approvals } = useApprovals();
+  const sessionApprovals = approvals.filter(
+    (approval) => approval.request.sessionKey === sessionKey
+  );
+
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
+      {sessionApprovals.length > 0 && (
+        <div className="space-y-3 px-4 pt-4">
+          {sessionApprovals.map((approval) => (
+            <ApprovalCard key={approval.id} approval={approval} />
+          ))}
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <span className="text-xs text-muted-foreground/40">Loading...</span>
+        </div>
+      )}
+
+      {!loading && rawMessages.length === 0 && !isBusy && (
+        <p className="text-xs text-muted-foreground/50 text-center py-12">
+          No messages in this session yet.
+        </p>
+      )}
+
+      <UXMessageList messages={rawMessages} />
+
+      {isBusy && (
+        <div className="px-4 py-1.5">
+          <div className="max-w-[90%] space-y-1.5">
+            <LoaderFive text="Thinking..." />
+            {stream ? (
+              <div className="text-sm text-foreground/90 leading-relaxed">
+                <MessageContent text={stream} />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="mx-4 my-2 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          {error}
+        </div>
+      )}
+    </div>
   );
 }
 

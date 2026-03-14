@@ -187,10 +187,10 @@ function buildWorkflowRoleGuidance(params: {
       "Role: Root assignee orchestrator.",
       "You own the full task lifecycle in HQ.",
       `Plan first by spawning a planner subagent and having it write ${planPath}.`,
-      "After the planner finishes, call record_task_plan and then set_task_subtasks before execution begins.",
+      "The planner must call record_task_plan and set_task_subtasks before handing control back to you.",
       "Run subtasks sequentially. Only one subtask may be running at a time.",
-      "When you spawn planner, worker, or validator sessions, link them in HQ immediately with link_task_session.",
-      "If a validator returns needs_revision, you handle retries or spawn a fresh worker.",
+      "When you spawn planner or worker sessions, link them in HQ immediately with link_task_session.",
+      "If a subtask needs revision, you handle retries or spawn a fresh worker.",
       "You are the only actor allowed to call complete_task_workflow.",
     ];
   }
@@ -199,8 +199,9 @@ function buildWorkflowRoleGuidance(params: {
     return [
       "Role: Planner subagent.",
       `Write the implementation plan to ${planPath}.`,
-      "Return the relative plan path and a concise summary to the root assignee.",
-      "Do not execute subtasks, update subtask statuses, or complete the workflow.",
+      "After the plan is ready, call record_task_plan and then set_task_subtasks with the ordered execution list.",
+      "Return the relative plan path and a concise summary to the root assignee after both HQ updates succeed.",
+      "Do not execute subtasks, update subtask statuses after planning, or complete the workflow.",
     ];
   }
 
@@ -211,8 +212,7 @@ function buildWorkflowRoleGuidance(params: {
         ? formatSubtaskForPrompt(subtask)
         : ["No linked subtask metadata was found yet."]),
       "Start by marking your linked subtask as running if the root has not already done so.",
-      "Do the work, then record a concise implementation summary with update_task_subtask.",
-      "Spawn exactly one validator subagent for review, and make sure that validator session is linked in HQ.",
+      "Do the work, verify it against the acceptance criteria, then record a concise implementation summary and mark the subtask done with update_task_subtask.",
       "Do not call complete_task_workflow.",
     ];
   }
@@ -276,10 +276,9 @@ async function maybeBuildWorkflowPromptContext(params: {
     "",
     "Global Contract:",
     "- HQ is the source of truth for workflow state, subtasks, and linked sessions.",
-    "- The planner writes plan.md first; the root records the plan and subtask list before execution.",
+    "- The planner writes plan.md first, records the plan in HQ, and creates the ordered subtask list before execution.",
     "- Only one subtask may be running at a time in this workflow.",
-    "- Each worker must spawn exactly one validator subagent.",
-    "- The validator records either done or needs_revision.",
+    "- Each worker owns its linked subtask end-to-end and records the outcome in HQ.",
     "- Only the root assignee completes the workflow.",
     "",
     ...buildWorkflowRoleGuidance({

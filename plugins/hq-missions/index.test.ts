@@ -265,7 +265,148 @@ describe("hq-missions plugin", () => {
     expect(result?.prependSystemContext).toContain(
       "Role: Root assignee orchestrator."
     );
+    expect(result?.prependSystemContext).toContain(
+      "The planner must call record_task_plan and set_task_subtasks before handing control back to you."
+    );
+    expect(result?.prependSystemContext).not.toContain("validator subagent");
     expect(result?.prependSystemContext).toContain("MISSION CONTEXT");
+  });
+
+  it("injects planner guidance that records the plan and subtasks", async () => {
+    const { hooks } = createPlugin();
+    callMock.mockResolvedValue({
+      task: {
+        id: "task-1",
+        title: "Complex task",
+        description: "Ship the workflow",
+        status: "doing",
+        workflowMode: "complex",
+        assignor: "lead",
+        assignee: "agent-1",
+        campaignId: null,
+      },
+      workflow: {
+        status: "planning",
+        planPath: ".openclaw/tasks/task-1/plan.md",
+        planSummary: "Plan summary",
+      },
+      subtasks: [],
+      sessions: [
+        {
+          id: 2,
+          sessionKey: "agent:planner:subagent:abc",
+          role: "planner",
+          subtaskId: null,
+          agentId: "planner",
+          parentSessionKey: "agent:agent-1:task:task-1",
+          startedAt: null,
+          completedAt: null,
+          endedAt: null,
+        },
+      ],
+      summary: {
+        mode: "complex",
+        status: "planning",
+        planPath: ".openclaw/tasks/task-1/plan.md",
+        planSummary: "Plan summary",
+        totalSubtasks: 0,
+        completedSubtasks: 0,
+        activeSubtaskId: null,
+        blockedSubtaskId: null,
+        rootAgentId: "agent-1",
+        sessionKeys: ["agent:planner:subagent:abc"],
+      },
+    });
+
+    const result = await hooks.get("before_prompt_build")!(
+      {
+        prompt: "hello",
+        messages: [],
+      },
+      {
+        sessionKey: "agent:planner:subagent:abc",
+      }
+    );
+
+    expect(result?.prependSystemContext).toContain("Role: Planner subagent.");
+    expect(result?.prependSystemContext).toContain(
+      "After the plan is ready, call record_task_plan and then set_task_subtasks with the ordered execution list."
+    );
+  });
+
+  it("injects worker guidance without a validator handoff", async () => {
+    const { hooks } = createPlugin();
+    callMock.mockResolvedValue({
+      task: {
+        id: "task-1",
+        title: "Complex task",
+        description: "Ship the workflow",
+        status: "doing",
+        workflowMode: "complex",
+        assignor: "lead",
+        assignee: "agent-1",
+        campaignId: null,
+      },
+      workflow: {
+        status: "executing",
+        planPath: ".openclaw/tasks/task-1/plan.md",
+        planSummary: "Plan summary",
+      },
+      subtasks: [
+        {
+          id: 11,
+          position: 1,
+          title: "Implement data model",
+          instructions: "Add tables and enums",
+          acceptanceCriteria: "Schema and API compile",
+          status: "running",
+          latestWorkerSummary: null,
+          latestValidatorSummary: null,
+          latestFeedback: null,
+        },
+      ],
+      sessions: [
+        {
+          id: 3,
+          sessionKey: "agent:worker:subagent:def",
+          role: "worker",
+          subtaskId: 11,
+          agentId: "worker",
+          parentSessionKey: "agent:agent-1:task:task-1",
+          startedAt: null,
+          completedAt: null,
+          endedAt: null,
+        },
+      ],
+      summary: {
+        mode: "complex",
+        status: "executing",
+        planPath: ".openclaw/tasks/task-1/plan.md",
+        planSummary: "Plan summary",
+        totalSubtasks: 1,
+        completedSubtasks: 0,
+        activeSubtaskId: 11,
+        blockedSubtaskId: null,
+        rootAgentId: "agent-1",
+        sessionKeys: ["agent:worker:subagent:def"],
+      },
+    });
+
+    const result = await hooks.get("before_prompt_build")!(
+      {
+        prompt: "hello",
+        messages: [],
+      },
+      {
+        sessionKey: "agent:worker:subagent:def",
+      }
+    );
+
+    expect(result?.prependSystemContext).toContain("Role: Worker subagent.");
+    expect(result?.prependSystemContext).toContain(
+      "Do the work, verify it against the acceptance criteria, then record a concise implementation summary and mark the subtask done with update_task_subtask."
+    );
+    expect(result?.prependSystemContext).not.toContain("validator subagent");
   });
 
   it("skips prompt enrichment when the session is not linked to a workflow", async () => {
