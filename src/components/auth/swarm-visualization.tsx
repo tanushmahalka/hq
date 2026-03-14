@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { memo, startTransition, useEffect, useMemo, useState } from "react";
 
 const BAR_COUNT = 20;
-const TICK_MS = 500;
+const TICK_MS = 700;
 
 const MOCK_AGENTS = [
   { name: "PR Outreach", emoji: "📣", role: "Communications" },
@@ -65,7 +65,13 @@ type CardPlacement = {
   rotate: number;  // subtle tilt in degrees
 };
 
-export function SwarmVisualization() {
+type SwarmVisualizationProps = {
+  paused?: boolean;
+};
+
+export const SwarmVisualization = memo(function SwarmVisualization({
+  paused = false,
+}: SwarmVisualizationProps) {
   const [agents, setAgents] = useState<AgentState[]>(() =>
     MOCK_AGENTS.map((_, i) => {
       const rng = seededRandom(i * 7919);
@@ -105,21 +111,28 @@ export function SwarmVisualization() {
 
   // Tick: shift bars, randomly activate
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAgents((prev) =>
-        prev.map((agent) => {
-          const firing = Math.random() < agent.activityChance;
-          const newBars = [...agent.bars.slice(1), firing ? 1 : 0];
-          return {
-            ...agent,
-            bars: newBars,
-            active: firing || newBars.slice(-3).some((b) => b > 0),
-          };
-        })
-      );
+    if (paused) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      startTransition(() => {
+        setAgents((prev) =>
+          prev.map((agent) => {
+            const firing = Math.random() < agent.activityChance;
+            const newBars = [...agent.bars.slice(1), firing ? 1 : 0];
+            return {
+              ...agent,
+              bars: newBars,
+              active: firing || newBars.slice(-3).some((b) => b > 0),
+            };
+          })
+        );
+      });
     }, TICK_MS);
-    return () => clearInterval(interval);
-  }, []);
+
+    return () => window.clearInterval(interval);
+  }, [paused]);
 
   return (
     <div
@@ -194,7 +207,7 @@ export function SwarmVisualization() {
       />
     </div>
   );
-}
+});
 
 function MockAgentCard({
   name,

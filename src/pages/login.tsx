@@ -11,6 +11,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { refetch } = useSession();
+  const [isFormFocused, setIsFormFocused] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -67,7 +68,17 @@ export default function Login() {
           </p>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form
+            onSubmit={handleSubmit}
+            onFocusCapture={() => setIsFormFocused(true)}
+            onBlurCapture={(event) => {
+              const nextFocusedElement = event.relatedTarget as Node | null;
+              if (!event.currentTarget.contains(nextFocusedElement)) {
+                setIsFormFocused(false);
+              }
+            }}
+            className="space-y-5"
+          >
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm text-muted-foreground">
                 Email
@@ -112,7 +123,7 @@ export default function Login() {
 
       {/* Right — swarm visualization */}
       <div className="hidden lg:block flex-1 border-l border-border/30">
-        <SwarmVisualization />
+        <SwarmVisualization paused={isFormFocused} />
       </div>
     </div>
   );

@@ -285,6 +285,8 @@ export function MessengerComposer({
   onSend,
   onAbort,
   onRemoveQueuedMessage,
+  allowAttachments = true,
+  allowQueueWhileBusy = true,
 }: {
   connected: boolean;
   isBusy: boolean;
@@ -297,6 +299,8 @@ export function MessengerComposer({
   ) => Promise<"sent" | "queued" | "error" | "ignored">;
   onAbort: () => void;
   onRemoveQueuedMessage: (id: string) => void;
+  allowAttachments?: boolean;
+  allowQueueWhileBusy?: boolean;
 }) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<PendingImageAttachment[]>([]);
@@ -326,7 +330,11 @@ export function MessengerComposer({
     }
   };
 
-  const hasDraft = input.trim().length > 0 || attachments.length > 0;
+  const canQueue = allowQueueWhileBusy && isBusy;
+  const hasDraft =
+    input.trim().length > 0 || (allowAttachments && attachments.length > 0);
+  const sendDisabled =
+    !connected || !hasDraft || (!allowQueueWhileBusy && isBusy);
 
   return (
     <>
@@ -378,7 +386,7 @@ export function MessengerComposer({
           </div>
         </div>
       )}
-      {attachments.length > 0 && (
+      {allowAttachments && attachments.length > 0 && (
         <div className="border-b border-border/40 px-3 py-2">
           <div className="flex flex-wrap gap-2">
             {attachments.map((attachment) => (
@@ -409,22 +417,27 @@ export function MessengerComposer({
         </div>
       )}
       <form onSubmit={handleSubmit} className="relative flex items-end">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e: ChangeEvent<HTMLInputElement>) => {
-            if (e.target.files) {
-              void addFiles(e.target.files);
-            }
-          }}
-        />
+        {allowAttachments && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              if (e.target.files) {
+                void addFiles(e.target.files);
+              }
+            }}
+          />
+        )}
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onPaste={(e: ClipboardEvent<HTMLTextAreaElement>) => {
+            if (!allowAttachments) {
+              return;
+            }
             const imageFiles = Array.from(e.clipboardData.files).filter((file) =>
               file.type.startsWith("image/")
             );
@@ -452,16 +465,18 @@ export function MessengerComposer({
           }}
         />
         <div className="absolute right-3 bottom-2.5 flex items-center gap-1.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            disabled={!connected}
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="Attach images"
-          >
-            <Paperclip className="size-3.5" />
-          </Button>
+          {allowAttachments && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              disabled={!connected}
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Attach images"
+            >
+              <Paperclip className="size-3.5" />
+            </Button>
+          )}
           {canAbort && (
             <Button
               type="button"
@@ -478,11 +493,11 @@ export function MessengerComposer({
             type="submit"
             variant="ghost"
             size="sm"
-            disabled={!connected || !hasDraft}
-            aria-label={isBusy ? "Queue message" : "Send message"}
-            title={isBusy ? "Queue message" : "Send message"}
+            disabled={sendDisabled}
+            aria-label={canQueue ? "Queue message" : "Send message"}
+            title={canQueue ? "Queue message" : "Send message"}
           >
-            <span>{isBusy ? "Queue" : "Send"}</span>
+            <span>{canQueue ? "Queue" : "Send"}</span>
             <ArrowUp className="size-3.5" />
           </Button>
         </div>

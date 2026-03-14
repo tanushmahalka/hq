@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useGateway } from "./use-gateway";
 import type { EventFrame } from "@/lib/gateway-client";
 import {
@@ -23,6 +23,8 @@ type UseTaskSessionsOptions = {
   primarySessionKey?: string;
 };
 
+const EMPTY_LINKED_SESSION_KEYS: string[] = [];
+
 /**
  * Loads task-related session history. Complex tasks can provide linked session
  * keys from HQ workflow state, while simple tasks still fall back to task-key
@@ -33,7 +35,19 @@ export function useTaskSessions(
   options: UseTaskSessionsOptions = {},
 ) {
   const { client, connected, subscribe } = useGateway();
-  const { fallbackAgentId, linkedSessionKeys = [], primarySessionKey } = options;
+  const { fallbackAgentId, linkedSessionKeys: linkedSessionKeysInput, primarySessionKey } = options;
+  const linkedSessionKeysSignature = useMemo(() => {
+    const normalized = [
+      ...new Set((linkedSessionKeysInput ?? []).filter((key): key is string => Boolean(key))),
+    ].sort();
+    return normalized.join("\u001f");
+  }, [linkedSessionKeysInput]);
+  const linkedSessionKeys = useMemo(() => {
+    if (!linkedSessionKeysSignature) {
+      return EMPTY_LINKED_SESSION_KEYS;
+    }
+    return linkedSessionKeysSignature.split("\u001f");
+  }, [linkedSessionKeysSignature]);
 
   const [sessionKeys, setSessionKeys] = useState<string[]>([]);
   const [messages, setMessages] = useState<RawMessage[]>([]);
@@ -81,6 +95,15 @@ export function useTaskSessions(
     setStream(null);
   }, []);
 
+  // Reset local cached session state when switching tasks.
+  useEffect(() => {
+    sessionKeysRef.current = new Set(linkedSessionKeys);
+    setSessionKeys(linkedSessionKeys);
+    setMessages([]);
+    clearStreaming();
+    setError(null);
+  }, [taskId, clearStreaming, linkedSessionKeys]);
+
   const loadAll = useCallback(async (options?: { background?: boolean }) => {
     if (!client || !connected) return;
 
@@ -91,7 +114,12 @@ export function useTaskSessions(
     setError(null);
 
     try {
-      let matchingKeys = [...new Set(linkedSessionKeys.filter(Boolean))];
+      let matchingKeys = [
+        ...new Set([
+          ...linkedSessionKeys,
+          ...sessionKeysRef.current,
+        ].filter(Boolean)),
+      ];
 
       if (matchingKeys.length === 0) {
         // 1. Discover sessions matching this task via sessions.list
@@ -301,6 +329,11 @@ export function useTaskSessions(
           ? `agent:${fallbackAgentId}:task:${taskId}`
           : null);
       if (!primaryKey) return;
+
+      if (!sessionKeysRef.current.has(primaryKey)) {
+        sessionKeysRef.current.add(primaryKey);
+        setSessionKeys([...sessionKeysRef.current]);
+      }
 
       setMessages((prev) => [
         ...prev,

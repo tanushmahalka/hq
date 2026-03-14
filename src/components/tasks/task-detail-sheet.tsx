@@ -48,6 +48,7 @@ import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { useGateway } from "@/hooks/use-gateway";
 import { SessionMessageList } from "@/components/chat/session-blocks";
 import { MessageContent } from "@/components/messenger/message-content";
+import { MessengerComposer } from "@/components/messenger/messenger-panel";
 import { ChatSendProvider } from "@/hooks/use-chat-send";
 import {
   getAtQuery,
@@ -1046,12 +1047,10 @@ function SessionPanel({
     ? agents.find((a) => a.id === task.assignee)
     : agents[0];
   const emoji = agent?.identity?.emoji;
-  const primarySessionKey =
-    workflowDetail?.sessions.find(
-      (session) => session.role === "root" && !session.endedAt
-    )?.sessionKey ??
-    workflowDetail?.sessions.find((session) => session.role === "root")
-      ?.sessionKey;
+  console.log(workflowDetail);
+  const primarySessionKey = workflowDetail?.sessions.find(
+    (session) => session.role === "root"
+  )?.sessionKey;
 
   return (
     <SessionChat
@@ -1153,83 +1152,26 @@ function SessionChat({
 
         {/* Input */}
         <div className="relative border-t bg-muted/30 shrink-0">
-          <SessionComposer
+          <MessengerComposer
             connected={connected}
-            isStreaming={isStreaming}
-            onSend={(text) => void sendMessage(text)}
+            isBusy={isStreaming}
+            canAbort={false}
+            queue={[]}
+            allowAttachments={false}
+            allowQueueWhileBusy={false}
+            placeholder={connected ? "Message agent..." : "Connecting..."}
+            onSend={async (text) => {
+              if (isStreaming) {
+                return "ignored";
+              }
+              await sendMessage(text);
+              return "sent";
+            }}
+            onAbort={() => {}}
+            onRemoveQueuedMessage={() => {}}
           />
         </div>
       </div>
     </ChatSendProvider>
-  );
-}
-
-function SessionComposer({
-  connected,
-  isStreaming,
-  onSend,
-}: {
-  connected: boolean;
-  isStreaming: boolean;
-  onSend: (text: string) => void;
-}) {
-  const [input, setInput] = useState("");
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const nextMessage = input.trim();
-    if (!nextMessage || isStreaming) return;
-    onSend(nextMessage);
-    setInput("");
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      {isStreaming && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
-          <div
-            className="h-full w-full animate-pulse-soft"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 18%, color-mix(in oklab, var(--swarm-violet) 92%, white 8%) 50%, color-mix(in oklab, var(--swarm-violet) 55%, transparent) 82%, transparent 100%)",
-              boxShadow:
-                "0 0 12px color-mix(in oklab, var(--swarm-violet) 65%, transparent)",
-            }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent 0%, var(--swarm-violet) 50%, transparent 100%)",
-              opacity: 0.9,
-              animation: "swarm-shimmer 2s ease-in-out infinite",
-            }}
-          />
-        </div>
-      )}
-      <textarea
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit(e);
-          }
-        }}
-        placeholder={connected ? "Message agent..." : "Connecting..."}
-        disabled={!connected || isStreaming}
-        rows={2}
-        className="w-full bg-transparent px-4 py-3 pr-11 text-sm resize-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-40"
-      />
-      <Button
-        type="submit"
-        size="icon"
-        variant="ghost"
-        className="absolute right-2 bottom-2 size-7"
-        disabled={!connected || isStreaming || !input.trim()}
-      >
-        <Send className="size-3.5" />
-      </Button>
-    </form>
   );
 }
