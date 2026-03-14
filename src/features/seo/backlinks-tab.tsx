@@ -5,7 +5,6 @@ import {
   ExternalLink,
   Link2,
   Shield,
-  ShieldAlert,
   X,
 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -22,6 +21,7 @@ import {
   toTitleCase,
 } from "./utils";
 import type {
+  BacklinksData,
   BacklinkSource,
   BacklinksSubview,
   CompetitorBacklink,
@@ -132,7 +132,7 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
     { enabled: siteId > 0 },
   );
 
-  const data = query.data;
+  const data = query.data as BacklinksData | undefined;
   const summary = data?.summary;
 
   const subviewCounts = useMemo(
@@ -276,7 +276,7 @@ function SummaryStrip({
   summary,
 }: {
   subview: BacklinksSubview;
-  summary: NonNullable<ReturnType<typeof trpc.seo.backlinks.useQuery>["data"]>["summary"];
+  summary: BacklinksData["summary"];
 }) {
   return (
     <div className="flex items-center gap-8 mb-4">
@@ -717,7 +717,7 @@ function DetailPanel({
 }: {
   subview: BacklinksSubview;
   selectedId: number | null;
-  data: NonNullable<ReturnType<typeof trpc.seo.backlinks.useQuery>["data"]>;
+  data: BacklinksData;
   siteId: number;
   onClose: () => void;
 }) {

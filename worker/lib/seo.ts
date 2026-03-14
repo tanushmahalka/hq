@@ -5,7 +5,6 @@ import {
   backlinkSources,
   competitorBacklinkSources,
   competitorDomainFootprints,
-  competitorRankedKeywords,
   linkOpportunities,
   outreachProspects,
   pageClusterTargets,
@@ -356,8 +355,10 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     capturedAt: parseRequiredDate(row.capturedAt, "site_domain_footprints.capturedAt"),
   }));
 
-  const competitorKeywordStatsRows = competitorKeywordStatsResult.rows;
-  const competitorTopKeywordRows = competitorTopKeywordsResult.rows;
+  const competitorKeywordStatsRows =
+    competitorKeywordStatsResult.rows as CompetitorKeywordStatsRow[];
+  const competitorTopKeywordRows =
+    competitorTopKeywordsResult.rows as CompetitorTopKeywordRow[];
 
   const normalizedCompetitorKeywordStatsRows = competitorKeywordStatsRows.map((row) => ({
     ...row,
