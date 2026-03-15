@@ -237,7 +237,7 @@ function parseImageUrlBlock(
   };
 }
 
-function normalizePendingAttachments(
+export function normalizePendingAttachments(
   attachments?: PendingImageAttachment[]
 ): PendingImageAttachment[] {
   if (!attachments?.length) {
@@ -255,7 +255,7 @@ function normalizePendingAttachments(
   });
 }
 
-function serializeAttachments(
+export function serializeAttachments(
   attachments: PendingImageAttachment[]
 ): ApiImageAttachment[] | undefined {
   const serialized = attachments
@@ -277,7 +277,7 @@ function serializeAttachments(
   return serialized.length > 0 ? serialized : undefined;
 }
 
-function buildOptimisticUserMessage(
+export function buildOptimisticUserMessage(
   text: string,
   attachments: PendingImageAttachment[],
   timestamp: number,

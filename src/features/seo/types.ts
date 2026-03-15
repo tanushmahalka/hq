@@ -193,6 +193,26 @@ export type BacklinkHistoryPoint = {
 };
 
 export type BacklinksData = {
+  counts: {
+    existing: number;
+    competitors: number;
+    opportunities: number;
+  };
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+  applied: {
+    subview: BacklinksSubview;
+    search: string;
+    statusFilter: string;
+    sortBy: string;
+    sortDirection: "asc" | "desc";
+  };
   existing: BacklinkSource[];
   competitor: CompetitorBacklink[];
   opportunities: LinkOpportunity[];
@@ -221,6 +241,60 @@ export type BacklinksData = {
     approvedForOutreach: number;
     rejectedOpportunities: number;
   };
+};
+
+export type BacklinkLink = {
+  id: number;
+  sourceUrl: string | null;
+  sourceTitle: string | null;
+  targetUrl: string;
+  targetPageTitle: string | null;
+  anchorText: string | null;
+  relAttr: string | null;
+  linkType: string | null;
+  authorityScore: string | null;
+  relevanceScore: string | null;
+  status: string;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+};
+
+export type BacklinkDomainGroup = {
+  sourceDomain: string;
+  totalLinks: number;
+  liveLinks: number;
+  maxAuthority: number | null;
+  lastSeenAt: string | null;
+  links: BacklinkLink[];
+  hasMoreLinks: boolean;
+};
+
+export type CompetitorBacklinkDomainGroup = {
+  sourceDomain: string;
+  totalLinks: number;
+  liveLinks: number;
+  maxAuthority: number | null;
+  lastSeenAt: string | null;
+  competitors: Array<{
+    competitorId: number;
+    competitorLabel: string;
+    competitorDomain: string;
+    linkCount: number;
+  }>;
+  links: Array<BacklinkLink & {
+    competitorLabel: string;
+    competitorDomain: string;
+  }>;
+  hasMoreLinks: boolean;
+};
+
+export type BacklinksByDomainPageInfo = {
+  page: number;
+  pageSize: number;
+  totalDomains: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
 };
 
 export type BacklinksSubview = "existing" | "competitors" | "opportunities";

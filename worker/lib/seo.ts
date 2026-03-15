@@ -1,4 +1,4 @@
-import { and, between, desc, eq, isNotNull, sql, sum } from "drizzle-orm";
+import { and, asc, between, desc, eq, ilike, isNotNull, or, sql, sum } from "drizzle-orm";
 import type { Database } from "../db/client.ts";
 import {
   analyticsDaily,
@@ -862,6 +862,26 @@ export async function getAnalyticsSummary(
  * --------------------------------------------------------------------------- */
 
 export type BacklinksResult = {
+  counts: {
+    existing: number;
+    competitors: number;
+    opportunities: number;
+  };
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+  applied: {
+    subview: "existing" | "competitors" | "opportunities";
+    search: string;
+    statusFilter: string;
+    sortBy: string;
+    sortDirection: "asc" | "desc";
+  };
   existing: Array<{
     id: number;
     siteId: number;
@@ -962,11 +982,49 @@ export type BacklinksResult = {
   };
 };
 
+type BacklinksQueryInput = {
+  siteId: number;
+  subview: "existing" | "competitors" | "opportunities";
+  search?: string;
+  statusFilter?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
+  summaryOnly?: boolean;
+};
+
+function clampPageSize(value: number | undefined): number {
+  const next = value ?? 50;
+  return Math.min(100, Math.max(25, next));
+}
+
+function normalizeSearch(value: string | undefined): string {
+  return value?.trim() ?? "";
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+}
+
 export async function getBacklinksData(
   db: Database,
-  siteId: number,
+  input: BacklinksQueryInput,
 ): Promise<BacklinksResult> {
-  // Get competitor IDs for this site
+  const siteId = input.siteId;
+  const subview = input.subview;
+  const search = normalizeSearch(input.search);
+  const statusFilter = input.statusFilter?.trim() || "all";
+  const summaryOnly = input.summaryOnly ?? false;
+  const pageSize = clampPageSize(input.pageSize);
+  const requestedPage = Math.max(1, input.page ?? 1);
+  const sortDirection = input.sortDirection === "asc" ? "asc" : "desc";
+
   const siteCompetitorRows = await db
     .select({
       id: siteCompetitors.id,
@@ -976,42 +1034,257 @@ export async function getBacklinksData(
     .from(siteCompetitors)
     .where(eq(siteCompetitors.siteId, siteId));
 
-  const competitorIds = siteCompetitorRows.map((c) => c.id);
-  const competitorById = new Map(siteCompetitorRows.map((c) => [c.id, c]));
+  const searchPattern = search ? `%${search.replaceAll("%", "\\%").replaceAll("_", "\\_")}%` : null;
 
-  const [existingRows, competitorRows, opportunityRows, siteHistoryRows, competitorHistoryRows] =
-    await Promise.all([
-    // 1. Our backlinks
+  const existingSearch = searchPattern
+    ? or(
+        ilike(backlinkSources.sourceDomain, searchPattern),
+        ilike(backlinkSources.sourceUrl, searchPattern),
+        ilike(backlinkSources.sourceTitle, searchPattern),
+        ilike(backlinkSources.targetUrl, searchPattern),
+        ilike(backlinkSources.anchorText, searchPattern),
+        ilike(pages.titleTag, searchPattern),
+      )
+    : undefined;
+  const competitorSearch = searchPattern
+    ? or(
+        ilike(siteCompetitors.label, searchPattern),
+        ilike(siteCompetitors.competitorDomain, searchPattern),
+        ilike(competitorBacklinkSources.sourceDomain, searchPattern),
+        ilike(competitorBacklinkSources.sourceUrl, searchPattern),
+        ilike(competitorBacklinkSources.sourceTitle, searchPattern),
+        ilike(competitorBacklinkSources.targetUrl, searchPattern),
+        ilike(competitorBacklinkSources.anchorText, searchPattern),
+      )
+    : undefined;
+  const opportunitySearch = searchPattern
+    ? or(
+        ilike(linkOpportunities.sourceDomain, searchPattern),
+        ilike(linkOpportunities.sourceUrl, searchPattern),
+        ilike(linkOpportunities.sourceTitle, searchPattern),
+        ilike(linkOpportunities.opportunityType, searchPattern),
+        ilike(linkOpportunities.whyThisFits, searchPattern),
+        ilike(pages.titleTag, searchPattern),
+        ilike(pages.url, searchPattern),
+        ilike(siteCompetitors.label, searchPattern),
+        ilike(outreachProspects.organizationName, searchPattern),
+      )
+    : undefined;
+
+  const existingWhere = and(
+    eq(backlinkSources.siteId, siteId),
+    statusFilter !== "all" ? eq(backlinkSources.status, statusFilter) : undefined,
+    existingSearch,
+  );
+  const competitorWhere = and(
+    eq(siteCompetitors.siteId, siteId),
+    statusFilter !== "all" ? eq(competitorBacklinkSources.status, statusFilter) : undefined,
+    competitorSearch,
+  );
+  const opportunityWhere = and(
+    eq(linkOpportunities.siteId, siteId),
+    statusFilter !== "all" ? eq(linkOpportunities.status, statusFilter) : undefined,
+    opportunitySearch,
+  );
+
+  const [
+    existingSummaryRow,
+    competitorSummaryRow,
+    opportunitySummaryRow,
+    linkGapRow,
+    siteHistoryRows,
+    competitorHistoryRows,
+    existingCountRow,
+    competitorCountRow,
+    opportunityCountRow,
+  ] = await Promise.all([
     db
       .select({
-        id: backlinkSources.id,
-        siteId: backlinkSources.siteId,
-        sourceDomain: backlinkSources.sourceDomain,
-        sourceUrl: backlinkSources.sourceUrl,
-        sourceTitle: backlinkSources.sourceTitle,
-        targetUrl: backlinkSources.targetUrl,
-        targetPageId: backlinkSources.targetPageId,
-        targetPageTitle: pages.titleTag,
-        anchorText: backlinkSources.anchorText,
-        relAttr: backlinkSources.relAttr,
-        linkType: backlinkSources.linkType,
-        relevanceScore: backlinkSources.relevanceScore,
-        authorityScore: backlinkSources.authorityScore,
-        firstSeenAt: backlinkSources.firstSeenAt,
-        lastSeenAt: backlinkSources.lastSeenAt,
-        verifiedAt: backlinkSources.verifiedAt,
-        status: backlinkSources.status,
+        total: sql<number>`count(*)`,
+        referringDomains: sql<number>`count(distinct ${backlinkSources.sourceDomain})`,
+        liveBacklinks: sql<number>`sum(case when ${backlinkSources.status} = 'live' then 1 else 0 end)`,
+        moneyPagesLinked: sql<number>`count(distinct ${backlinkSources.targetPageId})`,
+        avgAuthority: sql<string | null>`avg(${backlinkSources.authorityScore})`,
       })
       .from(backlinkSources)
+      .where(eq(backlinkSources.siteId, siteId))
+      .then((rows) => rows[0]),
+    db
+      .select({
+        total: sql<number>`count(*)`,
+      })
+      .from(competitorBacklinkSources)
+      .innerJoin(
+        siteCompetitors,
+        eq(competitorBacklinkSources.siteCompetitorId, siteCompetitors.id),
+      )
+      .where(eq(siteCompetitors.siteId, siteId))
+      .then((rows) => rows[0]),
+    db
+      .select({
+        total: sql<number>`count(*)`,
+        newOpportunities: sql<number>`sum(case when ${linkOpportunities.status} = 'new' then 1 else 0 end)`,
+        highConfidenceOpportunities:
+          sql<number>`sum(case when ${linkOpportunities.confidenceScore} >= 70 then 1 else 0 end)`,
+        approvedForOutreach:
+          sql<number>`sum(case when ${linkOpportunities.status} = 'approved' then 1 else 0 end)`,
+        rejectedOpportunities:
+          sql<number>`sum(case when ${linkOpportunities.status} = 'rejected' then 1 else 0 end)`,
+      })
+      .from(linkOpportunities)
+      .where(eq(linkOpportunities.siteId, siteId))
+      .then((rows) => rows[0]),
+    db
+      .select({
+        linkGapCount: sql<number>`count(distinct ${competitorBacklinkSources.sourceDomain})`,
+      })
+      .from(competitorBacklinkSources)
+      .innerJoin(
+        siteCompetitors,
+        eq(competitorBacklinkSources.siteCompetitorId, siteCompetitors.id),
+      )
+      .leftJoin(
+        backlinkSources,
+        and(
+          eq(backlinkSources.siteId, siteId),
+          eq(backlinkSources.sourceDomain, competitorBacklinkSources.sourceDomain),
+        ),
+      )
+      .where(and(eq(siteCompetitors.siteId, siteId), sql`${backlinkSources.id} is null`))
+      .then((rows) => rows[0]),
+    db
+      .select({
+        capturedAt: siteBacklinkFootprints.capturedAt,
+        backlinksCount: siteBacklinkFootprints.backlinksCount,
+        newBacklinksCount: siteBacklinkFootprints.newBacklinksCount,
+        lostBacklinksCount: siteBacklinkFootprints.lostBacklinksCount,
+        liveBacklinksCount: siteBacklinkFootprints.liveBacklinksCount,
+        referringDomainsCount: siteBacklinkFootprints.referringDomainsCount,
+        newReferringDomainsCount: siteBacklinkFootprints.newReferringDomainsCount,
+        lostReferringDomainsCount: siteBacklinkFootprints.lostReferringDomainsCount,
+        brokenBacklinksCount: siteBacklinkFootprints.brokenBacklinksCount,
+      })
+      .from(siteBacklinkFootprints)
+      .where(eq(siteBacklinkFootprints.siteId, siteId)),
+    db
+      .select({
+        siteCompetitorId: competitorBacklinkFootprints.siteCompetitorId,
+        capturedAt: competitorBacklinkFootprints.capturedAt,
+        backlinksCount: competitorBacklinkFootprints.backlinksCount,
+        newBacklinksCount: competitorBacklinkFootprints.newBacklinksCount,
+        lostBacklinksCount: competitorBacklinkFootprints.lostBacklinksCount,
+        liveBacklinksCount: competitorBacklinkFootprints.liveBacklinksCount,
+        referringDomainsCount: competitorBacklinkFootprints.referringDomainsCount,
+        newReferringDomainsCount: competitorBacklinkFootprints.newReferringDomainsCount,
+        lostReferringDomainsCount: competitorBacklinkFootprints.lostReferringDomainsCount,
+        brokenBacklinksCount: competitorBacklinkFootprints.brokenBacklinksCount,
+      })
+      .from(competitorBacklinkFootprints)
+      .innerJoin(
+        siteCompetitors,
+        eq(competitorBacklinkFootprints.siteCompetitorId, siteCompetitors.id),
+      )
+      .where(eq(siteCompetitors.siteId, siteId)),
+    db
+      .select({ total: sql<number>`count(*)` })
+      .from(backlinkSources)
       .leftJoin(pages, eq(backlinkSources.targetPageId, pages.id))
-      .where(eq(backlinkSources.siteId, siteId)),
+      .where(existingWhere)
+      .then((rows) => rows[0]),
+    db
+      .select({ total: sql<number>`count(*)` })
+      .from(competitorBacklinkSources)
+      .innerJoin(
+        siteCompetitors,
+        eq(competitorBacklinkSources.siteCompetitorId, siteCompetitors.id),
+      )
+      .where(competitorWhere)
+      .then((rows) => rows[0]),
+    db
+      .select({ total: sql<number>`count(*)` })
+      .from(linkOpportunities)
+      .leftJoin(pages, eq(linkOpportunities.targetPageId, pages.id))
+      .leftJoin(siteCompetitors, eq(linkOpportunities.siteCompetitorId, siteCompetitors.id))
+      .leftJoin(outreachProspects, eq(linkOpportunities.prospectId, outreachProspects.id))
+      .where(opportunityWhere)
+      .then((rows) => rows[0]),
+  ]);
 
-    // 2. Competitor backlinks
-    competitorIds.length > 0
+  const countBySubview = {
+    existing: toNumber(existingCountRow?.total),
+    competitors: toNumber(competitorCountRow?.total),
+    opportunities: toNumber(opportunityCountRow?.total),
+  };
+  const total = countBySubview[subview];
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const offset = (page - 1) * pageSize;
+
+  const existingSortColumn =
+    input.sortBy === "authority"
+      ? backlinkSources.authorityScore
+      : input.sortBy === "source"
+        ? backlinkSources.sourceDomain
+        : backlinkSources.lastSeenAt;
+  const competitorSortColumn =
+    input.sortBy === "authority"
+      ? competitorBacklinkSources.authorityScore
+      : input.sortBy === "relevance"
+        ? competitorBacklinkSources.relevanceScore
+        : input.sortBy === "source"
+          ? competitorBacklinkSources.sourceDomain
+          : input.sortBy === "competitor"
+            ? siteCompetitors.label
+            : competitorBacklinkSources.lastSeenAt;
+  const opportunitySortColumn =
+    input.sortBy === "risk"
+      ? linkOpportunities.riskScore
+      : input.sortBy === "status"
+        ? linkOpportunities.status
+        : input.sortBy === "source"
+          ? linkOpportunities.sourceDomain
+          : input.sortBy === "targetPage"
+            ? pages.titleTag
+            : linkOpportunities.confidenceScore;
+
+  const [existingRows, competitorRows, opportunityRows] = summaryOnly
+    ? [[], [], []]
+    : await Promise.all([
+    subview === "existing"
+      ? db
+          .select({
+            id: backlinkSources.id,
+            siteId: backlinkSources.siteId,
+            sourceDomain: backlinkSources.sourceDomain,
+            sourceUrl: backlinkSources.sourceUrl,
+            sourceTitle: backlinkSources.sourceTitle,
+            targetUrl: backlinkSources.targetUrl,
+            targetPageId: backlinkSources.targetPageId,
+            targetPageTitle: pages.titleTag,
+            anchorText: backlinkSources.anchorText,
+            relAttr: backlinkSources.relAttr,
+            linkType: backlinkSources.linkType,
+            relevanceScore: backlinkSources.relevanceScore,
+            authorityScore: backlinkSources.authorityScore,
+            firstSeenAt: backlinkSources.firstSeenAt,
+            lastSeenAt: backlinkSources.lastSeenAt,
+            verifiedAt: backlinkSources.verifiedAt,
+            status: backlinkSources.status,
+          })
+          .from(backlinkSources)
+          .leftJoin(pages, eq(backlinkSources.targetPageId, pages.id))
+          .where(existingWhere)
+          .orderBy(sortDirection === "asc" ? asc(existingSortColumn) : desc(existingSortColumn))
+          .limit(pageSize)
+          .offset(offset)
+      : Promise.resolve([]),
+    subview === "competitors"
       ? db
           .select({
             id: competitorBacklinkSources.id,
             siteCompetitorId: competitorBacklinkSources.siteCompetitorId,
+            competitorLabel: siteCompetitors.label,
+            competitorDomain: siteCompetitors.competitorDomain,
             sourceDomain: competitorBacklinkSources.sourceDomain,
             sourceUrl: competitorBacklinkSources.sourceUrl,
             sourceTitle: competitorBacklinkSources.sourceTitle,
@@ -1026,157 +1299,53 @@ export async function getBacklinksData(
             status: competitorBacklinkSources.status,
           })
           .from(competitorBacklinkSources)
-          .where(
-            sql`${competitorBacklinkSources.siteCompetitorId} IN (${sql.join(
-              competitorIds.map((id) => sql`${id}`),
-              sql`, `,
-            )})`,
+          .innerJoin(
+            siteCompetitors,
+            eq(competitorBacklinkSources.siteCompetitorId, siteCompetitors.id),
           )
+          .where(competitorWhere)
+          .orderBy(sortDirection === "asc" ? asc(competitorSortColumn) : desc(competitorSortColumn))
+          .limit(pageSize)
+          .offset(offset)
       : Promise.resolve([]),
-
-    // 3. Opportunities
-      db
-        .select({
-          id: linkOpportunities.id,
-          siteId: linkOpportunities.siteId,
-          sourceDomain: linkOpportunities.sourceDomain,
-          sourceUrl: linkOpportunities.sourceUrl,
-          sourceTitle: linkOpportunities.sourceTitle,
-          targetPageId: linkOpportunities.targetPageId,
-          targetPageTitle: pages.titleTag,
-          targetPageUrl: pages.url,
-          opportunityType: linkOpportunities.opportunityType,
-          discoveredFrom: linkOpportunities.discoveredFrom,
-          whyThisFits: linkOpportunities.whyThisFits,
-          suggestedAnchorText: linkOpportunities.suggestedAnchorText,
-          relevanceScore: linkOpportunities.relevanceScore,
-          authorityScore: linkOpportunities.authorityScore,
-          confidenceScore: linkOpportunities.confidenceScore,
-          riskScore: linkOpportunities.riskScore,
-          status: linkOpportunities.status,
-          firstSeenAt: linkOpportunities.firstSeenAt,
-          lastReviewedAt: linkOpportunities.lastReviewedAt,
-          prospectId: linkOpportunities.prospectId,
-          prospectName: outreachProspects.organizationName,
-          siteCompetitorId: linkOpportunities.siteCompetitorId,
-          brandMentionId: linkOpportunities.brandMentionId,
-        })
-        .from(linkOpportunities)
-        .leftJoin(pages, eq(linkOpportunities.targetPageId, pages.id))
-        .leftJoin(outreachProspects, eq(linkOpportunities.prospectId, outreachProspects.id))
-        .where(eq(linkOpportunities.siteId, siteId)),
-
-      db
-        .select({
-          capturedAt: siteBacklinkFootprints.capturedAt,
-          backlinksCount: siteBacklinkFootprints.backlinksCount,
-          newBacklinksCount: siteBacklinkFootprints.newBacklinksCount,
-          lostBacklinksCount: siteBacklinkFootprints.lostBacklinksCount,
-          liveBacklinksCount: siteBacklinkFootprints.liveBacklinksCount,
-          referringDomainsCount: siteBacklinkFootprints.referringDomainsCount,
-          newReferringDomainsCount: siteBacklinkFootprints.newReferringDomainsCount,
-          lostReferringDomainsCount: siteBacklinkFootprints.lostReferringDomainsCount,
-          brokenBacklinksCount: siteBacklinkFootprints.brokenBacklinksCount,
-        })
-        .from(siteBacklinkFootprints)
-        .where(eq(siteBacklinkFootprints.siteId, siteId)),
-
-      competitorIds.length > 0
-        ? db
-            .select({
-              siteCompetitorId: competitorBacklinkFootprints.siteCompetitorId,
-              capturedAt: competitorBacklinkFootprints.capturedAt,
-              backlinksCount: competitorBacklinkFootprints.backlinksCount,
-              newBacklinksCount: competitorBacklinkFootprints.newBacklinksCount,
-              lostBacklinksCount: competitorBacklinkFootprints.lostBacklinksCount,
-              liveBacklinksCount: competitorBacklinkFootprints.liveBacklinksCount,
-              referringDomainsCount: competitorBacklinkFootprints.referringDomainsCount,
-              newReferringDomainsCount: competitorBacklinkFootprints.newReferringDomainsCount,
-              lostReferringDomainsCount: competitorBacklinkFootprints.lostReferringDomainsCount,
-              brokenBacklinksCount: competitorBacklinkFootprints.brokenBacklinksCount,
-            })
-            .from(competitorBacklinkFootprints)
-            .where(
-              sql`${competitorBacklinkFootprints.siteCompetitorId} IN (${sql.join(
-                competitorIds.map((id) => sql`${id}`),
-                sql`, `,
-              )})`,
-            )
-        : Promise.resolve([]),
-    ]);
-
-  // Enrich competitor backlinks with labels
-  const enrichedCompetitorRows = competitorRows.map((row) => {
-    const comp = competitorById.get(row.siteCompetitorId);
-    return {
-      ...row,
-      competitorLabel: comp?.label ?? "Unknown",
-      competitorDomain: comp?.domain ?? "",
-    };
-  });
-
-  // Enrich opportunities with competitor labels
-  const enrichedOpportunities = opportunityRows.map((row) => {
-    const comp = row.siteCompetitorId ? competitorById.get(row.siteCompetitorId) : null;
-    return {
-      ...row,
-      competitorLabel: comp?.label ?? null,
-    };
-  });
-
-  // Compute our referring domains (unique source domains from existing)
-  const ownDomains = new Set(existingRows.map((r) => r.sourceDomain));
-  const liveBacklinks = existingRows.filter((r) => r.status === "live").length;
-
-  // Money pages linked — pages that are target of backlinks and are money pages
-  const linkedTargetPageIds = new Set(
-    existingRows.map((r) => r.targetPageId).filter((id): id is number => id !== null),
-  );
-  // We don't have isMoneyPage join here, so approximate with count of distinct target pages
-  const moneyPagesLinked = linkedTargetPageIds.size;
-
-  // Avg authority
-  const authorityValues = existingRows
-    .map((r) => (r.authorityScore ? Number(r.authorityScore) : null))
-    .filter((v): v is number => v !== null && !Number.isNaN(v));
-  const avgAuthority =
-    authorityValues.length > 0
-      ? authorityValues.reduce((s, v) => s + v, 0) / authorityValues.length
-      : 0;
-
-  // Competitor stats
-  const competitorDomainSet = new Set(siteCompetitorRows.map((c) => c.domain));
-  const competitorBacklinkCounts = new Map<number, number>();
-  const competitorLiveBacklinkCounts = new Map<number, number>();
-  const competitorReferringDomainSets = new Map<number, Set<string>>();
-  for (const row of enrichedCompetitorRows) {
-    competitorBacklinkCounts.set(
-      row.siteCompetitorId,
-      (competitorBacklinkCounts.get(row.siteCompetitorId) ?? 0) + 1,
-    );
-    if (row.status === "live") {
-      competitorLiveBacklinkCounts.set(
-        row.siteCompetitorId,
-        (competitorLiveBacklinkCounts.get(row.siteCompetitorId) ?? 0) + 1,
-      );
-    }
-    const domains = competitorReferringDomainSets.get(row.siteCompetitorId) ?? new Set<string>();
-    domains.add(row.sourceDomain);
-    competitorReferringDomainSets.set(row.siteCompetitorId, domains);
-  }
-
-  // Link gap: competitor backlink source domains we don't have
-  const competitorSourceDomains = new Set(enrichedCompetitorRows.map((r) => r.sourceDomain));
-  const linkGapCount = [...competitorSourceDomains].filter((d) => !ownDomains.has(d)).length;
-
-  // Opportunity stats
-  const newOpportunities = enrichedOpportunities.filter((r) => r.status === "new").length;
-  const highConfidenceOpportunities = enrichedOpportunities.filter((r) => {
-    const score = r.confidenceScore ? Number(r.confidenceScore) : 0;
-    return score >= 70;
-  }).length;
-  const approvedForOutreach = enrichedOpportunities.filter((r) => r.status === "approved").length;
-  const rejectedOpportunities = enrichedOpportunities.filter((r) => r.status === "rejected").length;
+    subview === "opportunities"
+      ? db
+          .select({
+            id: linkOpportunities.id,
+            siteId: linkOpportunities.siteId,
+            sourceDomain: linkOpportunities.sourceDomain,
+            sourceUrl: linkOpportunities.sourceUrl,
+            sourceTitle: linkOpportunities.sourceTitle,
+            targetPageId: linkOpportunities.targetPageId,
+            targetPageTitle: pages.titleTag,
+            targetPageUrl: pages.url,
+            opportunityType: linkOpportunities.opportunityType,
+            discoveredFrom: linkOpportunities.discoveredFrom,
+            whyThisFits: linkOpportunities.whyThisFits,
+            suggestedAnchorText: linkOpportunities.suggestedAnchorText,
+            relevanceScore: linkOpportunities.relevanceScore,
+            authorityScore: linkOpportunities.authorityScore,
+            confidenceScore: linkOpportunities.confidenceScore,
+            riskScore: linkOpportunities.riskScore,
+            status: linkOpportunities.status,
+            firstSeenAt: linkOpportunities.firstSeenAt,
+            lastReviewedAt: linkOpportunities.lastReviewedAt,
+            prospectId: linkOpportunities.prospectId,
+            prospectName: outreachProspects.organizationName,
+            siteCompetitorId: linkOpportunities.siteCompetitorId,
+            competitorLabel: siteCompetitors.label,
+            brandMentionId: linkOpportunities.brandMentionId,
+          })
+          .from(linkOpportunities)
+          .leftJoin(pages, eq(linkOpportunities.targetPageId, pages.id))
+          .leftJoin(siteCompetitors, eq(linkOpportunities.siteCompetitorId, siteCompetitors.id))
+          .leftJoin(outreachProspects, eq(linkOpportunities.prospectId, outreachProspects.id))
+          .where(opportunityWhere)
+          .orderBy(sortDirection === "asc" ? asc(opportunitySortColumn) : desc(opportunitySortColumn))
+          .limit(pageSize)
+          .offset(offset)
+      : Promise.resolve([]),
+  ]);
 
   const mapHistoryRow = (row: typeof siteHistoryRows[number]) => ({
     capturedAt: row.capturedAt,
@@ -1197,14 +1366,14 @@ export async function getBacklinksData(
   if (siteHistory.length === 0) {
     siteHistory.push({
       capturedAt: new Date().toISOString(),
-      backlinksCount: existingRows.length,
+      backlinksCount: toNumber(existingSummaryRow?.total),
       newBacklinksCount: 0,
       lostBacklinksCount: 0,
-      liveBacklinksCount: liveBacklinks,
-      referringDomainsCount: ownDomains.size,
+      liveBacklinksCount: toNumber(existingSummaryRow?.liveBacklinks),
+      referringDomainsCount: toNumber(existingSummaryRow?.referringDomains),
       newReferringDomainsCount: 0,
       lostReferringDomainsCount: 0,
-      brokenBacklinksCount: existingRows.filter((r) => r.status === "broken").length,
+      brokenBacklinksCount: 0,
     });
   }
 
@@ -1236,11 +1405,11 @@ export async function getBacklinksData(
     if (history.length === 0) {
       history.push({
         capturedAt: new Date().toISOString(),
-        backlinksCount: competitorBacklinkCounts.get(competitor.id) ?? 0,
+        backlinksCount: 0,
         newBacklinksCount: 0,
         lostBacklinksCount: 0,
-        liveBacklinksCount: competitorLiveBacklinkCounts.get(competitor.id) ?? 0,
-        referringDomainsCount: competitorReferringDomainSets.get(competitor.id)?.size ?? 0,
+        liveBacklinksCount: 0,
+        referringDomainsCount: 0,
         newReferringDomainsCount: 0,
         lostReferringDomainsCount: 0,
         brokenBacklinksCount: 0,
@@ -1256,28 +1425,51 @@ export async function getBacklinksData(
   });
 
   return {
+    counts: countBySubview,
+    pageInfo: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasPreviousPage: page > 1,
+      hasNextPage: page < totalPages,
+    },
+    applied: {
+      subview,
+      search,
+      statusFilter,
+      sortBy:
+        subview === "existing"
+          ? input.sortBy || "lastSeen"
+          : subview === "competitors"
+            ? input.sortBy || "authority"
+            : input.sortBy || "confidence",
+      sortDirection,
+    },
     existing: existingRows,
-    competitor: enrichedCompetitorRows,
-    opportunities: enrichedOpportunities,
+    competitor: competitorRows,
+    opportunities: opportunityRows,
     history: {
       site: siteHistory,
       competitors: competitorHistory,
     },
     summary: {
-      referringDomains: ownDomains.size,
-      liveBacklinks,
-      moneyPagesLinked,
-      avgAuthority: Math.round(avgAuthority * 10) / 10,
+      referringDomains: toNumber(existingSummaryRow?.referringDomains),
+      liveBacklinks: toNumber(existingSummaryRow?.liveBacklinks),
+      moneyPagesLinked: toNumber(existingSummaryRow?.moneyPagesLinked),
+      avgAuthority: Math.round(toNumber(existingSummaryRow?.avgAuthority) * 10) / 10,
       newBacklinks: siteHistory[siteHistory.length - 1]?.newBacklinksCount ?? 0,
       lostBacklinks: siteHistory[siteHistory.length - 1]?.lostBacklinksCount ?? 0,
       brokenBacklinks: siteHistory[siteHistory.length - 1]?.brokenBacklinksCount ?? 0,
-      competitorDomainsTracked: competitorDomainSet.size,
-      competitorBacklinksTracked: enrichedCompetitorRows.length,
-      linkGapCount,
-      newOpportunities,
-      highConfidenceOpportunities,
-      approvedForOutreach,
-      rejectedOpportunities,
+      competitorDomainsTracked: siteCompetitorRows.length,
+      competitorBacklinksTracked: toNumber(competitorSummaryRow?.total),
+      linkGapCount: toNumber(linkGapRow?.linkGapCount),
+      newOpportunities: toNumber(opportunitySummaryRow?.newOpportunities),
+      highConfidenceOpportunities: toNumber(
+        opportunitySummaryRow?.highConfidenceOpportunities,
+      ),
+      approvedForOutreach: toNumber(opportunitySummaryRow?.approvedForOutreach),
+      rejectedOpportunities: toNumber(opportunitySummaryRow?.rejectedOpportunities),
     },
   };
 }
@@ -1295,6 +1487,338 @@ export async function updateOpportunityStatus(
       updatedAt: new Date().toISOString(),
     })
     .where(eq(linkOpportunities.id, opportunityId));
+}
+
+/* ---------------------------------------------------------------------------
+ * Backlinks grouped by domain
+ * --------------------------------------------------------------------------- */
+
+type BacklinkLink = {
+  id: number;
+  sourceUrl: string | null;
+  sourceTitle: string | null;
+  targetUrl: string;
+  targetPageTitle: string | null;
+  anchorText: string | null;
+  relAttr: string | null;
+  linkType: string | null;
+  authorityScore: string | null;
+  relevanceScore: string | null;
+  status: string;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+};
+
+type CompetitorBacklinkLink = BacklinkLink & {
+  competitorLabel: string;
+  competitorDomain: string;
+};
+
+export type BacklinkDomainGroup = {
+  sourceDomain: string;
+  totalLinks: number;
+  liveLinks: number;
+  maxAuthority: number | null;
+  lastSeenAt: string | null;
+  links: BacklinkLink[];
+  hasMoreLinks: boolean;
+};
+
+export type CompetitorBacklinkDomainGroup = {
+  sourceDomain: string;
+  totalLinks: number;
+  liveLinks: number;
+  maxAuthority: number | null;
+  lastSeenAt: string | null;
+  competitors: Array<{
+    competitorId: number;
+    competitorLabel: string;
+    competitorDomain: string;
+    linkCount: number;
+  }>;
+  links: CompetitorBacklinkLink[];
+  hasMoreLinks: boolean;
+};
+
+export type BacklinksByDomainResult = {
+  existing: BacklinkDomainGroup[];
+  competitor: CompetitorBacklinkDomainGroup[];
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    totalDomains: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+  kind: "existing" | "competitors";
+};
+
+const DOMAINS_PER_PAGE = 30;
+const LINKS_PER_DOMAIN = 10;
+
+export async function getBacklinksByDomain(
+  db: Database,
+  siteId: number,
+  kind: "existing" | "competitors",
+  page: number,
+  search?: string,
+): Promise<BacklinksByDomainResult> {
+  const safePage = Math.max(1, page);
+  const searchPattern = search?.trim()
+    ? `%${search.trim().replaceAll("%", "\\%").replaceAll("_", "\\_")}%`
+    : null;
+
+  const offset = (safePage - 1) * DOMAINS_PER_PAGE;
+
+  if (kind === "existing") {
+    // Step 1: Get paginated domains with aggregate stats (pagination at DB level)
+    const domainStatsQuery = sql`
+      SELECT
+        bs.source_domain AS "sourceDomain",
+        COUNT(*)::integer AS "totalLinks",
+        SUM(CASE WHEN bs.status = 'live' THEN 1 ELSE 0 END)::integer AS "liveLinks",
+        MAX(bs.authority_score::numeric) AS "maxAuthority",
+        MAX(bs.last_seen_at) AS "lastSeenAt",
+        COUNT(*) OVER ()::integer AS "totalDomains"
+      FROM backlink_sources bs
+      WHERE bs.site_id = ${siteId}
+        ${searchPattern ? sql`AND (
+          bs.source_domain ILIKE ${searchPattern}
+          OR bs.source_url ILIKE ${searchPattern}
+          OR bs.source_title ILIKE ${searchPattern}
+          OR bs.target_url ILIKE ${searchPattern}
+          OR bs.anchor_text ILIKE ${searchPattern}
+        )` : sql``}
+      GROUP BY bs.source_domain
+      ORDER BY "totalLinks" DESC
+      LIMIT ${DOMAINS_PER_PAGE} OFFSET ${offset}
+    `;
+
+    const pagedResult = await db.execute(domainStatsQuery);
+    const pagedDomains = pagedResult.rows as Array<{
+      sourceDomain: string;
+      totalLinks: number;
+      liveLinks: number;
+      maxAuthority: string | null;
+      lastSeenAt: string | null;
+      totalDomains: number;
+    }>;
+
+    const totalDomains = pagedDomains[0]?.totalDomains ?? 0;
+    const totalPages = Math.max(1, Math.ceil(totalDomains / DOMAINS_PER_PAGE));
+    const clampedPage = Math.min(safePage, totalPages);
+
+    if (pagedDomains.length === 0) {
+      return {
+        existing: [],
+        competitor: [],
+        pageInfo: { page: clampedPage, pageSize: DOMAINS_PER_PAGE, totalDomains, totalPages, hasPreviousPage: false, hasNextPage: false },
+        kind,
+      };
+    }
+
+    // Step 2: Fetch top N links per domain using lateral join (limit at DB level)
+    const domainNames = pagedDomains.map((d) => d.sourceDomain);
+    const linksQuery = sql`
+      SELECT l.*
+      FROM unnest(ARRAY[${sql.join(domainNames.map((d) => sql`${d}`), sql`, `)}]) AS d(domain_name)
+      CROSS JOIN LATERAL (
+        SELECT
+          bs.id,
+          bs.source_domain AS "sourceDomain",
+          bs.source_url AS "sourceUrl",
+          bs.source_title AS "sourceTitle",
+          bs.target_url AS "targetUrl",
+          p.title_tag AS "targetPageTitle",
+          bs.anchor_text AS "anchorText",
+          bs.rel_attr AS "relAttr",
+          bs.link_type AS "linkType",
+          bs.authority_score AS "authorityScore",
+          bs.relevance_score AS "relevanceScore",
+          bs.status,
+          bs.first_seen_at AS "firstSeenAt",
+          bs.last_seen_at AS "lastSeenAt"
+        FROM backlink_sources bs
+        LEFT JOIN pages p ON p.id = bs.target_page_id
+        WHERE bs.site_id = ${siteId}
+          AND bs.source_domain = d.domain_name
+        ORDER BY bs.last_seen_at DESC
+        LIMIT ${LINKS_PER_DOMAIN}
+      ) l
+    `;
+
+    const allLinks = (await db.execute(linksQuery)).rows as Array<BacklinkLink & { sourceDomain: string }>;
+
+    // Group links by domain
+    const linksByDomain = new Map<string, BacklinkLink[]>();
+    for (const link of allLinks) {
+      const arr = linksByDomain.get(link.sourceDomain) ?? [];
+      arr.push(link);
+      linksByDomain.set(link.sourceDomain, arr);
+    }
+
+    const existingGroups: BacklinkDomainGroup[] = pagedDomains.map((d) => ({
+      sourceDomain: d.sourceDomain,
+      totalLinks: d.totalLinks,
+      liveLinks: d.liveLinks,
+      maxAuthority: d.maxAuthority ? Number(d.maxAuthority) : null,
+      lastSeenAt: d.lastSeenAt,
+      links: linksByDomain.get(d.sourceDomain) ?? [],
+      hasMoreLinks: d.totalLinks > LINKS_PER_DOMAIN,
+    }));
+
+    return {
+      existing: existingGroups,
+      competitor: [],
+      pageInfo: {
+        page: clampedPage,
+        pageSize: DOMAINS_PER_PAGE,
+        totalDomains,
+        totalPages,
+        hasPreviousPage: clampedPage > 1,
+        hasNextPage: clampedPage < totalPages,
+      },
+      kind,
+    };
+  }
+
+  // --- Competitors ---
+  const domainStatsQuery = sql`
+    SELECT
+      cbs.source_domain AS "sourceDomain",
+      COUNT(*)::integer AS "totalLinks",
+      SUM(CASE WHEN cbs.status = 'live' THEN 1 ELSE 0 END)::integer AS "liveLinks",
+      COUNT(DISTINCT cbs.site_competitor_id)::integer AS "competitorCount",
+      MAX(cbs.authority_score::numeric) AS "maxAuthority",
+      MAX(cbs.last_seen_at) AS "lastSeenAt",
+      COUNT(*) OVER ()::integer AS "totalDomains"
+    FROM competitor_backlink_sources cbs
+    INNER JOIN site_competitors sc ON sc.id = cbs.site_competitor_id
+    WHERE sc.site_id = ${siteId}
+      ${searchPattern ? sql`AND (
+        cbs.source_domain ILIKE ${searchPattern}
+        OR cbs.source_url ILIKE ${searchPattern}
+        OR cbs.source_title ILIKE ${searchPattern}
+        OR cbs.target_url ILIKE ${searchPattern}
+        OR cbs.anchor_text ILIKE ${searchPattern}
+        OR sc.label ILIKE ${searchPattern}
+      )` : sql``}
+    GROUP BY cbs.source_domain
+    ORDER BY "competitorCount" DESC, "totalLinks" DESC
+    LIMIT ${DOMAINS_PER_PAGE} OFFSET ${offset}
+  `;
+
+  const pagedResult = await db.execute(domainStatsQuery);
+  const pagedDomains = pagedResult.rows as Array<{
+    sourceDomain: string;
+    totalLinks: number;
+    liveLinks: number;
+    maxAuthority: string | null;
+    lastSeenAt: string | null;
+    totalDomains: number;
+  }>;
+
+  const totalDomains = pagedDomains[0]?.totalDomains ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalDomains / DOMAINS_PER_PAGE));
+  const clampedPage = Math.min(safePage, totalPages);
+
+  if (pagedDomains.length === 0) {
+    return {
+      existing: [],
+      competitor: [],
+      pageInfo: { page: clampedPage, pageSize: DOMAINS_PER_PAGE, totalDomains, totalPages, hasPreviousPage: false, hasNextPage: false },
+      kind,
+    };
+  }
+
+  // Fetch links + competitor info per domain using lateral join
+  const domainNames = pagedDomains.map((d) => d.sourceDomain);
+  const linksQuery = sql`
+    SELECT l.*
+    FROM unnest(ARRAY[${sql.join(domainNames.map((d) => sql`${d}`), sql`, `)}]) AS d(domain_name)
+    CROSS JOIN LATERAL (
+      SELECT
+        cbs.id,
+        cbs.source_domain AS "sourceDomain",
+        sc.label AS "competitorLabel",
+        sc.competitor_domain AS "competitorDomain",
+        cbs.source_url AS "sourceUrl",
+        cbs.source_title AS "sourceTitle",
+        cbs.target_url AS "targetUrl",
+        cbs.anchor_text AS "anchorText",
+        cbs.rel_attr AS "relAttr",
+        cbs.link_type AS "linkType",
+        cbs.authority_score AS "authorityScore",
+        cbs.relevance_score AS "relevanceScore",
+        cbs.status,
+        cbs.first_seen_at AS "firstSeenAt",
+        cbs.last_seen_at AS "lastSeenAt",
+        sc.id AS "siteCompetitorId"
+      FROM competitor_backlink_sources cbs
+      INNER JOIN site_competitors sc ON sc.id = cbs.site_competitor_id
+      WHERE sc.site_id = ${siteId}
+        AND cbs.source_domain = d.domain_name
+      ORDER BY cbs.last_seen_at DESC
+      LIMIT ${LINKS_PER_DOMAIN * 5}
+    ) l
+  `;
+
+  const allLinks = (await db.execute(linksQuery)).rows as Array<
+    CompetitorBacklinkLink & { sourceDomain: string; siteCompetitorId: number }
+  >;
+
+  // Group links by domain + build competitor metadata
+  const linksByDomain = new Map<string, CompetitorBacklinkLink[]>();
+  const competitorsByDomain = new Map<string, Map<number, { competitorId: number; competitorLabel: string; competitorDomain: string; linkCount: number }>>();
+
+  for (const link of allLinks) {
+    let compMap = competitorsByDomain.get(link.sourceDomain);
+    if (!compMap) {
+      compMap = new Map();
+      competitorsByDomain.set(link.sourceDomain, compMap);
+    }
+    const existing = compMap.get(link.siteCompetitorId);
+    if (existing) {
+      existing.linkCount++;
+    } else {
+      compMap.set(link.siteCompetitorId, {
+        competitorId: link.siteCompetitorId,
+        competitorLabel: link.competitorLabel,
+        competitorDomain: link.competitorDomain,
+        linkCount: 1,
+      });
+    }
+
+    const arr = linksByDomain.get(link.sourceDomain) ?? [];
+    arr.push(link);
+    linksByDomain.set(link.sourceDomain, arr);
+  }
+
+  const competitorGroups: CompetitorBacklinkDomainGroup[] = pagedDomains.map((d) => ({
+    sourceDomain: d.sourceDomain,
+    totalLinks: d.totalLinks,
+    liveLinks: d.liveLinks,
+    maxAuthority: d.maxAuthority ? Number(d.maxAuthority) : null,
+    lastSeenAt: d.lastSeenAt,
+    competitors: [...(competitorsByDomain.get(d.sourceDomain)?.values() ?? [])],
+    links: linksByDomain.get(d.sourceDomain) ?? [],
+    hasMoreLinks: d.totalLinks > LINKS_PER_DOMAIN * 5,
+  }));
+
+  return {
+    existing: [],
+    competitor: competitorGroups,
+    pageInfo: {
+      page: clampedPage,
+      pageSize: DOMAINS_PER_PAGE,
+      totalDomains,
+      totalPages,
+      hasPreviousPage: clampedPage > 1,
+      hasNextPage: clampedPage < totalPages,
+    },
+    kind,
+  };
 }
 
 export async function captureBacklinkFootprints(

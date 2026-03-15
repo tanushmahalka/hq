@@ -26,6 +26,9 @@ export function DataTable<TData, TValue>({
   data,
   emptyState,
   initialSorting = [],
+  sorting: controlledSorting,
+  onSortingChange,
+  manualSorting = false,
   onRowClick,
   getRowClassName,
   className,
@@ -35,20 +38,38 @@ export function DataTable<TData, TValue>({
   data: TData[]
   emptyState?: React.ReactNode
   initialSorting?: SortingState
+  sorting?: SortingState
+  onSortingChange?: (sorting: SortingState) => void
+  manualSorting?: boolean
   onRowClick?: (row: Row<TData>) => void
   getRowClassName?: (row: Row<TData>) => string | undefined
   className?: string
   tableClassName?: string
 }) {
-  const [sorting, setSorting] = React.useState<SortingState>(initialSorting)
+  const [uncontrolledSorting, setUncontrolledSorting] =
+    React.useState<SortingState>(initialSorting)
+  const sorting = controlledSorting ?? uncontrolledSorting
+
+  const handleSortingChange = React.useCallback(
+    (updater: SortingState | ((old: SortingState) => SortingState)) => {
+      const nextSorting =
+        typeof updater === "function" ? updater(sorting) : updater
+      if (controlledSorting === undefined) {
+        setUncontrolledSorting(nextSorting)
+      }
+      onSortingChange?.(nextSorting)
+    },
+    [controlledSorting, onSortingChange, sorting],
+  )
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
+    getSortedRowModel: manualSorting ? undefined : getSortedRowModel(),
+    manualSorting,
+    onSortingChange: handleSortingChange,
     state: {
       sorting,
     },

@@ -24,5 +24,8 @@ You are the root assignee session for an HQ complex task.
 - HQ is the source of truth for workflow state.
 - Do not skip planning.
 - Do not execute multiple subtasks in parallel.
+- Push the planner toward failure-isolating subtasks. When work spans many independent targets, prefer one target per subtask or a very small deterministic batch.
+- Do not allow the planner to bundle many independent imports, domains, files, or entities into one broad execution step just because they use the same script.
+- Shared setup, reusable tooling, and final validation can be separate subtasks, but repeated per-item execution should usually be split out.
 - Do not let workers complete the parent workflow.
 - Keep summaries concise when updating HQ.

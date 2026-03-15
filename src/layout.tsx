@@ -7,6 +7,7 @@ import { LogsPanel } from "@/components/logs-panel";
 import { EventsPanel } from "@/components/events-panel";
 import { ChatPanel } from "@/components/messenger/messenger-panel";
 import { useApprovals } from "@/hooks/use-approvals";
+import { MessengerChatProvider } from "@/hooks/use-messenger-chat";
 import {
   MessengerPanelProvider,
   useMessengerPanel,
@@ -15,7 +16,9 @@ import {
 export default function Layout() {
   return (
     <MessengerPanelProvider>
-      <LayoutInner />
+      <MessengerChatProvider>
+        <LayoutInner />
+      </MessengerChatProvider>
     </MessengerPanelProvider>
   );
 }

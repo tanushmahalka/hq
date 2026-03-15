@@ -268,6 +268,9 @@ describe("hq-missions plugin", () => {
     expect(result?.prependSystemContext).toContain(
       "The planner must call record_task_plan and set_task_subtasks before handing control back to you."
     );
+    expect(result?.prependSystemContext).toContain(
+      "Push the planner toward failure-isolating subtasks: independent targets should usually become separate subtasks or very small deterministic batches."
+    );
     expect(result?.prependSystemContext).not.toContain("validator subagent");
     expect(result?.prependSystemContext).toContain("MISSION CONTEXT");
   });
@@ -329,6 +332,12 @@ describe("hq-missions plugin", () => {
     );
 
     expect(result?.prependSystemContext).toContain("Role: Planner subagent.");
+    expect(result?.prependSystemContext).toContain(
+      "When the task repeats across many independent targets, prefer one target per subtask or a very small deterministic batch with an explicit reason."
+    );
+    expect(result?.prependSystemContext).toContain(
+      "Example: if 18 competitors each need a backlink import, shared setup can be one subtask, but the competitor imports should usually be separate subtasks so retries and status tracking stay isolated."
+    );
     expect(result?.prependSystemContext).toContain(
       "After the plan is ready, call record_task_plan and then set_task_subtasks with the ordered execution list."
     );

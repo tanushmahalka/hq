@@ -1,17 +1,19 @@
-import { useCallback, useDeferredValue, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowUpDown,
   Check,
+  ChevronRight,
   ChevronsUpDown,
   ExternalLink,
+  Globe,
   Link2,
   RefreshCw,
   Shield,
   Users,
   X,
 } from "lucide-react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
@@ -38,12 +40,20 @@ import {
   formatOptionalDecimal,
   toTitleCase,
 } from "./utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import type {
+  BacklinkDomainGroup,
   BacklinkHistoryPoint,
   BacklinksData,
+  BacklinksByDomainPageInfo,
   BacklinkSource,
   BacklinksSubview,
   CompetitorBacklink,
+  CompetitorBacklinkDomainGroup,
   LinkOpportunity,
 } from "./types";
 
@@ -134,6 +144,14 @@ function SortHeader({
   );
 }
 
+const PAGE_SIZE = 50;
+
+const DEFAULT_SORTING: Record<BacklinksSubview, SortingState> = {
+  existing: [{ id: "lastSeen", desc: true }],
+  competitors: [{ id: "authority", desc: true }],
+  opportunities: [{ id: "confidence", desc: true }],
+};
+
 /* ---------------------------------------------------------------------------
  * BacklinksTab
  * --------------------------------------------------------------------------- */
@@ -143,17 +161,52 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [pageBySubview, setPageBySubview] = useState<Record<BacklinksSubview, number>>({
+    existing: 1,
+    competitors: 1,
+    opportunities: 1,
+  });
+  const [sortingBySubview, setSortingBySubview] =
+    useState<Record<BacklinksSubview, SortingState>>(DEFAULT_SORTING);
 
   const deferredSearch = useDeferredValue(search);
   const utils = trpc.useUtils();
+  const activeSorting = sortingBySubview[subview];
+  const activeSort = activeSorting[0] ?? DEFAULT_SORTING[subview][0];
+  const activePage = pageBySubview[subview];
+  // For existing/competitors, domain-grouped view is primary — skip paginated rows
+  const summaryOnly = subview !== "opportunities";
+  const queryInput = useMemo(
+    () => ({
+      siteId,
+      subview,
+      search: deferredSearch,
+      statusFilter,
+      page: activePage,
+      pageSize: PAGE_SIZE,
+      sortBy: activeSort?.id ?? DEFAULT_SORTING[subview][0].id,
+      sortDirection: activeSort?.desc ? ("desc" as const) : ("asc" as const),
+      summaryOnly,
+    }),
+    [activePage, activeSort, deferredSearch, siteId, statusFilter, subview, summaryOnly],
+  );
 
   const query = trpc.seo.backlinks.useQuery(
-    { siteId },
-    { enabled: siteId > 0 },
+    queryInput,
+    { enabled: siteId > 0, placeholderData: (previous) => previous, staleTime: 30_000 },
   );
+
+  // Domain-grouped query for existing & competitors subviews
+  const [domainPage, setDomainPage] = useState(1);
+  const domainKind = subview === "competitors" ? "competitors" as const : "existing" as const;
+  const domainQuery = trpc.seo.backlinksByDomain.useQuery(
+    { siteId, kind: domainKind, page: domainPage, search: deferredSearch },
+    { enabled: siteId > 0 && (subview === "existing" || subview === "competitors"), placeholderData: (prev) => prev, staleTime: 30_000 },
+  );
+
   const captureSnapshot = trpc.seo.captureBacklinkSnapshot.useMutation({
     onSuccess: (result) => {
-      utils.seo.backlinks.invalidate({ siteId });
+      utils.seo.backlinks.invalidate();
       toast.success("Backlink snapshot captured", {
         description: `${formatNumber(result.siteBacklinksCount)} site backlinks saved for ${formatDate(result.capturedAt)}.`,
       });
@@ -170,12 +223,41 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
 
   const subviewCounts = useMemo(
     () => ({
-      existing: data?.existing.length ?? 0,
-      competitors: data?.competitor.length ?? 0,
-      opportunities: data?.opportunities.length ?? 0,
+      existing: data?.counts?.existing ?? 0,
+      competitors: data?.counts?.competitors ?? 0,
+      opportunities: data?.counts?.opportunities ?? 0,
     }),
     [data],
   );
+
+  useEffect(() => {
+    setPageBySubview({
+      existing: 1,
+      competitors: 1,
+      opportunities: 1,
+    });
+    setSelectedId(null);
+  }, [siteId]);
+
+  useEffect(() => {
+    setPageBySubview((current) =>
+      current[subview] === 1 ? current : { ...current, [subview]: 1 },
+    );
+    setDomainPage(1);
+  }, [deferredSearch, statusFilter, subview]);
+
+  useEffect(() => {
+    setSelectedId((current) => {
+      if (current === null || !data) return current;
+      const activeRows =
+        subview === "existing"
+          ? data.existing
+          : subview === "competitors"
+            ? data.competitor
+            : data.opportunities;
+      return activeRows.some((row) => row.id === current) ? current : null;
+    });
+  }, [data, subview]);
 
   // Reset selection when switching subviews
   const handleSubviewChange = (sv: BacklinksSubview) => {
@@ -183,10 +265,26 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
     setSelectedId(null);
     setSearch("");
     setStatusFilter("all");
+    setDomainPage(1);
+  };
+
+  const handleSortingChange = (sorting: SortingState) => {
+    setSortingBySubview((current) => ({ ...current, [subview]: sorting }));
+    setPageBySubview((current) => ({ ...current, [subview]: 1 }));
+  };
+
+  const handleStatusFilterChange = (next: string) => {
+    setStatusFilter(next);
+    setSelectedId(null);
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPageBySubview((current) => ({ ...current, [subview]: nextPage }));
+    setSelectedId(null);
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-1 min-h-0 flex-col overflow-y-auto pb-4">
       {/* Subtab bar */}
       <div className="flex items-center justify-between gap-4 border-b mb-4">
         <div className="flex items-center gap-0">
@@ -256,62 +354,70 @@ export function BacklinksTab({ siteId }: { siteId: number }) {
           description="Try refreshing the page."
         />
       ) : (
-        <div className="flex flex-1 min-h-0 gap-0">
+        <div className="flex min-h-[42rem] flex-col gap-4 xl:flex-row xl:gap-0">
           {/* Left: table */}
-          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          <div className="flex min-h-[32rem] min-w-0 flex-1 flex-col">
             {/* Search + filters */}
-            <div className="mb-3 flex items-center gap-3">
+            <div className="mb-3 flex flex-wrap items-center gap-3">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by domain, URL, anchor, or type..."
-                className="text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/50 flex-1"
+                className="min-w-[16rem] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
               />
+              {query.isFetching ? (
+                <RefreshCw className="size-3.5 animate-spin text-muted-foreground/50" />
+              ) : null}
               <StatusFilters
                 subview={subview}
                 active={statusFilter}
-                onChange={setStatusFilter}
+                onChange={handleStatusFilterChange}
               />
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl border border-border/40 bg-card overflow-hidden flex-1 min-h-0">
-              {subview === "existing" ? (
-                <ExistingTable
-                  rows={data.existing}
-                  search={deferredSearch}
-                  statusFilter={statusFilter}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                />
-              ) : subview === "competitors" ? (
-                <CompetitorTable
-                  rows={data.competitor}
-                  search={deferredSearch}
-                  statusFilter={statusFilter}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                />
-              ) : (
+            {/* Content */}
+            {subview === "existing" ? (
+              <ExistingDomainList
+                groups={domainQuery.data?.existing ?? []}
+                pageInfo={domainQuery.data?.pageInfo}
+                isLoading={domainQuery.isLoading}
+                isFetching={domainQuery.isFetching}
+                onPageChange={setDomainPage}
+              />
+            ) : subview === "competitors" ? (
+              <CompetitorDomainList
+                groups={domainQuery.data?.competitor ?? []}
+                pageInfo={domainQuery.data?.pageInfo}
+                isLoading={domainQuery.isLoading}
+                isFetching={domainQuery.isFetching}
+                onPageChange={setDomainPage}
+              />
+            ) : (
+              <div className="flex min-h-[32rem] flex-1 flex-col overflow-hidden rounded-xl border border-border/40 bg-card">
                 <OpportunityTable
                   rows={data.opportunities}
-                  search={deferredSearch}
-                  statusFilter={statusFilter}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
+                  sorting={activeSorting}
+                  onSortingChange={handleSortingChange}
                 />
-              )}
-            </div>
+                <PaginationBar
+                  pageInfo={data.pageInfo}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Right: detail panel */}
-          <DetailPanel
-            subview={subview}
-            selectedId={selectedId}
-            data={data}
-            siteId={siteId}
-            onClose={() => setSelectedId(null)}
-          />
+          {/* Right: detail panel — only for opportunities */}
+          {subview === "opportunities" && (
+            <DetailPanel
+              subview={subview}
+              selectedId={selectedId}
+              data={data}
+              onClose={() => setSelectedId(null)}
+            />
+          )}
         </div>
       )}
     </div>
@@ -1069,243 +1175,398 @@ function StatusFilters({
 }
 
 /* ---------------------------------------------------------------------------
- * Search helper
+ * Pagination
  * --------------------------------------------------------------------------- */
 
-function matchesSearch(search: string, ...fields: Array<string | null | undefined>): boolean {
-  if (!search.trim()) return true;
-  const q = search.trim().toLowerCase();
-  return fields.some((f) => f?.toLowerCase().includes(q));
+function PaginationBar({
+  pageInfo,
+  onPageChange,
+}: {
+  pageInfo: BacklinksData["pageInfo"];
+  onPageChange: (page: number) => void;
+}) {
+  const start = pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1;
+  const end = Math.min(pageInfo.page * pageInfo.pageSize, pageInfo.total);
+
+  return (
+    <div className="flex items-center justify-between gap-4 border-t border-border/40 px-4 py-3">
+      <p className="text-xs text-muted-foreground/60 tabular-nums">
+        {start}-{end} of {formatNumber(pageInfo.total)}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          disabled={!pageInfo.hasPreviousPage}
+          onClick={() => onPageChange(pageInfo.page - 1)}
+        >
+          Previous
+        </Button>
+        <span className="text-xs text-muted-foreground/60 tabular-nums">
+          {pageInfo.page} / {pageInfo.totalPages}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          disabled={!pageInfo.hasNextPage}
+          onClick={() => onPageChange(pageInfo.page + 1)}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 /* ---------------------------------------------------------------------------
- * Existing backlinks table
+ * Domain-grouped views
  * --------------------------------------------------------------------------- */
 
-const existingColumns: ColumnDef<BacklinkSource>[] = [
-  {
-    id: "source",
-    accessorFn: (r) => r.sourceDomain,
-    header: ({ column }) => (
-      <SortHeader label="Source" isSorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
-    ),
-    cell: ({ row }) => (
-      <div className="min-w-[200px]">
-        <p className="text-sm truncate">{row.original.sourceTitle || row.original.sourceUrl || row.original.sourceDomain}</p>
-        <p className="text-xs text-muted-foreground/50 truncate">{row.original.sourceDomain}</p>
-      </div>
-    ),
-  },
-  {
-    id: "targetPage",
-    accessorFn: (r) => r.targetPageTitle ?? r.targetUrl,
-    header: "Target page",
-    cell: ({ row }) => (
-      <p className="text-sm text-muted-foreground truncate max-w-[180px]">
-        {row.original.targetPageTitle || row.original.targetUrl}
-      </p>
-    ),
-  },
-  {
-    id: "anchor",
-    accessorKey: "anchorText",
-    header: "Anchor",
-    cell: ({ row }) => (
-      <p className="text-sm text-muted-foreground truncate max-w-[140px]">
-        {row.original.anchorText || <span className="text-muted-foreground/30">--</span>}
-      </p>
-    ),
-  },
-  {
-    id: "rel",
-    accessorKey: "relAttr",
-    header: "Rel",
-    cell: ({ row }) => (
-      <span className="text-xs text-muted-foreground/60">{row.original.relAttr ?? "--"}</span>
-    ),
-  },
-  {
-    id: "authority",
-    accessorFn: (r) => Number(r.authorityScore ?? -1),
-    header: ({ column }) => (
-      <SortHeader label="Authority" isSorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
-    ),
-    cell: ({ row }) => <ScorePill value={row.original.authorityScore} />,
-  },
-  {
-    id: "lastSeen",
-    accessorFn: (r) => r.lastSeenAt ?? "",
-    header: ({ column }) => (
-      <SortHeader label="Last seen" isSorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
-    ),
-    cell: ({ row }) => (
-      <span className="text-xs text-muted-foreground/60">{formatDate(row.original.lastSeenAt)}</span>
-    ),
-  },
-  {
-    id: "status",
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-1.5">
-        <StatusDot status={row.original.status} />
-        <span className="text-xs text-muted-foreground capitalize">{row.original.status}</span>
-      </div>
-    ),
-  },
-];
-
-function ExistingTable({
-  rows,
-  search,
-  statusFilter,
-  selectedId,
-  onSelect,
+function DomainPagination({
+  pageInfo,
+  isFetching,
+  onPageChange,
 }: {
-  rows: BacklinkSource[];
-  search: string;
-  statusFilter: string;
-  selectedId: number | null;
-  onSelect: (id: number | null) => void;
+  pageInfo: BacklinksByDomainPageInfo;
+  isFetching: boolean;
+  onPageChange: (page: number) => void;
 }) {
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        if (statusFilter !== "all" && r.status !== statusFilter) return false;
-        return matchesSearch(search, r.sourceDomain, r.sourceUrl, r.sourceTitle, r.targetUrl, r.anchorText);
-      }),
-    [rows, search, statusFilter],
+  if (pageInfo.totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between gap-4 mt-3">
+      <p className="text-xs text-muted-foreground/60 tabular-nums">
+        {formatNumber(pageInfo.totalDomains)} domain{pageInfo.totalDomains !== 1 ? "s" : ""}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          disabled={!pageInfo.hasPreviousPage || isFetching}
+          onClick={() => onPageChange(pageInfo.page - 1)}
+        >
+          Previous
+        </Button>
+        <span className="text-xs text-muted-foreground/60 tabular-nums">
+          {pageInfo.page} / {pageInfo.totalPages}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          disabled={!pageInfo.hasNextPage || isFetching}
+          onClick={() => onPageChange(pageInfo.page + 1)}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
   );
+}
+
+function ExpandableLinkList({
+  links,
+  hasMoreLinks,
+  totalLinks,
+  renderLink,
+}: {
+  links: Array<{ id: number }>;
+  hasMoreLinks: boolean;
+  totalLinks: number;
+  renderLink: (link: typeof links[number]) => React.ReactNode;
+}) {
+  const remaining = totalLinks - links.length;
 
   return (
-    <DataTable
-      columns={existingColumns}
-      data={filtered}
-      initialSorting={[{ id: "lastSeen", desc: true }]}
-      onRowClick={(row) => onSelect(row.original.id)}
-      getRowClassName={(row) => cn(selectedId === row.original.id && "bg-muted/40")}
-      tableClassName="min-w-[800px]"
-      emptyState={
+    <div className="ml-6 mt-1 rounded-xl border border-border/30 bg-card/60 overflow-hidden">
+      {links.map((link) => renderLink(link))}
+      {hasMoreLinks && (
+        <div className="px-4 py-2 border-t border-border/20">
+          <p className="text-xs text-muted-foreground/50 text-center">
+            Showing {links.length} of {formatNumber(totalLinks)} links
+            {remaining > 0 && ` · ${formatNumber(remaining)} more not loaded`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExistingDomainList({
+  groups,
+  pageInfo,
+  isLoading,
+  isFetching,
+  onPageChange,
+}: {
+  groups: BacklinkDomainGroup[];
+  pageInfo?: BacklinksByDomainPageInfo;
+  isLoading: boolean;
+  isFetching: boolean;
+  onPageChange: (page: number) => void;
+}) {
+  if (isLoading || (isFetching && groups.length === 0)) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="rounded-xl border border-border/40 bg-card">
         <InlineEmptyState
           title="No backlinks tracked yet"
-          description="Once backlinks are imported or verified, they'll appear here."
+          description="Once backlinks are imported or verified, they'll appear here grouped by domain."
         />
-      }
-    />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="space-y-1.5">
+        {groups.map((group) => (
+          <Collapsible key={group.sourceDomain}>
+            <CollapsibleTrigger className="w-full">
+              <div className="group/domain flex items-center gap-3 rounded-xl border border-border/40 bg-card px-4 py-3 transition-colors hover:border-border/60 swarm-card">
+                <ChevronRight className="size-3.5 text-muted-foreground/50 transition-transform [[data-state=open]>&]:rotate-90" />
+                <Globe className="size-3.5 text-muted-foreground/40 shrink-0" />
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm truncate">{group.sourceDomain}</p>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {group.totalLinks} link{group.totalLinks !== 1 ? "s" : ""}
+                  </span>
+                  <span className="text-xs tabular-nums text-emerald-500">
+                    {group.liveLinks} live
+                  </span>
+                  {group.lastSeenAt && (
+                    <span className="text-xs text-muted-foreground/40 w-20 text-right">
+                      {formatDate(group.lastSeenAt)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ExpandableLinkList
+                links={group.links}
+                hasMoreLinks={group.hasMoreLinks}
+                totalLinks={group.totalLinks}
+                renderLink={(link) => {
+                  const l = link as BacklinkDomainGroup["links"][number];
+                  return (
+                    <div
+                      key={l.id}
+                      className="flex items-center gap-3 px-4 py-2.5 border-b border-border/20 last:border-b-0 hover:bg-muted/20 transition-colors"
+                    >
+                      <StatusDot status={l.status} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">
+                          {l.sourceTitle || l.sourceUrl || "Unknown source"}
+                        </p>
+                        <p className="text-xs text-muted-foreground/50 truncate">
+                          → {l.targetPageTitle || l.targetUrl}
+                          {l.anchorText ? ` · "${l.anchorText}"` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {l.relAttr && (
+                          <span className="text-[10px] text-muted-foreground/40">{l.relAttr}</span>
+                        )}
+
+                        <span className="text-xs text-muted-foreground/40 capitalize">{l.status}</span>
+                        {l.sourceUrl && (
+                          <a
+                            href={l.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-muted-foreground/30 hover:text-foreground transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="size-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+        ))}
+      </div>
+      {pageInfo && (
+        <DomainPagination pageInfo={pageInfo} isFetching={isFetching} onPageChange={onPageChange} />
+      )}
+    </div>
   );
 }
 
-/* ---------------------------------------------------------------------------
- * Competitor backlinks table
- * --------------------------------------------------------------------------- */
-
-const competitorBLColumns: ColumnDef<CompetitorBacklink>[] = [
-  {
-    id: "competitor",
-    accessorFn: (r) => r.competitorLabel,
-    header: ({ column }) => (
-      <SortHeader label="Competitor" isSorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
-    ),
-    cell: ({ row }) => (
-      <span className="text-sm truncate">{row.original.competitorLabel}</span>
-    ),
-  },
-  {
-    id: "source",
-    accessorFn: (r) => r.sourceDomain,
-    header: ({ column }) => (
-      <SortHeader label="Source" isSorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
-    ),
-    cell: ({ row }) => (
-      <div className="min-w-[180px]">
-        <p className="text-sm truncate">{row.original.sourceTitle || row.original.sourceDomain}</p>
-        <p className="text-xs text-muted-foreground/50 truncate">{row.original.sourceDomain}</p>
-      </div>
-    ),
-  },
-  {
-    id: "targetUrl",
-    accessorFn: (r) => r.targetUrl,
-    header: "Target URL",
-    cell: ({ row }) => (
-      <p className="text-sm text-muted-foreground truncate max-w-[180px]">{row.original.targetUrl}</p>
-    ),
-  },
-  {
-    id: "anchor",
-    accessorKey: "anchorText",
-    header: "Anchor",
-    cell: ({ row }) => (
-      <p className="text-sm text-muted-foreground truncate max-w-[120px]">
-        {row.original.anchorText || <span className="text-muted-foreground/30">--</span>}
-      </p>
-    ),
-  },
-  {
-    id: "authority",
-    accessorFn: (r) => Number(r.authorityScore ?? -1),
-    header: ({ column }) => (
-      <SortHeader label="Authority" isSorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
-    ),
-    cell: ({ row }) => <ScorePill value={row.original.authorityScore} />,
-  },
-  {
-    id: "relevance",
-    accessorFn: (r) => Number(r.relevanceScore ?? -1),
-    header: ({ column }) => (
-      <SortHeader label="Relevance" isSorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
-    ),
-    cell: ({ row }) => <ScorePill value={row.original.relevanceScore} />,
-  },
-  {
-    id: "lastSeen",
-    accessorFn: (r) => r.lastSeenAt ?? "",
-    header: ({ column }) => (
-      <SortHeader label="Last seen" isSorted={column.getIsSorted()} onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
-    ),
-    cell: ({ row }) => (
-      <span className="text-xs text-muted-foreground/60">{formatDate(row.original.lastSeenAt)}</span>
-    ),
-  },
-];
-
-function CompetitorTable({
-  rows,
-  search,
-  statusFilter,
-  selectedId,
-  onSelect,
-}: {
-  rows: CompetitorBacklink[];
-  search: string;
-  statusFilter: string;
-  selectedId: number | null;
-  onSelect: (id: number | null) => void;
-}) {
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        if (statusFilter !== "all" && r.status !== statusFilter) return false;
-        return matchesSearch(search, r.competitorLabel, r.competitorDomain, r.sourceDomain, r.sourceUrl, r.sourceTitle, r.targetUrl, r.anchorText);
-      }),
-    [rows, search, statusFilter],
-  );
+function CompetitorDomainRow({ group }: { group: CompetitorBacklinkDomainGroup }) {
+  // Group links by competitor for the 3rd level
+  const linksByCompetitor = useMemo(() => {
+    const map = new Map<number, CompetitorBacklinkDomainGroup["links"]>();
+    for (const link of group.links) {
+      const key = group.competitors.find(
+        (c) => c.competitorLabel === link.competitorLabel && c.competitorDomain === link.competitorDomain,
+      )?.competitorId ?? 0;
+      const arr = map.get(key) ?? [];
+      arr.push(link);
+      map.set(key, arr);
+    }
+    return map;
+  }, [group]);
 
   return (
-    <DataTable
-      columns={competitorBLColumns}
-      data={filtered}
-      initialSorting={[{ id: "authority", desc: true }]}
-      onRowClick={(row) => onSelect(row.original.id)}
-      getRowClassName={(row) => cn(selectedId === row.original.id && "bg-muted/40")}
-      tableClassName="min-w-[900px]"
-      emptyState={
+    <Collapsible>
+      {/* Level 1: Domain row */}
+      <CollapsibleTrigger className="w-full">
+        <div className="group/domain flex items-center gap-3 rounded-xl border border-border/40 bg-card px-4 py-3 transition-colors hover:border-border/60 swarm-card">
+          <ChevronRight className="size-3.5 text-muted-foreground/50 transition-transform [[data-state=open]>&]:rotate-90" />
+          <Globe className="size-3.5 text-muted-foreground/40 shrink-0" />
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-sm truncate">{group.sourceDomain}</p>
+          </div>
+          <div className="flex items-center gap-4 shrink-0">
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {group.totalLinks} link{group.totalLinks !== 1 ? "s" : ""}
+            </span>
+            <span className="text-xs tabular-nums text-muted-foreground/60">
+              {group.competitors.length} competitor{group.competitors.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+        </div>
+      </CollapsibleTrigger>
+
+      {/* Level 2: Competitor rows */}
+      <CollapsibleContent>
+        <div className="ml-6 mt-1 space-y-1">
+          {group.competitors.map((comp) => {
+            const compLinks = linksByCompetitor.get(comp.competitorId) ?? [];
+            return (
+              <Collapsible key={comp.competitorId}>
+                <CollapsibleTrigger className="w-full">
+                  <div className="flex items-center gap-3 rounded-lg border border-border/30 bg-card/60 px-3.5 py-2.5 transition-colors hover:bg-muted/20">
+                    <ChevronRight className="size-3 text-muted-foreground/40 transition-transform [[data-state=open]>&]:rotate-90" />
+                    <Users className="size-3 text-muted-foreground/40 shrink-0" />
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm truncate">{comp.competitorLabel}</p>
+                      <p className="text-[11px] text-muted-foreground/40 truncate">{comp.competitorDomain}</p>
+                    </div>
+                    <span className="text-xs tabular-nums text-muted-foreground shrink-0">
+                      {comp.linkCount} link{comp.linkCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </CollapsibleTrigger>
+
+                {/* Level 3: Individual links */}
+                <CollapsibleContent>
+                  <div className="ml-5 mt-0.5 rounded-lg border border-border/20 bg-card/40 overflow-hidden">
+                    {compLinks.map((l) => (
+                      <div
+                        key={l.id}
+                        className="flex items-center gap-3 px-3.5 py-2 border-b border-border/15 last:border-b-0 hover:bg-muted/15 transition-colors"
+                      >
+                        <StatusDot status={l.status} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm truncate">
+                            {l.sourceTitle || l.sourceUrl || "Unknown source"}
+                          </p>
+                          <p className="text-xs text-muted-foreground/50 truncate">
+                            → {l.targetUrl}
+                            {l.anchorText ? ` · "${l.anchorText}"` : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+  
+                          <span className="text-xs text-muted-foreground/40 capitalize">{l.status}</span>
+                          {l.sourceUrl && (
+                            <a
+                              href={l.sourceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-muted-foreground/30 hover:text-foreground transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="size-3" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {compLinks.length === 0 && (
+                      <p className="text-xs text-muted-foreground/40 text-center py-4">
+                        Links not loaded for this page
+                      </p>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function CompetitorDomainList({
+  groups,
+  pageInfo,
+  isLoading,
+  isFetching,
+  onPageChange,
+}: {
+  groups: CompetitorBacklinkDomainGroup[];
+  pageInfo?: BacklinksByDomainPageInfo;
+  isLoading: boolean;
+  isFetching: boolean;
+  onPageChange: (page: number) => void;
+}) {
+  if (isLoading || (isFetching && groups.length === 0)) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="rounded-xl border border-border/40 bg-card">
         <InlineEmptyState
           title="No competitor backlinks imported yet"
-          description="They'll appear here after competitor backlink discovery runs."
+          description="They'll appear here grouped by source domain after competitor backlink discovery runs."
         />
-      }
-    />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="space-y-1.5">
+        {groups.map((group) => (
+          <CompetitorDomainRow key={group.sourceDomain} group={group} />
+        ))}
+      </div>
+      {pageInfo && (
+        <DomainPagination pageInfo={pageInfo} isFetching={isFetching} onPageChange={onPageChange} />
+      )}
+    </div>
   );
 }
 
@@ -1384,42 +1645,24 @@ const opportunityColumns: ColumnDef<LinkOpportunity>[] = [
 
 function OpportunityTable({
   rows,
-  search,
-  statusFilter,
   selectedId,
   onSelect,
+  sorting,
+  onSortingChange,
 }: {
   rows: LinkOpportunity[];
-  search: string;
-  statusFilter: string;
   selectedId: number | null;
   onSelect: (id: number | null) => void;
+  sorting: SortingState;
+  onSortingChange: (sorting: SortingState) => void;
 }) {
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        if (statusFilter !== "all" && r.status !== statusFilter) return false;
-        return matchesSearch(
-          search,
-          r.sourceDomain,
-          r.sourceUrl,
-          r.sourceTitle,
-          r.opportunityType,
-          r.whyThisFits,
-          r.targetPageTitle,
-          r.targetPageUrl,
-          r.competitorLabel,
-          r.prospectName,
-        );
-      }),
-    [rows, search, statusFilter],
-  );
-
   return (
     <DataTable
       columns={opportunityColumns}
-      data={filtered}
-      initialSorting={[{ id: "confidence", desc: true }]}
+      data={rows}
+      sorting={sorting}
+      onSortingChange={onSortingChange}
+      manualSorting
       onRowClick={(row) => onSelect(row.original.id)}
       getRowClassName={(row) => cn(selectedId === row.original.id && "bg-muted/40")}
       tableClassName="min-w-[950px]"
@@ -1441,18 +1684,16 @@ function DetailPanel({
   subview,
   selectedId,
   data,
-  siteId,
   onClose,
 }: {
   subview: BacklinksSubview;
   selectedId: number | null;
   data: BacklinksData;
-  siteId: number;
   onClose: () => void;
 }) {
   if (selectedId === null) {
     return (
-      <div className="w-[340px] shrink-0 border-l border-border/40 flex items-center justify-center">
+      <div className="flex min-h-[12rem] w-full shrink-0 items-center justify-center border-t border-border/40 xl:min-h-0 xl:w-[340px] xl:border-t-0 xl:border-l">
         <p className="text-sm text-muted-foreground/40 text-center px-6">
           Select a row to inspect details
         </p>
@@ -1474,7 +1715,7 @@ function DetailPanel({
 
   const item = data.opportunities.find((r) => r.id === selectedId);
   if (!item) return null;
-  return <OpportunityDetail item={item} siteId={siteId} onClose={onClose} />;
+  return <OpportunityDetail item={item} onClose={onClose} />;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1489,7 +1730,7 @@ function ExistingDetail({
   onClose: () => void;
 }) {
   return (
-    <div className="w-[340px] shrink-0 border-l border-border/40 overflow-y-auto">
+    <div className="max-h-[28rem] w-full shrink-0 overflow-y-auto border-t border-border/40 xl:max-h-none xl:w-[340px] xl:border-t-0 xl:border-l">
       <div className="p-5">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -1551,7 +1792,7 @@ function CompetitorDetail({
   onClose: () => void;
 }) {
   return (
-    <div className="w-[340px] shrink-0 border-l border-border/40 overflow-y-auto">
+    <div className="max-h-[28rem] w-full shrink-0 overflow-y-auto border-t border-border/40 xl:max-h-none xl:w-[340px] xl:border-t-0 xl:border-l">
       <div className="p-5">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -1606,17 +1847,15 @@ function CompetitorDetail({
 
 function OpportunityDetail({
   item,
-  siteId,
   onClose,
 }: {
   item: LinkOpportunity;
-  siteId: number;
   onClose: () => void;
 }) {
   const utils = trpc.useUtils();
   const mutation = trpc.seo.updateOpportunityStatus.useMutation({
     onSuccess: () => {
-      utils.seo.backlinks.invalidate({ siteId });
+      utils.seo.backlinks.invalidate();
     },
   });
 
@@ -1625,7 +1864,7 @@ function OpportunityDetail({
   };
 
   return (
-    <div className="w-[340px] shrink-0 border-l border-border/40 overflow-y-auto">
+    <div className="max-h-[28rem] w-full shrink-0 overflow-y-auto border-t border-border/40 xl:max-h-none xl:w-[340px] xl:border-t-0 xl:border-l">
       <div className="p-5">
         <div className="flex items-start justify-between mb-4">
           <div>

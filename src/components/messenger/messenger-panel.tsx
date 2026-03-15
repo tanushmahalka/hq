@@ -2,7 +2,6 @@ import { ApprovalCard } from "@/components/approvals/approval-card";
 import {
   useRef,
   useEffect,
-  useState,
   type ChangeEvent,
   type ClipboardEvent,
   type FormEvent,
@@ -10,11 +9,11 @@ import {
 import { X, ArrowUp, ChevronDown, Paperclip, Square } from "lucide-react";
 import { useApprovals, type PendingApproval } from "@/hooks/use-approvals";
 import {
-  useChat,
   type PendingImageAttachment,
   type RawMessage,
 } from "@/hooks/use-chat";
 import { useGateway } from "@/hooks/use-gateway";
+import { useMessengerChat } from "@/hooks/use-messenger-chat";
 import { useMessengerPanel } from "@/hooks/use-messenger-panel";
 import { ChatSendProvider } from "@/hooks/use-chat-send";
 import { UXMessageList } from "@/components/chat/session-blocks";
@@ -180,7 +179,13 @@ export function Session({
     error,
     sendMessage,
     abortRun,
-  } = useChat(sessionKey);
+    draft,
+    setDraft,
+    attachments,
+    addAttachments,
+    removeAttachment,
+    clearAttachments,
+  } = useMessengerChat(sessionKey);
   const sessionApprovals = approvals.filter(
     (approval) => approval.request.sessionKey === sessionKey
   );
@@ -202,6 +207,12 @@ export function Session({
         <SessionInput
           connected={connected}
           isBusy={isBusy}
+          draft={draft}
+          onDraftChange={setDraft}
+          attachments={attachments}
+          onAddAttachments={addAttachments}
+          onRemoveAttachment={removeAttachment}
+          onClearAttachments={clearAttachments}
           onSend={(text, attachments) => sendMessage(text, attachments)}
           onAbort={() => void abortRun()}
         />
@@ -280,20 +291,31 @@ export function SessionMessages({
 export function SessionInput({
   connected,
   isBusy,
+  draft,
+  onDraftChange,
+  attachments,
+  onAddAttachments,
+  onRemoveAttachment,
+  onClearAttachments,
   onSend,
   onAbort,
 }: {
   connected: boolean;
   isBusy: boolean;
+  draft: string;
+  onDraftChange: (draft: string) => void;
+  attachments: PendingImageAttachment[];
+  onAddAttachments: (attachments: PendingImageAttachment[]) => void;
+  onRemoveAttachment: (attachmentId: string) => void;
+  onClearAttachments: () => void;
   onSend: (
     text: string,
     attachments: PendingImageAttachment[]
   ) => Promise<"sent" | "queued" | "error" | "ignored">;
   onAbort: () => void;
 }) {
-  const [input, setInput] = useState("");
-  const [attachments, setAttachments] = useState<PendingImageAttachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const placeholder = connected ? "Message..." : "Connecting...";
 
   const addFiles = async (files: FileList | File[]) => {
@@ -309,22 +331,31 @@ export function SessionInput({
       return;
     }
 
-    setAttachments((prev) => [...prev, ...nextAttachments]);
+    onAddAttachments(nextAttachments);
   };
 
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
-    const outcome = await onSend(input, attachments);
+    const outcome = await onSend(draft, attachments);
     if (outcome === "sent" || outcome === "queued") {
-      setInput("");
-      setAttachments([]);
+      onDraftChange("");
+      onClearAttachments();
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     }
   };
 
-  const hasDraft = input.trim().length > 0 || attachments.length > 0;
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+    textarea.style.height = "44px";
+    textarea.style.height = Math.min(textarea.scrollHeight, 128) + "px";
+  }, [draft]);
+
+  const hasDraft = draft.trim().length > 0 || attachments.length > 0;
   const sendDisabled = !connected || !hasDraft;
 
   return (
@@ -366,11 +397,7 @@ export function SessionInput({
                 />
                 <button
                   type="button"
-                  onClick={() =>
-                    setAttachments((prev) =>
-                      prev.filter((item) => item.id !== attachment.id)
-                    )
-                  }
+                  onClick={() => onRemoveAttachment(attachment.id)}
                   className="absolute right-1 top-1 rounded-full bg-background/90 p-1 text-muted-foreground/70 shadow-sm transition-colors hover:text-foreground"
                   aria-label="Remove attachment"
                 >
@@ -395,8 +422,9 @@ export function SessionInput({
           }}
         />
         <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+          ref={textareaRef}
+          value={draft}
+          onChange={(e) => onDraftChange(e.target.value)}
           onPaste={(e: ClipboardEvent<HTMLTextAreaElement>) => {
             const imageFiles = Array.from(e.clipboardData.files).filter(
               (file) => file.type.startsWith("image/")

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { MessengerComposer } from "./messenger-panel";
 import type { PendingImageAttachment } from "@/hooks/use-chat";
 
@@ -40,20 +41,46 @@ class MockFileReader {
   }
 }
 
+function ComposerHarness({
+  isBusy = false,
+  onSend = vi.fn().mockResolvedValue("ignored"),
+}: {
+  isBusy?: boolean;
+  onSend?: (
+    text: string,
+    attachments: PendingImageAttachment[],
+  ) => Promise<"sent" | "queued" | "error" | "ignored">;
+}) {
+  const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<PendingImageAttachment[]>([]);
+
+  return (
+    <MessengerComposer
+      connected
+      isBusy={isBusy}
+      draft={draft}
+      onDraftChange={setDraft}
+      attachments={attachments}
+      onAddAttachments={(next) => setAttachments((prev) => [...prev, ...next])}
+      onRemoveAttachment={(attachmentId) =>
+        setAttachments((prev) =>
+          prev.filter((attachment) => attachment.id !== attachmentId),
+        )
+      }
+      onClearAttachments={() => setAttachments([])}
+      onSend={onSend}
+      onAbort={vi.fn()}
+    />
+  );
+}
+
 describe("MessengerComposer", () => {
   beforeEach(() => {
     vi.stubGlobal("FileReader", MockFileReader);
   });
 
   it("adds pasted images as removable previews", async () => {
-    render(
-      <MessengerComposer
-        connected
-        isBusy={false}
-        onSend={vi.fn().mockResolvedValue("ignored")}
-        onAbort={vi.fn()}
-      />
-    );
+    render(<ComposerHarness />);
 
     const textarea = screen.getByPlaceholderText("Message...");
     const file = new File(["image"], "paste.png", { type: "image/png" });
@@ -80,14 +107,7 @@ describe("MessengerComposer", () => {
       (text: string, attachments: PendingImageAttachment[]) => Promise<"sent">
     >().mockResolvedValue("sent");
 
-    const { container } = render(
-      <MessengerComposer
-        connected
-        isBusy={false}
-        onSend={onSend}
-        onAbort={vi.fn()}
-      />
-    );
+    const { container } = render(<ComposerHarness onSend={onSend} />);
 
     const input = container.querySelector('input[type="file"]');
     expect(input).not.toBeNull();
@@ -112,14 +132,7 @@ describe("MessengerComposer", () => {
   });
 
   it("keeps Send and shows Stop while busy", () => {
-    render(
-      <MessengerComposer
-        connected
-        isBusy
-        onSend={vi.fn().mockResolvedValue("queued")}
-        onAbort={vi.fn()}
-      />
-    );
+    render(<ComposerHarness isBusy onSend={vi.fn().mockResolvedValue("queued")} />);
 
     expect(screen.getByText("Send")).toBeInTheDocument();
     expect(screen.getByLabelText("Send message")).toBeInTheDocument();

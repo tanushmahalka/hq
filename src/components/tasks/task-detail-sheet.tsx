@@ -33,6 +33,8 @@ import {
   MessageSquare,
   Bot,
   ListTodo,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
 import {
@@ -40,6 +42,11 @@ import {
   TASK_WORKFLOW_STATUS_LABELS,
   type TaskSubtaskStatus,
 } from "@shared/task-workflow";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 import { trpc } from "@/lib/trpc";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { useGateway } from "@/hooks/use-gateway";
@@ -67,17 +74,6 @@ const ALL_TABS = [
 ] as const;
 
 type TabId = (typeof ALL_TABS)[number]["id"];
-
-type TaskSheetTask = {
-  id: string;
-  title: string;
-  description: string | null;
-  assignee: string | null;
-  workflowMode?: "simple" | "complex";
-  workflowSummary?: {
-    sessionKeys: string[];
-  } | null;
-};
 
 type TaskWorkflowDetailData = {
   workflow: {
@@ -499,7 +495,6 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
             {resolvedActiveTab === "workflow" &&
               task?.workflowMode === "complex" && (
                 <WorkflowPanel
-                  task={task}
                   workflowDetail={workflowDetail}
                   loading={workflowLoading}
                 />
@@ -810,12 +805,17 @@ function subtaskStatusClasses(status: TaskSubtaskStatus) {
   return "bg-muted text-muted-foreground";
 }
 
+const SUBTASK_DOT_COLORS: Record<TaskSubtaskStatus, string> = {
+  pending: "bg-gray-400",
+  running: "bg-[var(--swarm-violet)]",
+  needs_revision: "bg-red-400",
+  done: "bg-[var(--swarm-mint)]",
+};
+
 function WorkflowPanel({
-  task,
   workflowDetail,
   loading,
 }: {
-  task: TaskSheetTask;
   workflowDetail?: TaskWorkflowDetailData;
   loading: boolean;
 }) {
@@ -830,20 +830,28 @@ function WorkflowPanel({
   if (!workflowDetail) {
     return (
       <div className="flex h-full items-center justify-center px-6">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground/40 text-center">
           Workflow details are not available yet.
         </p>
       </div>
     );
   }
 
-  const workflowStatus = workflowDetail.summary.status;
+  const { summary, subtasks } = workflowDetail;
+  const workflowStatus = summary.status;
+  const planSummary =
+    summary.planSummary ?? workflowDetail.workflow?.planSummary;
+  const completionPct =
+    summary.totalSubtasks > 0
+      ? (summary.completedSubtasks / summary.totalSubtasks) * 100
+      : 0;
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="space-y-6 p-6">
-        <section className="rounded-2xl border bg-card p-4">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="p-6 space-y-6">
+        {/* Status + progress */}
+        <div>
+          <div className="flex items-center gap-2.5">
             <Badge
               variant="secondary"
               className={workflowStatusClasses(workflowStatus)}
@@ -852,180 +860,181 @@ function WorkflowPanel({
                 ? TASK_WORKFLOW_STATUS_LABELS[workflowStatus]
                 : "Planning"}
             </Badge>
-            <Badge variant="outline" className="text-[10px]">
-              {workflowDetail.summary.completedSubtasks}/
-              {workflowDetail.summary.totalSubtasks || 0} subtasks done
-            </Badge>
-            {workflowDetail.summary.rootAgentId ? (
-              <Badge variant="outline" className="text-[10px]">
-                root {workflowDetail.summary.rootAgentId}
-              </Badge>
-            ) : null}
-          </div>
-
-          <div className="mt-4 space-y-3 text-sm">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
-                Plan Path
-              </p>
-              <p className="mt-1 font-mono text-xs">
-                {workflowDetail.summary.planPath ??
-                  `.openclaw/tasks/${task.id}/plan.md`}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
-                Plan Preview
-              </p>
-              <p className="mt-1 leading-relaxed text-muted-foreground">
-                {workflowDetail.summary.planSummary ??
-                  workflowDetail.workflow?.planSummary ??
-                  "No plan summary has been recorded yet."}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center justify-between gap-3">
-            <h4 className="text-sm font-medium">Execution Steps</h4>
-            <span className="text-[11px] text-muted-foreground/60">
-              Sequential in v1
+            <span className="text-[13px] text-muted-foreground">
+              {summary.completedSubtasks} of {summary.totalSubtasks || 0} steps
+              complete
             </span>
           </div>
+          {summary.totalSubtasks > 0 && (
+            <div className="mt-3 h-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[var(--swarm-violet)] transition-all duration-500 ease-out"
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+          )}
+        </div>
 
-          <div className="mt-4 space-y-3">
-            {workflowDetail.subtasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No subtasks have been registered yet.
-              </p>
-            ) : (
-              workflowDetail.subtasks.map((subtask) => (
-                <div
+        {/* Plan summary */}
+        {planSummary && (
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground">Plan</h4>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground/80 whitespace-pre-wrap">
+              {planSummary}
+            </p>
+          </div>
+        )}
+
+        {/* Steps timeline */}
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground">Steps</h4>
+
+          {subtasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground/40 text-center py-8">
+              No steps have been planned yet.
+            </p>
+          ) : (
+            <div className="mt-3">
+              {subtasks.map((subtask, i) => (
+                <SubtaskTimelineRow
                   key={subtask.id}
-                  className="rounded-xl border border-border/60 bg-muted/20 p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
-                        Step {subtask.position}
-                      </p>
-                      <h5 className="mt-1 text-sm font-medium">
-                        {subtask.title}
-                      </h5>
-                    </div>
-                    <Badge
-                      variant="secondary"
-                      className={subtaskStatusClasses(subtask.status)}
-                    >
-                      {TASK_SUBTASK_STATUS_LABELS[subtask.status]}
-                    </Badge>
-                  </div>
+                  subtask={subtask}
+                  isLast={i === subtasks.length - 1}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-                  {subtask.instructions ? (
-                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                      {subtask.instructions}
-                    </p>
-                  ) : null}
+function SubtaskTimelineRow({
+  subtask,
+  isLast,
+}: {
+  subtask: TaskWorkflowDetailData["subtasks"][number];
+  isLast: boolean;
+}) {
+  const hasDetails =
+    subtask.instructions ||
+    subtask.acceptanceCriteria ||
+    subtask.latestWorkerSummary ||
+    subtask.latestValidatorSummary ||
+    subtask.latestFeedback;
 
-                  {subtask.acceptanceCriteria ? (
-                    <div className="mt-3 rounded-lg border border-border/60 bg-background/80 p-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
-                        Acceptance Criteria
-                      </p>
-                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                        {subtask.acceptanceCriteria}
-                      </p>
-                    </div>
-                  ) : null}
+  const isDone = subtask.status === "done";
+  const isRunning = subtask.status === "running";
 
-                  {subtask.latestWorkerSummary ? (
-                    <div className="mt-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
-                        Latest Worker Summary
-                      </p>
-                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                        {subtask.latestWorkerSummary}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {subtask.latestValidatorSummary ? (
-                    <div className="mt-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/60">
-                        Latest Validator Summary
-                      </p>
-                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                        {subtask.latestValidatorSummary}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {subtask.latestFeedback ? (
-                    <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/5 p-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-red-700/80 dark:text-red-300/80">
-                        Latest Feedback
-                      </p>
-                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                        {subtask.latestFeedback}
-                      </p>
-                    </div>
-                  ) : null}
-                </div>
-              ))
-            )}
+  return (
+    <div className="flex gap-3">
+      {/* Timeline track */}
+      <div className="flex flex-col items-center pt-1">
+        {isDone ? (
+          <div className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[var(--swarm-mint)]">
+            <Check className="size-2.5 text-white" strokeWidth={3} />
           </div>
-        </section>
+        ) : (
+          <div
+            className={`swarm-status-dot shrink-0 mt-[5px] ${SUBTASK_DOT_COLORS[subtask.status]} ${isRunning ? "active" : ""}`}
+          />
+        )}
+        {!isLast && <div className="flex-1 w-px bg-border/50 my-1.5" />}
+      </div>
 
-        <section className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center justify-between gap-3">
-            <h4 className="text-sm font-medium">Linked Sessions</h4>
-            <span className="text-[11px] text-muted-foreground/60">
-              {workflowDetail.sessions.length} tracked
-            </span>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {workflowDetail.sessions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No sessions have been linked yet.
-              </p>
-            ) : (
-              workflowDetail.sessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="rounded-xl border border-border/60 bg-muted/20 p-3"
+      {/* Content */}
+      <div className={`flex-1 min-w-0 ${isLast ? "" : "pb-4"}`}>
+        {hasDetails ? (
+          <Collapsible>
+            <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group/step">
+              <span
+                className={`text-sm flex-1 ${isDone ? "text-muted-foreground line-through decoration-muted-foreground/30" : "font-medium"}`}
+              >
+                {subtask.title}
+              </span>
+              {!isDone && (
+                <Badge
+                  variant="secondary"
+                  className={`text-[10px] shrink-0 ${subtaskStatusClasses(subtask.status)}`}
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="text-[10px] capitalize">
-                      {session.role}
-                    </Badge>
-                    {session.agentId ? (
-                      <Badge variant="secondary" className="text-[10px]">
-                        {session.agentId}
-                      </Badge>
-                    ) : null}
-                    {session.subtaskId ? (
-                      <Badge variant="outline" className="text-[10px]">
-                        subtask:{session.subtaskId}
-                      </Badge>
-                    ) : null}
-                    <span className="text-[11px] text-muted-foreground/60">
-                      {session.endedAt
-                        ? "Ended"
-                        : session.completedAt
-                        ? "Completed"
-                        : "Active"}
-                    </span>
-                  </div>
-                  <p className="mt-2 break-all font-mono text-[11px] text-muted-foreground">
-                    {session.sessionKey}
+                  {TASK_SUBTASK_STATUS_LABELS[subtask.status]}
+                </Badge>
+              )}
+              <ChevronDown className="size-3.5 shrink-0 text-muted-foreground/40 transition-transform group-data-[state=open]/step:rotate-180" />
+            </CollapsibleTrigger>
+
+            <CollapsibleContent>
+              <div className="mt-2 space-y-2.5 text-sm">
+                {subtask.instructions && (
+                  <p className="leading-relaxed text-muted-foreground/80">
+                    {subtask.instructions}
                   </p>
-                </div>
-              ))
+                )}
+
+                {subtask.acceptanceCriteria && (
+                  <div className="rounded-lg bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground/60 mb-1">
+                      Acceptance criteria
+                    </p>
+                    <p className="leading-relaxed text-muted-foreground/80">
+                      {subtask.acceptanceCriteria}
+                    </p>
+                  </div>
+                )}
+
+                {subtask.latestWorkerSummary && (
+                  <div>
+                    <p className="text-xs text-muted-foreground/60 mb-1">
+                      Worker summary
+                    </p>
+                    <p className="leading-relaxed text-muted-foreground/80">
+                      {subtask.latestWorkerSummary}
+                    </p>
+                  </div>
+                )}
+
+                {subtask.latestValidatorSummary && (
+                  <div>
+                    <p className="text-xs text-muted-foreground/60 mb-1">
+                      Validator summary
+                    </p>
+                    <p className="leading-relaxed text-muted-foreground/80">
+                      {subtask.latestValidatorSummary}
+                    </p>
+                  </div>
+                )}
+
+                {subtask.latestFeedback && (
+                  <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
+                    <p className="text-xs text-red-700/60 dark:text-red-300/60 mb-1">
+                      Feedback
+                    </p>
+                    <p className="leading-relaxed text-muted-foreground">
+                      {subtask.latestFeedback}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-sm flex-1 ${isDone ? "text-muted-foreground line-through decoration-muted-foreground/30" : "font-medium"}`}
+            >
+              {subtask.title}
+            </span>
+            {!isDone && (
+              <Badge
+                variant="secondary"
+                className={`text-[10px] shrink-0 ${subtaskStatusClasses(subtask.status)}`}
+              >
+                {TASK_SUBTASK_STATUS_LABELS[subtask.status]}
+              </Badge>
             )}
           </div>
-        </section>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import {
   captureBacklinkFootprints,
   getAnalyticsSummary,
   getBacklinksData,
+  getBacklinksByDomain,
   getSeoOverview,
   updateOpportunityStatus,
 } from "../../lib/seo.ts";
@@ -24,9 +25,31 @@ export const seoRouter = router({
       return getAnalyticsSummary(ctx.db, input.siteId, input.startDate, input.endDate);
     }),
   backlinks: orgProcedure
-    .input(z.object({ siteId: z.number() }))
+    .input(
+      z.object({
+        siteId: z.number(),
+        subview: z.enum(["existing", "competitors", "opportunities"]),
+        search: z.string().optional(),
+        statusFilter: z.string().optional(),
+        page: z.number().int().min(1).optional(),
+        pageSize: z.number().int().min(1).max(100).optional(),
+        sortBy: z.string().optional(),
+        sortDirection: z.enum(["asc", "desc"]).optional(),
+        summaryOnly: z.boolean().optional(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
-      return getBacklinksData(ctx.db, input.siteId);
+      return getBacklinksData(ctx.db, input);
+    }),
+  backlinksByDomain: orgProcedure
+    .input(z.object({
+      siteId: z.number(),
+      kind: z.enum(["existing", "competitors"]),
+      page: z.number().int().min(1).default(1),
+      search: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      return getBacklinksByDomain(ctx.db, input.siteId, input.kind, input.page, input.search);
     }),
   captureBacklinkSnapshot: orgProcedure
     .input(z.object({ siteId: z.number() }))
