@@ -30,10 +30,10 @@ function printHelp(): void {
   printLine("Usage:");
   printLine("  seo providers set dataforseo --login <login> --password <password>");
   printLine("  seo providers show dataforseo [--json]");
-  printLine("  seo providers set google --client-id <id> [--redirect-uri <uri>]");
+  printLine("  seo providers set google --client-id <id> --client-secret <secret> --redirect-uri <uri>");
   printLine("  seo providers show google [--json]");
-  printLine("  seo providers auth google");
-  printLine("  seo providers login-url google [--pkce] [--json]");
+  printLine("  seo providers auth google [--pkce] [--json]");
+  printLine("  seo providers exchange-code google --callback-url <url> [--json]");
   printLine("  seo page audit --page <url> [--page <url> ...] [--json]");
 }
 

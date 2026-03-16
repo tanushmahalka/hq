@@ -1,5 +1,6 @@
 import { parseArgs, getBooleanFlag, getStringFlag } from "../core/args.ts";
 import {
+  clearGoogleOAuthPendingAuth,
   getConfigPath,
   readConfig,
   redactDataForSeoConfig,
@@ -7,12 +8,17 @@ import {
   resolveGoogleOAuthConfig,
   saveDataForSeoConfig,
   saveGoogleOAuthConfig,
+  saveGoogleOAuthPendingAuth,
   saveGoogleOAuthTokens,
 } from "../core/config.ts";
 import { CliError } from "../core/errors.ts";
 import { printJson, printLine } from "../core/output.ts";
-import { GoogleDeviceAuthClient } from "../providers/google/device-auth.ts";
-import { buildGoogleOAuthLoginUrl, generateGooglePkcePair } from "../providers/google/oauth.ts";
+import {
+  buildGoogleOAuthLoginUrl,
+  exchangeGoogleAuthorizationCode,
+  generateGooglePkcePair,
+  parseGoogleOAuthCallback,
+} from "../providers/google/oauth.ts";
 import type { GoogleOAuthApplicationType } from "../types/config.ts";
 
 const PROVIDER_SCHEMA = {
@@ -30,8 +36,8 @@ const PROVIDER_SCHEMA = {
   "--login-hint": "string",
   "--code-challenge": "string",
   "--code-challenge-method": "string",
-  "--timeout-seconds": "string",
-  "--interval-seconds": "string",
+  "--callback-url": "string",
+  "--code": "string",
   "--pkce": "boolean",
   "--json": "boolean",
   "--help": "boolean",
@@ -46,26 +52,22 @@ export async function runProvidersCommand(argv: string[]): Promise<void> {
   }
 
   if (action === "set") {
-    const parsed = parseArgs(rest, PROVIDER_SCHEMA);
-    await runSetProvider(provider, parsed);
+    await runSetProvider(provider, parseArgs(rest, PROVIDER_SCHEMA));
     return;
   }
 
   if (action === "show") {
-    const parsed = parseArgs(rest, PROVIDER_SCHEMA);
-    await runShowProvider(provider, parsed);
+    await runShowProvider(provider, parseArgs(rest, PROVIDER_SCHEMA));
     return;
   }
 
-  if (action === "login-url") {
-    const parsed = parseArgs(rest, PROVIDER_SCHEMA);
-    await runProviderLoginUrl(provider, parsed);
+  if (action === "auth" || action === "login-url") {
+    await runProviderAuth(provider, parseArgs(rest, PROVIDER_SCHEMA));
     return;
   }
 
-  if (action === "auth") {
-    const parsed = parseArgs(rest, PROVIDER_SCHEMA);
-    await runProviderAuth(provider, parsed);
+  if (action === "exchange-code") {
+    await runProviderExchangeCode(provider, parseArgs(rest, PROVIDER_SCHEMA));
     return;
   }
 
@@ -76,10 +78,10 @@ function printProvidersHelp(): void {
   printLine("Usage:");
   printLine("  seo providers set dataforseo --login <login> --password <password> [--base-url <url>] [--json]");
   printLine("  seo providers show dataforseo [--json]");
-  printLine("  seo providers set google --client-id <id> [--redirect-uri <uri>] [--client-secret <secret>] [--application-type <web|desktop|limited-input-device>] [--scope <scope> ...] [--json]");
+  printLine("  seo providers set google --client-id <id> --client-secret <secret> --redirect-uri <uri> [--application-type <web|desktop>] [--scope <scope> ...] [--json]");
   printLine("  seo providers show google [--json]");
-  printLine("  seo providers login-url google [--scope <scope> ...] [--state <state>] [--access-type <online|offline>] [--prompt <value>] [--login-hint <email>] [--pkce] [--json]");
-  printLine("  seo providers auth google [--scope <scope> ...] [--timeout-seconds <n>] [--interval-seconds <n>] [--json]");
+  printLine("  seo providers auth google [--scope <scope> ...] [--state <state>] [--access-type <online|offline>] [--prompt <value>] [--login-hint <email>] [--pkce] [--json]");
+  printLine("  seo providers exchange-code google (--callback-url <url> | --code <code>) [--state <state>] [--json]");
 }
 
 async function runSetProvider(provider: string | undefined, parsed: ReturnType<typeof parseArgs>): Promise<void> {
@@ -120,8 +122,11 @@ async function runSetProvider(provider: string | undefined, parsed: ReturnType<t
     const scopes = getStringArrayFlagOrUndefined(parsed, "--scope");
     const asJson = getBooleanFlag(parsed, "--json");
 
-    if (!clientId) {
-      throw new CliError("`seo providers set google` requires `--client-id`.", 2);
+    if (!clientId || !clientSecret || !redirectUri) {
+      throw new CliError(
+        "`seo providers set google` requires `--client-id`, `--client-secret`, and `--redirect-uri`.",
+        2,
+      );
     }
 
     const { config, configPath } = await saveGoogleOAuthConfig({
@@ -148,6 +153,7 @@ async function runSetProvider(provider: string | undefined, parsed: ReturnType<t
     printLine(`Redirect URI: ${result.config.redirectUri ?? "(not set)"}`);
     printLine(`Application Type: ${result.config.applicationType}`);
     printLine(`Scopes: ${result.config.scopes.join(", ")}`);
+    printLine(`Pending Auth: ${result.config.pendingAuth.state ? "yes" : "no"}`);
     if (result.config.tokens.accessToken) {
       printLine("Stored Tokens: yes");
     }
@@ -197,21 +203,26 @@ async function runShowProvider(provider: string | undefined, parsed: ReturnType<
     printLine(`Redirect URI: ${result.config.redirectUri ?? "(not set)"}`);
     printLine(`Application Type: ${result.config.applicationType}`);
     printLine(`Scopes: ${result.config.scopes.join(", ")}`);
+    printLine(`Pending Auth: ${result.config.pendingAuth.state ? "yes" : "no"}`);
+    if (result.config.pendingAuth.state) {
+      printLine(`Pending State: ${result.config.pendingAuth.state}`);
+    }
     return;
   }
 
   throw new CliError("Supported providers: `dataforseo`, `google`.", 2);
 }
 
-async function runProviderLoginUrl(provider: string | undefined, parsed: ReturnType<typeof parseArgs>): Promise<void> {
+async function runProviderAuth(provider: string | undefined, parsed: ReturnType<typeof parseArgs>): Promise<void> {
   if (provider !== "google") {
-    throw new CliError("`seo providers login-url` currently supports only `google`.", 2);
+    throw new CliError("`seo providers auth` currently supports only `google`.", 2);
   }
 
   const resolved = resolveGoogleOAuthConfig(await readConfig());
   if (!resolved.redirectUri) {
-    throw new CliError("Google login URL flow requires a redirect URI. Run `seo providers set google --redirect-uri ...` first.", 2);
+    throw new CliError("Google web auth requires a redirect URI. Run `seo providers set google --redirect-uri ...` first.", 2);
   }
+
   const scopes = getStringArrayFlagOrUndefined(parsed, "--scope");
   const state = getStringFlag(parsed, "--state");
   const accessType = getStringFlag(parsed, "--access-type");
@@ -234,7 +245,7 @@ async function runProviderLoginUrl(provider: string | undefined, parsed: ReturnT
     codeChallengeMethod = pkcePair.codeChallengeMethod;
   }
 
-  const result = buildGoogleOAuthLoginUrl({
+  const login = buildGoogleOAuthLoginUrl({
     config: resolved,
     scopes,
     state,
@@ -245,13 +256,26 @@ async function runProviderLoginUrl(provider: string | undefined, parsed: ReturnT
     codeChallengeMethod: codeChallengeMethod as "S256" | "plain" | undefined,
   });
 
+  const { configPath } = await saveGoogleOAuthPendingAuth({
+    state: login.state,
+    scopes: scopes ?? resolved.scopes,
+    accessType: (accessType as "online" | "offline" | undefined) ?? "offline",
+    prompt,
+    loginHint,
+    codeVerifier,
+    createdAt: new Date().toISOString(),
+  });
+
   const payload = {
+    ok: true,
     provider: "google",
+    flow: "manual-copy-paste",
+    configPath,
     applicationType: resolved.applicationType,
     redirectUri: resolved.redirectUri,
     scopes: scopes ?? resolved.scopes,
-    state: result.state,
-    loginUrl: result.url,
+    state: login.state,
+    loginUrl: login.url,
     ...(codeVerifier ? { codeVerifier } : {}),
   };
 
@@ -260,14 +284,89 @@ async function runProviderLoginUrl(provider: string | undefined, parsed: ReturnT
     return;
   }
 
-  printLine(`Provider: ${payload.provider}`);
-  printLine(`Application Type: ${payload.applicationType}`);
+  printLine("Google auth session started");
   printLine(`Redirect URI: ${payload.redirectUri}`);
   printLine(`State: ${payload.state}`);
   if (codeVerifier) {
     printLine(`Code Verifier: ${codeVerifier}`);
   }
   printLine(`Login URL: ${payload.loginUrl}`);
+  printLine("Next: have the user open the login URL and paste back the final callback URL after Google redirects them.");
+}
+
+async function runProviderExchangeCode(provider: string | undefined, parsed: ReturnType<typeof parseArgs>): Promise<void> {
+  if (provider !== "google") {
+    throw new CliError("`seo providers exchange-code` currently supports only `google`.", 2);
+  }
+
+  const resolved = resolveGoogleOAuthConfig(await readConfig());
+  if (!resolved.redirectUri) {
+    throw new CliError("Google code exchange requires a redirect URI. Run `seo providers set google --redirect-uri ...` first.", 2);
+  }
+
+  const callbackUrl = getStringFlag(parsed, "--callback-url");
+  const explicitCode = getStringFlag(parsed, "--code");
+  const explicitState = getStringFlag(parsed, "--state");
+  const asJson = getBooleanFlag(parsed, "--json");
+
+  if (!callbackUrl && !explicitCode) {
+    throw new CliError("`seo providers exchange-code google` requires either `--callback-url` or `--code`.", 2);
+  }
+
+  const parsedCallback = callbackUrl ? parseGoogleOAuthCallback(callbackUrl) : {};
+  if (parsedCallback.error) {
+    throw new CliError(
+      `Google OAuth returned an error: ${parsedCallback.errorDescription ? `${parsedCallback.error} (${parsedCallback.errorDescription})` : parsedCallback.error}`,
+      2,
+    );
+  }
+
+  const code = explicitCode ?? parsedCallback.code;
+  const state = explicitState ?? parsedCallback.state;
+  if (!code) {
+    throw new CliError("No authorization code was found. Pass `--code` or a callback URL containing `?code=...`.", 2);
+  }
+
+  const pendingAuth = resolved.pendingAuth;
+  if (pendingAuth?.state && !state) {
+    throw new CliError("Expected the pasted callback URL to include `state` so the pending Google auth session can be validated.", 2);
+  }
+
+  if (pendingAuth?.state && state !== pendingAuth.state) {
+    throw new CliError("Callback state did not match the pending Google auth session.", 2);
+  }
+
+  const tokens = await exchangeGoogleAuthorizationCode({
+    config: resolved,
+    code,
+    codeVerifier: pendingAuth?.codeVerifier,
+  });
+  const { configPath } = await saveGoogleOAuthTokens(tokens);
+  await clearGoogleOAuthPendingAuth();
+
+  const payload = {
+    ok: true,
+    provider: "google",
+    configPath,
+    tokens: {
+      accessToken: "********",
+      refreshToken: tokens.refreshToken ? "********" : null,
+      tokenType: tokens.tokenType,
+      scope: tokens.scope,
+      expiryDate: tokens.expiryDate ?? null,
+    },
+  };
+
+  if (asJson) {
+    printJson(payload);
+    return;
+  }
+
+  printLine("Google authorization completed");
+  printLine(`Config path: ${configPath}`);
+  printLine(`Token type: ${tokens.tokenType}`);
+  printLine(`Scopes: ${tokens.scope.join(", ")}`);
+  printLine(`Expires at: ${tokens.expiryDate ?? "(not provided)"}`);
 }
 
 function parseGoogleApplicationType(value: string | undefined): GoogleOAuthApplicationType | undefined {
@@ -279,11 +378,7 @@ function parseGoogleApplicationType(value: string | undefined): GoogleOAuthAppli
     return value;
   }
 
-  if (value === "limited-input-device") {
-    return value;
-  }
-
-  throw new CliError("`--application-type` must be `web`, `desktop`, or `limited-input-device`.", 2);
+  throw new CliError("`--application-type` must be `web` or `desktop`.", 2);
 }
 
 function getStringArrayFlagOrUndefined(
@@ -297,72 +392,4 @@ function getStringArrayFlagOrUndefined(
   }
 
   return values;
-}
-
-async function runProviderAuth(provider: string | undefined, parsed: ReturnType<typeof parseArgs>): Promise<void> {
-  if (provider !== "google") {
-    throw new CliError("`seo providers auth` currently supports only `google`.", 2);
-  }
-
-  const resolved = resolveGoogleOAuthConfig(await readConfig());
-  const scopes = getStringArrayFlagOrUndefined(parsed, "--scope");
-  const timeoutSeconds = parsePositiveInteger(getStringFlag(parsed, "--timeout-seconds")) ?? 900;
-  const intervalSecondsOverride = parsePositiveInteger(getStringFlag(parsed, "--interval-seconds"));
-  const asJson = getBooleanFlag(parsed, "--json");
-  const client = new GoogleDeviceAuthClient(resolved);
-  const authorization = await client.startDeviceAuthorization({ scopes });
-  const intervalSeconds = intervalSecondsOverride ?? authorization.interval;
-
-  if (!asJson) {
-    printLine("Google device authorization started");
-    printLine(`Verification URL: ${authorization.verificationUrl}`);
-    if (authorization.verificationUrlComplete) {
-      printLine(`Direct URL: ${authorization.verificationUrlComplete}`);
-    }
-    printLine(`User Code: ${authorization.userCode}`);
-    printLine("Waiting for the user to approve access...");
-  }
-
-  const tokens = await client.pollForTokens({
-    deviceCode: authorization.deviceCode,
-    intervalSeconds,
-    timeoutSeconds,
-  });
-  const { configPath } = await saveGoogleOAuthTokens(tokens);
-
-  if (asJson) {
-    printJson({
-      ok: true,
-      provider: "google",
-      flow: "device",
-      configPath,
-      tokens: {
-        accessToken: "********",
-        refreshToken: tokens.refreshToken ? "********" : null,
-        tokenType: tokens.tokenType,
-        scope: tokens.scope,
-        expiryDate: tokens.expiryDate ?? null,
-      },
-    });
-    return;
-  }
-
-  printLine("Google authorization completed");
-  printLine(`Config path: ${configPath}`);
-  printLine(`Token type: ${tokens.tokenType}`);
-  printLine(`Scopes: ${tokens.scope.join(", ")}`);
-  printLine(`Expires at: ${tokens.expiryDate ?? "(not provided)"}`);
-}
-
-function parsePositiveInteger(value: string | undefined): number | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new CliError("Expected a positive integer value.", 2);
-  }
-
-  return parsed;
 }

@@ -10,9 +10,14 @@ import {
   resolveDataForSeoConfig,
   saveDataForSeoConfig,
   saveGoogleOAuthConfig,
+  saveGoogleOAuthPendingAuth,
   saveGoogleOAuthTokens,
 } from "../src/core/config.ts";
-import { buildGoogleOAuthLoginUrl } from "../src/providers/google/oauth.ts";
+import {
+  buildGoogleOAuthLoginUrl,
+  exchangeGoogleAuthorizationCode,
+  parseGoogleOAuthCallback,
+} from "../src/providers/google/oauth.ts";
 
 test("saveDataForSeoConfig persists config and resolves it", async () => {
   const tempDir = await mkdtemp(path.join(tmpdir(), "seo-cli-config-"));
@@ -71,7 +76,6 @@ test("saveGoogleOAuthConfig persists config and resolves it", async () => {
   await saveGoogleOAuthConfig({
     clientId: "google-client-id",
     clientSecret: "google-client-secret",
-    redirectUri: "https://localhost/oauth/google/callback",
     applicationType: "web",
     scopes: ["scope:a", "scope:b"],
   });
@@ -83,7 +87,7 @@ test("saveGoogleOAuthConfig persists config and resolves it", async () => {
   assert.equal(saved.providers?.google?.clientId, "google-client-id");
   assert.equal(resolved.clientId, "google-client-id");
   assert.equal(resolved.clientSecret, "google-client-secret");
-  assert.equal(resolved.redirectUri, "https://localhost/oauth/google/callback");
+  assert.equal(resolved.redirectUri, "https://hq.kungfudata.com/oauth/google/callback");
   assert.deepEqual(resolved.scopes, ["scope:a", "scope:b"]);
   assert.match(rawFile, /google-client-id/);
   assert.match(rawFile, /google-client-secret/);
@@ -91,13 +95,13 @@ test("saveGoogleOAuthConfig persists config and resolves it", async () => {
 
 test("buildGoogleOAuthLoginUrl creates a consent URL with stored defaults", () => {
   const result = buildGoogleOAuthLoginUrl({
-    config: {
-      clientId: "google-client-id",
-      clientSecret: "google-client-secret",
-      redirectUri: "https://localhost/oauth/google/callback",
-      applicationType: "web",
-      scopes: ["scope:a", "scope:b"],
-    },
+      config: {
+        clientId: "google-client-id",
+        clientSecret: "google-client-secret",
+        redirectUri: "https://hq.kungfudata.com/oauth/google/callback",
+        applicationType: "web",
+        scopes: ["scope:a", "scope:b"],
+      },
     state: "fixed-state",
     prompt: "consent",
   });
@@ -106,7 +110,7 @@ test("buildGoogleOAuthLoginUrl creates a consent URL with stored defaults", () =
 
   assert.equal(url.origin, "https://accounts.google.com");
   assert.equal(url.searchParams.get("client_id"), "google-client-id");
-  assert.equal(url.searchParams.get("redirect_uri"), "https://localhost/oauth/google/callback");
+  assert.equal(url.searchParams.get("redirect_uri"), "https://hq.kungfudata.com/oauth/google/callback");
   assert.equal(url.searchParams.get("response_type"), "code");
   assert.equal(url.searchParams.get("scope"), "scope:a scope:b");
   assert.equal(url.searchParams.get("state"), "fixed-state");
@@ -120,7 +124,9 @@ test("saveGoogleOAuthTokens stores OAuth tokens in config", async () => {
 
   await saveGoogleOAuthConfig({
     clientId: "google-client-id",
-    applicationType: "limited-input-device",
+    clientSecret: "google-client-secret",
+    redirectUri: "https://app.example.com/oauth/google/callback",
+    applicationType: "web",
   });
 
   await saveGoogleOAuthTokens({
@@ -136,4 +142,80 @@ test("saveGoogleOAuthTokens stores OAuth tokens in config", async () => {
   assert.equal(saved.providers?.google?.tokens?.accessToken, "access-token");
   assert.equal(saved.providers?.google?.tokens?.refreshToken, "refresh-token");
   assert.deepEqual(saved.providers?.google?.tokens?.scope, ["scope:a"]);
+});
+
+test("saveGoogleOAuthPendingAuth stores pending auth session metadata", async () => {
+  const tempDir = await mkdtemp(path.join(tmpdir(), "seo-cli-config-"));
+  process.env.SEO_CLI_CONFIG_PATH = path.join(tempDir, "config.json");
+
+  await saveGoogleOAuthConfig({
+    clientId: "google-client-id",
+    clientSecret: "google-client-secret",
+    redirectUri: "https://app.example.com/oauth/google/callback",
+    applicationType: "web",
+  });
+
+  await saveGoogleOAuthPendingAuth({
+    state: "state-123",
+    scopes: ["scope:a"],
+    accessType: "offline",
+    codeVerifier: "verifier-123",
+    createdAt: "2026-01-01T00:00:00.000Z",
+  });
+
+  const saved = await readConfig();
+
+  assert.equal(saved.providers?.google?.pendingAuth?.state, "state-123");
+  assert.equal(saved.providers?.google?.pendingAuth?.codeVerifier, "verifier-123");
+});
+
+test("parseGoogleOAuthCallback extracts code and state from callback URL", () => {
+  const parsed = parseGoogleOAuthCallback(
+    "https://app.example.com/oauth/google/callback?code=abc123&state=state-123&scope=scope:a",
+  );
+
+  assert.equal(parsed.code, "abc123");
+  assert.equal(parsed.state, "state-123");
+});
+
+test("exchangeGoogleAuthorizationCode exchanges a web auth code for tokens", async () => {
+  const tokens = await exchangeGoogleAuthorizationCode(
+    {
+      config: {
+        clientId: "google-client-id",
+        clientSecret: "google-client-secret",
+        redirectUri: "https://app.example.com/oauth/google/callback",
+        applicationType: "web",
+        scopes: ["scope:a"],
+      },
+      code: "auth-code",
+      codeVerifier: "verifier-123",
+    },
+    async (input, init) => {
+      assert.equal(String(input), "https://oauth2.googleapis.com/token");
+      assert.equal(init?.method, "POST");
+      const body = String(init?.body);
+      assert.match(body, /code=auth-code/);
+      assert.match(body, /client_id=google-client-id/);
+      assert.match(body, /client_secret=google-client-secret/);
+      assert.match(body, /code_verifier=verifier-123/);
+
+      return new Response(
+        JSON.stringify({
+          access_token: "access-token",
+          refresh_token: "refresh-token",
+          token_type: "Bearer",
+          scope: "scope:a scope:b",
+          expires_in: 3600,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+  );
+
+  assert.equal(tokens.accessToken, "access-token");
+  assert.equal(tokens.refreshToken, "refresh-token");
+  assert.equal(tokens.tokenType, "Bearer");
+  assert.deepEqual(tokens.scope, ["scope:a", "scope:b"]);
+  assert.ok(tokens.expiryDate);
 });

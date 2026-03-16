@@ -7,6 +7,7 @@ import type {
   DataForSeoProviderConfig,
   GoogleOAuthProviderConfig,
   GoogleOAuthApplicationType,
+  GoogleOAuthPendingAuth,
   GoogleOAuthTokenSet,
   ResolvedGoogleOAuthProviderConfig,
   ResolvedDataForSeoProviderConfig,
@@ -15,6 +16,7 @@ import type {
 
 const DEFAULT_DATAFORSEO_BASE_URL = "https://api.dataforseo.com";
 const DEFAULT_GOOGLE_APPLICATION_TYPE: GoogleOAuthApplicationType = "web";
+const DEFAULT_GOOGLE_REDIRECT_URI = "https://hq.kungfudata.com/oauth/google/callback";
 const DEFAULT_GOOGLE_SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"];
 
 function defaultConfigDir(): string {
@@ -93,6 +95,7 @@ export async function saveGoogleOAuthConfig(
       google: {
         ...current.providers?.google,
         ...nextConfig,
+        redirectUri: nextConfig.redirectUri ?? current.providers?.google?.redirectUri ?? DEFAULT_GOOGLE_REDIRECT_URI,
         applicationType:
           nextConfig.applicationType ??
           current.providers?.google?.applicationType ??
@@ -117,6 +120,43 @@ export async function saveGoogleOAuthTokens(
       google: {
         ...current.providers?.google,
         tokens,
+        pendingAuth: undefined,
+      },
+    },
+  };
+
+  const configPath = await writeConfig(merged);
+  return { configPath, config: merged };
+}
+
+export async function saveGoogleOAuthPendingAuth(
+  pendingAuth: GoogleOAuthPendingAuth,
+): Promise<{ configPath: string; config: SeoCliConfig }> {
+  const current = await readConfig();
+  const merged: SeoCliConfig = {
+    ...current,
+    providers: {
+      ...current.providers,
+      google: {
+        ...current.providers?.google,
+        pendingAuth,
+      },
+    },
+  };
+
+  const configPath = await writeConfig(merged);
+  return { configPath, config: merged };
+}
+
+export async function clearGoogleOAuthPendingAuth(): Promise<{ configPath: string; config: SeoCliConfig }> {
+  const current = await readConfig();
+  const merged: SeoCliConfig = {
+    ...current,
+    providers: {
+      ...current.providers,
+      google: {
+        ...current.providers?.google,
+        pendingAuth: undefined,
       },
     },
   };
@@ -145,7 +185,7 @@ export function resolveGoogleOAuthConfig(config: SeoCliConfig): ResolvedGoogleOA
   const fromFile = config.providers?.google ?? {};
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID ?? fromFile.clientId;
   const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? fromFile.clientSecret;
-  const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI ?? fromFile.redirectUri;
+  const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI ?? fromFile.redirectUri ?? DEFAULT_GOOGLE_REDIRECT_URI;
   const applicationType =
     (process.env.GOOGLE_OAUTH_APPLICATION_TYPE as GoogleOAuthApplicationType | undefined) ??
     fromFile.applicationType ??
@@ -168,6 +208,7 @@ export function resolveGoogleOAuthConfig(config: SeoCliConfig): ResolvedGoogleOA
     applicationType,
     scopes,
     tokens: fromFile.tokens,
+    pendingAuth: fromFile.pendingAuth,
   };
 }
 
@@ -194,11 +235,20 @@ export function redactGoogleOAuthConfig(
     scope: string[];
     expiryDate: string | null;
   };
+  pendingAuth: {
+    state: string | null;
+    scopes: string[];
+    accessType: string | null;
+    prompt: string | null;
+    loginHint: string | null;
+    hasCodeVerifier: boolean;
+    createdAt: string | null;
+  };
 } {
   return {
     clientId: config?.clientId ?? null,
     clientSecret: config?.clientSecret ? "********" : null,
-    redirectUri: config?.redirectUri ?? null,
+    redirectUri: config?.redirectUri ?? DEFAULT_GOOGLE_REDIRECT_URI,
     applicationType: config?.applicationType ?? DEFAULT_GOOGLE_APPLICATION_TYPE,
     scopes: config?.scopes ?? DEFAULT_GOOGLE_SCOPES,
     tokens: {
@@ -207,6 +257,15 @@ export function redactGoogleOAuthConfig(
       tokenType: config?.tokens?.tokenType ?? null,
       scope: config?.tokens?.scope ?? [],
       expiryDate: config?.tokens?.expiryDate ?? null,
+    },
+    pendingAuth: {
+      state: config?.pendingAuth?.state ?? null,
+      scopes: config?.pendingAuth?.scopes ?? [],
+      accessType: config?.pendingAuth?.accessType ?? null,
+      prompt: config?.pendingAuth?.prompt ?? null,
+      loginHint: config?.pendingAuth?.loginHint ?? null,
+      hasCodeVerifier: Boolean(config?.pendingAuth?.codeVerifier),
+      createdAt: config?.pendingAuth?.createdAt ?? null,
     },
   };
 }

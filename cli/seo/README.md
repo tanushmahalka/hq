@@ -7,8 +7,9 @@ JSON-first SEO tooling for AI agents.
 ```bash
 ./bin/seo providers set dataforseo --login "$DATAFORSEO_LOGIN" --password "$DATAFORSEO_PASSWORD"
 ./bin/seo providers show dataforseo --json
-./bin/seo providers set google --client-id "$GOOGLE_OAUTH_CLIENT_ID" --application-type limited-input-device
-./bin/seo providers auth google
+./bin/seo providers set google --client-id "$GOOGLE_OAUTH_CLIENT_ID" --client-secret "$GOOGLE_OAUTH_CLIENT_SECRET" --redirect-uri "https://auth.example.com/oauth/google/callback"
+./bin/seo providers auth google --json
+./bin/seo providers exchange-code google --callback-url "https://auth.example.com/oauth/google/callback?code=..." --json
 ./bin/seo page audit --page "https://example.com" --json
 ./bin/seo page audit --page "https://example.com" --page "https://example.com/pricing"
 ```
@@ -31,22 +32,30 @@ Environment variables override file config:
 
 ## Google OAuth
 
-For an EC2-hosted CLI, prefer Google device flow. Store the client ID with `seo providers set google`, then run `seo providers auth google` and hand the verification URL and user code to the user.
+For an EC2-hosted CLI using a Google `Web application` client, the simplest setup is a manual handoff flow:
+
+1. Run `seo providers auth google` to generate the login URL.
+2. Give that URL to the user.
+3. After Google redirects them, have them paste the final callback URL back to the agent.
+4. Run `seo providers exchange-code google --callback-url "..."`
 
 ```bash
 ./bin/seo providers set google \
   --client-id "$GOOGLE_OAUTH_CLIENT_ID" \
-  --application-type limited-input-device \
+  --client-secret "$GOOGLE_OAUTH_CLIENT_SECRET" \
+  --redirect-uri "https://auth.example.com/oauth/google/callback" \
+  --application-type web \
   --scope "https://www.googleapis.com/auth/webmasters.readonly"
 
-./bin/seo providers auth google
+./bin/seo providers auth google --prompt consent
+./bin/seo providers exchange-code google --callback-url "https://auth.example.com/oauth/google/callback?code=...&state=..."
 ```
 
-Use the older redirect flow only when you control an HTTPS callback URL:
+Notes:
 
-- `--application-type web` is the right fit when you own a backend callback endpoint.
-- `--application-type desktop` is the right fit for a native installed-app flow on the same machine as the browser.
-- `seo providers login-url google` still supports that redirect-based flow and requires `--redirect-uri`.
+- `--application-type web` is the right fit when you own an HTTPS callback URL.
+- `seo providers auth google` stores the pending `state` and optional PKCE verifier in config so `exchange-code` can validate the pasted callback.
+- `prompt=consent` is a good default if you want Google to issue a refresh token.
 
 ## Audit Endpoint
 

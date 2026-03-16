@@ -4,7 +4,7 @@ export interface DataForSeoProviderConfig {
   baseUrl?: string;
 }
 
-export type GoogleOAuthApplicationType = "web" | "desktop" | "limited-input-device";
+export type GoogleOAuthApplicationType = "web" | "desktop";
 
 export interface GoogleOAuthTokenSet {
   accessToken: string;
@@ -14,6 +14,16 @@ export interface GoogleOAuthTokenSet {
   expiryDate?: string;
 }
 
+export interface GoogleOAuthPendingAuth {
+  state: string;
+  scopes: string[];
+  accessType: "online" | "offline";
+  prompt?: string;
+  loginHint?: string;
+  codeVerifier?: string;
+  createdAt: string;
+}
+
 export interface GoogleOAuthProviderConfig {
   clientId: string;
   clientSecret?: string;
@@ -21,6 +31,7 @@ export interface GoogleOAuthProviderConfig {
   applicationType?: GoogleOAuthApplicationType;
   scopes?: string[];
   tokens?: GoogleOAuthTokenSet;
+  pendingAuth?: GoogleOAuthPendingAuth;
 }
 
 export interface SeoCliConfig {
@@ -43,4 +54,5 @@ export interface ResolvedGoogleOAuthProviderConfig {
   applicationType: GoogleOAuthApplicationType;
   scopes: string[];
   tokens?: GoogleOAuthTokenSet;
+  pendingAuth?: GoogleOAuthPendingAuth;
 }

@@ -30,6 +30,7 @@ import Usage from "./pages/usage";
 import Login from "./pages/login";
 import InvitePage from "./pages/invite";
 import NoAccess from "./pages/no-access";
+import GoogleOauthCallback from "./pages/google-oauth-callback";
 import SettingsHome from "./pages/settings-home";
 import SettingsLayout from "./pages/settings-layout";
 import TeamPage from "./pages/team";
@@ -53,6 +54,11 @@ function LegacyNoAccessRedirect() {
   return <Navigate to={`/app/no-access${location.search}`} replace />;
 }
 
+function LegacyGoogleOauthCallbackRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/oauth/google/callback${location.search}${location.hash}`} replace />;
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider defaultTheme="light">
@@ -67,6 +73,7 @@ createRoot(document.getElementById("root")!).render(
               element={<Navigate to="/app/login" replace />}
             />
             <Route path="app/invite/:invitationId" element={<InvitePage />} />
+            <Route path="oauth/google/callback" element={<GoogleOauthCallback />} />
             <Route
               path="app/no-access"
               element={
@@ -85,6 +92,10 @@ createRoot(document.getElementById("root")!).render(
             />
             <Route path="invite/:invitationId" element={<LegacyInviteRedirect />} />
             <Route path="no-access" element={<LegacyNoAccessRedirect />} />
+            <Route
+              path="app/oauth/google/callback"
+              element={<LegacyGoogleOauthCallbackRedirect />}
+            />
 
             {/* Protected app routes (auth + org required) */}
             <Route

@@ -1,44 +1,47 @@
 # Google OAuth Reference
 
-For a CLI running on EC2, the best default is Google device authorization. That avoids localhost callbacks and lets a non-technical user approve access from their own browser.
+For a CLI running on EC2 with a Google `Web application` client, the simplest setup is a manual copy-paste flow.
 
-## Device Flow On EC2
-
-```bash
-./bin/seo providers set google \
-  --client-id "$GOOGLE_OAUTH_CLIENT_ID" \
-  --application-type limited-input-device \
-  --scope "https://www.googleapis.com/auth/webmasters.readonly"
-
-./bin/seo providers auth google
-```
-
-The CLI will print:
-
-```text
-Verification URL: https://www.google.com/device
-User Code: XXXX-XXXX
-Waiting for the user to approve access...
-```
-
-Once the user approves access, the CLI stores the Google tokens in the normal config file.
-
-## Redirect Flow
-
-Use redirect-based OAuth only when you control the callback destination:
+## Store Client Settings
 
 ```bash
 ./bin/seo providers set google \
   --client-id "$GOOGLE_OAUTH_CLIENT_ID" \
   --client-secret "$GOOGLE_OAUTH_CLIENT_SECRET" \
-  --redirect-uri "https://app.example.com/oauth/google/callback" \
-  --application-type web
+  --redirect-uri "https://auth.example.com/oauth/google/callback" \
+  --application-type web \
+  --scope "https://www.googleapis.com/auth/webmasters.readonly"
+```
 
-./bin/seo providers login-url google --prompt consent --pkce --json
+## Start Auth
+
+```bash
+./bin/seo providers auth google
+```
+
+The CLI returns a Google login URL and stores the pending `state` locally. Hand that URL to the user.
+
+## Finish Auth
+
+After Google redirects the user to your callback URL, have them paste the full final URL back to the agent:
+
+```bash
+./bin/seo providers exchange-code google \
+  --callback-url "https://auth.example.com/oauth/google/callback?code=...&state=..."
+```
+
+## Example Flow
+
+```text
+1. Agent runs `seo providers auth google`
+2. Agent sends `loginUrl` to the user
+3. User signs in with Google
+4. Google redirects user to `https://auth.example.com/oauth/google/callback?...`
+5. User copies that final URL and sends it back
+6. Agent runs `seo providers exchange-code google --callback-url "..."`
 ```
 
 ## Choosing The Google OAuth App Type
 
-- Use `limited-input-device` for an EC2-hosted CLI that asks the user to visit Google’s verification page and enter a code.
-- Use `web` when your backend owns a fixed HTTPS redirect URI.
-- Use `desktop` when the OAuth callback is handled locally on the same machine as the running app.
+- Use `web` when your callback is a public HTTPS URL.
+- Use `desktop` only when the app and browser are on the same machine and you are handling the callback locally.
