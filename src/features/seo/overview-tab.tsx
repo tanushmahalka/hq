@@ -17,7 +17,7 @@ import {
 
 type PageSort = "default" | "score-asc" | "score-desc" | "issues-desc" | "issues-asc";
 
-function getPageAuditSummary(page: SeoPage): { score: number | null; issueCount: number } {
+export function getPageAuditSummary(page: SeoPage): { score: number | null; issueCount: number } {
   const audit = extractAuditItem(page.auditJson);
   if (!audit) return { score: null, issueCount: 0 };
 

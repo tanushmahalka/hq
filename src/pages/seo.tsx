@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import {
   FileText,
   Globe,
@@ -24,7 +24,7 @@ import { AnalyticsTab } from "@/features/seo/analytics-tab";
 import { BacklinksTab } from "@/features/seo/backlinks-tab";
 import { CompetitorsTab } from "@/features/seo/competitors-tab";
 import { KeywordsTab } from "@/features/seo/keywords-tab";
-import { OverviewTab, PageDetailCard } from "@/features/seo/overview-tab";
+import { OverviewTab, PageDetailCard, getPageAuditSummary } from "@/features/seo/overview-tab";
 import {
   EmptyState,
   SeoLoadingState,
@@ -144,6 +144,11 @@ export default function Seo() {
     0,
   );
 
+  const totalIssueCount = useMemo(
+    () => sitePages.reduce((sum, page) => sum + getPageAuditSummary(page).issueCount, 0),
+    [sitePages],
+  );
+
   return (
     <div className="flex flex-col h-full p-12">
       {/* Page header */}
@@ -179,8 +184,8 @@ export default function Seo() {
         <div className="flex items-center gap-0">
           <SeoTabButton
             active={activeTab === "overview"}
-            label="Overview"
-            description={selectedSite ? `${formatNumber(sitePages.length)} pages` : ""}
+            label="Pages"
+            description={selectedSite ? `${formatNumber(sitePages.length)} tracked` : ""}
             onClick={() => setActiveTab("overview")}
           />
           <SeoTabButton
@@ -214,9 +219,9 @@ export default function Seo() {
             {activeTab === "overview" ? (
               <>
                 <SummaryCard label="Pages" value={selectedSite.pageCount} />
+                <SummaryCard label="Issues" value={totalIssueCount} />
                 <SummaryCard label="Clusters" value={selectedSite.clusterCount} />
                 <SummaryCard label="Keywords" value={selectedSite.keywordCount} />
-                <SummaryCard label="Mapped" value={selectedSite.mappedPageCount} />
               </>
             ) : (
               <>
