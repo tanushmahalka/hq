@@ -32,6 +32,11 @@ export interface GoogleOAuthTokenExchangeOptions {
   codeVerifier?: string;
 }
 
+export interface GoogleOAuthTokenRefreshOptions {
+  config: ResolvedGoogleOAuthProviderConfig;
+  refreshToken?: string;
+}
+
 interface GoogleOAuthTokenResponse {
   access_token: string;
   expires_in?: number;
@@ -136,6 +141,64 @@ export async function exchangeGoogleAuthorizationCode(
     scope: payload.scope?.split(" ").filter(Boolean) ?? options.config.scopes,
     expiryDate: payload.expires_in ? new Date(Date.now() + payload.expires_in * 1000).toISOString() : undefined,
   };
+}
+
+export async function refreshGoogleAccessToken(
+  options: GoogleOAuthTokenRefreshOptions,
+  fetchImpl: typeof fetch = fetch,
+): Promise<GoogleOAuthTokenSet> {
+  const refreshToken = options.refreshToken ?? options.config.tokens?.refreshToken;
+  if (!refreshToken) {
+    throw new CliError("Google OAuth refresh requires a stored refresh token.", 2);
+  }
+
+  const body = new URLSearchParams({
+    client_id: options.config.clientId,
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  });
+
+  if (options.config.clientSecret) {
+    body.set("client_secret", options.config.clientSecret);
+  }
+
+  const response = await fetchImpl("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const payload = (await safeParseError(response)) ?? {
+      error: `http_${response.status}`,
+      error_description: response.statusText,
+    };
+    throw new CliError(`Google OAuth token refresh failed: ${formatGoogleError(payload)}`, 2);
+  }
+
+  const payload = (await response.json()) as GoogleOAuthTokenResponse;
+
+  return {
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token ?? refreshToken,
+    tokenType: payload.token_type,
+    scope: payload.scope?.split(" ").filter(Boolean) ?? options.config.tokens?.scope ?? options.config.scopes,
+    expiryDate: payload.expires_in ? new Date(Date.now() + payload.expires_in * 1000).toISOString() : undefined,
+  };
+}
+
+export function isGoogleAccessTokenExpired(tokens: GoogleOAuthTokenSet | undefined, skewMs = 60_000): boolean {
+  if (!tokens?.accessToken) {
+    return true;
+  }
+
+  if (!tokens.expiryDate) {
+    return false;
+  }
+
+  return Date.parse(tokens.expiryDate) <= Date.now() + skewMs;
 }
 
 export function parseGoogleOAuthCallback(callbackUrl: string): {

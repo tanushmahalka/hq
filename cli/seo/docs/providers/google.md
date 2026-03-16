@@ -45,3 +45,21 @@ After Google redirects the user to your callback URL, have them paste the full f
 
 - Use `web` when your callback is a public HTTPS URL.
 - Use `desktop` only when the app and browser are on the same machine and you are handling the callback locally.
+
+## Fetch Search Console Queries
+
+Once OAuth tokens are stored, fetch query rows for a Search Console property:
+
+```bash
+./bin/seo keywords list \
+  --site "sc-domain:example.com" \
+  --from "2026-03-01" \
+  --to "2026-03-07" \
+  --json
+```
+
+The command:
+
+- calls Search Console `searchAnalytics.query`
+- paginates internally until all available rows are collected
+- refreshes the Google access token automatically when a refresh token is available

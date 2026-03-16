@@ -2,6 +2,7 @@ import { CliError } from "./core/errors.ts";
 import { printLine } from "./core/output.ts";
 import { runProvidersCommand } from "./commands/providers.ts";
 import { runPageAuditCommand } from "./commands/page/audit/index.ts";
+import { runKeywordsListCommand } from "./commands/keywords/list.ts";
 
 async function main(argv: string[]): Promise<void> {
   const [group, action, ...rest] = argv;
@@ -21,6 +22,11 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
+  if (group === "keywords" && action === "list") {
+    await runKeywordsListCommand(rest);
+    return;
+  }
+
   throw new CliError(`Unknown command: ${argv.join(" ")}`, 2);
 }
 
@@ -35,6 +41,7 @@ function printHelp(): void {
   printLine("  seo providers auth google [--pkce] [--json]");
   printLine("  seo providers exchange-code google --callback-url <url> [--json]");
   printLine("  seo page audit --page <url> [--page <url> ...] [--json]");
+  printLine("  seo keywords list --site <sc-property> --from <yyyy-mm-dd> --to <yyyy-mm-dd> [--json]");
 }
 
 main(process.argv.slice(2)).catch((error: unknown) => {

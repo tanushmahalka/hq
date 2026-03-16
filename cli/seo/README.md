@@ -12,6 +12,7 @@ JSON-first SEO tooling for AI agents.
 ./bin/seo providers exchange-code google --callback-url "https://auth.example.com/oauth/google/callback?code=..." --json
 ./bin/seo page audit --page "https://example.com" --json
 ./bin/seo page audit --page "https://example.com" --page "https://example.com/pricing"
+./bin/seo keywords list --site "sc-domain:example.com" --from "2026-03-01" --to "2026-03-07" --json
 ```
 
 ## Config
@@ -56,6 +57,24 @@ Notes:
 - `--application-type web` is the right fit when you own an HTTPS callback URL.
 - `seo providers auth google` stores the pending `state` and optional PKCE verifier in config so `exchange-code` can validate the pasted callback.
 - `prompt=consent` is a good default if you want Google to issue a refresh token.
+
+## Search Console Keywords
+
+Use the Search Console API to fetch all available query rows for a property and date range. Pagination is handled internally.
+
+```bash
+./bin/seo keywords list \
+  --site "sc-domain:example.com" \
+  --from "2026-03-01" \
+  --to "2026-03-07" \
+  --json
+```
+
+Notes:
+
+- `--site` must match the Search Console property identifier, such as `sc-domain:example.com` or `https://example.com/`.
+- The CLI automatically pages through Search Console `searchAnalytics.query` results.
+- If a refresh token is stored, the CLI refreshes expired Google access tokens automatically.
 
 ## Audit Endpoint
 

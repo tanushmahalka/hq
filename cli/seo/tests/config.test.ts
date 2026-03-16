@@ -16,6 +16,7 @@ import {
 import {
   buildGoogleOAuthLoginUrl,
   exchangeGoogleAuthorizationCode,
+  refreshGoogleAccessToken,
   parseGoogleOAuthCallback,
 } from "../src/providers/google/oauth.ts";
 
@@ -218,4 +219,44 @@ test("exchangeGoogleAuthorizationCode exchanges a web auth code for tokens", asy
   assert.equal(tokens.tokenType, "Bearer");
   assert.deepEqual(tokens.scope, ["scope:a", "scope:b"]);
   assert.ok(tokens.expiryDate);
+});
+
+test("refreshGoogleAccessToken keeps the existing refresh token when Google omits it", async () => {
+  const tokens = await refreshGoogleAccessToken(
+    {
+      config: {
+        clientId: "google-client-id",
+        clientSecret: "google-client-secret",
+        redirectUri: "https://app.example.com/oauth/google/callback",
+        applicationType: "web",
+        scopes: ["scope:a"],
+        tokens: {
+          accessToken: "old-access-token",
+          refreshToken: "refresh-token",
+          tokenType: "Bearer",
+          scope: ["scope:a"],
+        },
+      },
+    },
+    async (input, init) => {
+      assert.equal(String(input), "https://oauth2.googleapis.com/token");
+      assert.equal(init?.method, "POST");
+      const body = String(init?.body);
+      assert.match(body, /refresh_token=refresh-token/);
+      assert.match(body, /grant_type=refresh_token/);
+
+      return new Response(
+        JSON.stringify({
+          access_token: "fresh-access-token",
+          token_type: "Bearer",
+          expires_in: 3600,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+  );
+
+  assert.equal(tokens.accessToken, "fresh-access-token");
+  assert.equal(tokens.refreshToken, "refresh-token");
+  assert.equal(tokens.tokenType, "Bearer");
 });

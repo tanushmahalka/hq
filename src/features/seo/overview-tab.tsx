@@ -25,8 +25,7 @@ function getPageAuditSummary(page: SeoPage): { score: number | null; issueCount:
   if (audit.checks) {
     for (const [key, value] of Object.entries(audit.checks)) {
       if (!CHECK_LABELS[key]) continue;
-      const isPositive = ["canonical", "seo_friendly_url", "has_html_doctype"].includes(key);
-      if (isPositive ? !value : value) issueCount++;
+      if (POSITIVE_CHECKS.has(key) ? !value : value) issueCount++;
     }
   }
 
@@ -396,11 +395,7 @@ export function OverviewTab({
 function extractAuditItem(auditJson: unknown): PageAuditItem | null {
   if (!auditJson || typeof auditJson !== "object") return null;
   const json = auditJson as Record<string, unknown>;
-  const pagesArr = json.pages;
-  if (!Array.isArray(pagesArr) || pagesArr.length === 0) return null;
-  const firstPage = pagesArr[0] as Record<string, unknown> | undefined;
-  if (!firstPage) return null;
-  const tasks = firstPage.tasks as Record<string, unknown> | undefined;
+  const tasks = json.tasks as Record<string, unknown> | undefined;
   const instant = tasks?.instant as Record<string, unknown> | undefined;
   const result = instant?.result as Array<Record<string, unknown>> | undefined;
   if (!Array.isArray(result) || result.length === 0) return null;
@@ -428,27 +423,65 @@ function CheckItem({ label, passed }: { label: string; passed: boolean }) {
 }
 
 const CHECK_LABELS: Record<string, string> = {
+  // Negative checks (true = problem)
   no_title: "Missing title tag",
   no_description: "Missing meta description",
   no_h1_tag: "Missing H1 tag",
   no_favicon: "Missing favicon",
+  no_doctype: "Missing doctype",
   title_too_long: "Title too long",
   title_too_short: "Title too short",
   no_image_alt: "Images missing alt text",
+  no_image_title: "Images missing title attribute",
   low_content_rate: "Low content rate",
+  high_content_rate: "High content rate",
   high_loading_time: "High loading time",
+  high_waiting_time: "High server wait time",
   is_broken: "Broken page",
   is_redirect: "Redirect",
+  is_http: "Not using HTTPS",
   duplicate_title_tag: "Duplicate title",
   duplicate_description: "Duplicate description",
   duplicate_content: "Duplicate content",
+  duplicate_meta_tags: "Duplicate meta tags",
   https_to_http_links: "HTTPS to HTTP links",
   has_render_blocking_resources: "Render-blocking resources",
   irrelevant_description: "Irrelevant description",
-  seo_friendly_url: "SEO-friendly URL",
+  irrelevant_title: "Irrelevant title",
+  irrelevant_meta_keywords: "Irrelevant meta keywords",
+  large_page_size: "Large page size",
+  size_greater_than_3mb: "Page larger than 3 MB",
+  small_page_size: "Small page size",
+  low_character_count: "Low character count",
+  high_character_count: "High character count",
+  low_readability_rate: "Low readability",
+  lorem_ipsum: "Contains placeholder text",
+  deprecated_html_tags: "Deprecated HTML tags",
+  no_content_encoding: "No content encoding",
+  no_encoding_meta_tag: "No encoding meta tag",
+  has_meta_refresh_redirect: "Meta refresh redirect",
+  flash: "Uses Flash",
+  // Positive checks (true = good)
+  is_https: "Using HTTPS",
   canonical: "Canonical tag present",
+  seo_friendly_url: "SEO-friendly URL",
   has_html_doctype: "HTML doctype present",
+  meta_charset_consistency: "Charset is consistent",
+  has_micromarkup: "Has structured data",
 };
+
+const POSITIVE_CHECKS = new Set([
+  "is_https",
+  "canonical",
+  "seo_friendly_url",
+  "has_html_doctype",
+  "meta_charset_consistency",
+  "has_micromarkup",
+  "seo_friendly_url_dynamic_check",
+  "seo_friendly_url_keywords_check",
+  "seo_friendly_url_characters_check",
+  "seo_friendly_url_relative_length_check",
+]);
 
 
 function PageAuditSection({ audit }: { audit: PageAuditItem }) {
@@ -463,8 +496,7 @@ function PageAuditSection({ audit }: { audit: PageAuditItem }) {
     for (const [key, value] of Object.entries(checks)) {
       const label = CHECK_LABELS[key];
       if (!label) continue;
-      const isPositiveCheck = ["canonical", "seo_friendly_url", "has_html_doctype"].includes(key);
-      const passed = isPositiveCheck ? value : !value;
+      const passed = POSITIVE_CHECKS.has(key) ? value : !value;
       (passed ? passes : issues).push({ label, key });
     }
   }
