@@ -1,6 +1,8 @@
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { SeoCluster, SeoPage, SeoSite } from "./types";
+import { ArrowDownUp, ChevronRight } from "lucide-react";
+import type { PageAuditItem, SeoCluster, SeoPage, SeoSite } from "./types";
 import { FilterChip, InfoTile, InlineEmptyState } from "./shared";
 import {
   formatDate,
@@ -12,6 +14,24 @@ import {
   getVisibilityStatus,
   toTitleCase,
 } from "./utils";
+
+type PageSort = "default" | "score-asc" | "score-desc" | "issues-desc" | "issues-asc";
+
+function getPageAuditSummary(page: SeoPage): { score: number | null; issueCount: number } {
+  const audit = extractAuditItem(page.auditJson);
+  if (!audit) return { score: null, issueCount: 0 };
+
+  let issueCount = 0;
+  if (audit.checks) {
+    for (const [key, value] of Object.entries(audit.checks)) {
+      if (!CHECK_LABELS[key]) continue;
+      const isPositive = ["canonical", "seo_friendly_url", "has_html_doctype"].includes(key);
+      if (isPositive ? !value : value) issueCount++;
+    }
+  }
+
+  return { score: audit.onpage_score ?? null, issueCount };
+}
 
 export function OverviewTab({
   filteredPages,
@@ -51,6 +71,34 @@ export function OverviewTab({
   selectedClusterId: number | null;
   onSelectCluster: (value: number) => void;
 }) {
+  const [pageSort, setPageSort] = useState<PageSort>("default");
+
+  // Precompute audit summaries and sort
+  const sortedPages = useMemo(() => {
+    const withAudit = filteredPages.map((page) => ({
+      page,
+      audit: getPageAuditSummary(page),
+    }));
+
+    if (pageSort === "default") return withAudit;
+
+    return [...withAudit].sort((a, b) => {
+      if (pageSort === "score-desc") return (b.audit.score ?? -1) - (a.audit.score ?? -1);
+      if (pageSort === "score-asc") return (a.audit.score ?? 101) - (b.audit.score ?? 101);
+      if (pageSort === "issues-desc") return b.audit.issueCount - a.audit.issueCount;
+      if (pageSort === "issues-asc") return a.audit.issueCount - b.audit.issueCount;
+      return 0;
+    });
+  }, [filteredPages, pageSort]);
+
+  function cycleSort(field: "score" | "issues") {
+    if (field === "score") {
+      setPageSort((prev) => prev === "score-desc" ? "score-asc" : "score-desc");
+    } else {
+      setPageSort((prev) => prev === "issues-desc" ? "issues-asc" : "issues-desc");
+    }
+  }
+
   return (
     <div className="space-y-8">
       {/* Pages section */}
@@ -70,7 +118,7 @@ export function OverviewTab({
             placeholder="Search pages by title, URL, type, or cluster..."
             className="text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/50 w-full"
           />
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <FilterChip
               active={selectedPageType === "all"}
               onClick={() => onPageTypeChange("all")}
@@ -84,19 +132,48 @@ export function OverviewTab({
                 label={toTitleCase(pageType)}
               />
             ))}
+
+            {/* Sort controls */}
+            <span className="w-px h-4 bg-border/40 mx-1" />
+            <button
+              type="button"
+              onClick={() => cycleSort("score")}
+              className={cn(
+                "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                pageSort.startsWith("score")
+                  ? "border-foreground/20 bg-foreground/5 text-foreground"
+                  : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border",
+              )}
+            >
+              <ArrowDownUp className="size-3" />
+              Score {pageSort === "score-asc" ? "↑" : pageSort === "score-desc" ? "↓" : ""}
+            </button>
+            <button
+              type="button"
+              onClick={() => cycleSort("issues")}
+              className={cn(
+                "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                pageSort.startsWith("issues")
+                  ? "border-foreground/20 bg-foreground/5 text-foreground"
+                  : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border",
+              )}
+            >
+              <ArrowDownUp className="size-3" />
+              Issues {pageSort === "issues-asc" ? "↑" : pageSort === "issues-desc" ? "↓" : ""}
+            </button>
           </div>
         </div>
 
         {/* Page list */}
         <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
-          {filteredPages.length === 0 ? (
+          {sortedPages.length === 0 ? (
             <InlineEmptyState
               title="No pages match these filters"
               description="Try a broader search or switch back to all page types."
             />
           ) : (
             <div className="max-h-[600px] overflow-y-auto">
-              {filteredPages.map((page) => {
+              {sortedPages.map(({ page, audit }) => {
                 const visibility = getVisibilityStatus(
                   page.indexability,
                   page.statusCode,
@@ -106,6 +183,15 @@ export function OverviewTab({
                   page.isMoneyPage,
                   page.isAuthorityAsset,
                 );
+
+                const scoreColor =
+                  audit.score != null
+                    ? audit.score >= 80
+                      ? "text-emerald-500"
+                      : audit.score >= 50
+                        ? "text-amber-500"
+                        : "text-red-500"
+                    : null;
 
                 return (
                   <button
@@ -129,6 +215,19 @@ export function OverviewTab({
                       <span className="flex-1 text-sm truncate">
                         {page.displayTitle}
                       </span>
+
+                      {/* Inline audit indicators */}
+                      {audit.issueCount > 0 && (
+                        <span className="text-[11px] tabular-nums text-red-500/70 shrink-0">
+                          {audit.issueCount} issue{audit.issueCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {audit.score != null && (
+                        <span className={cn("text-[11px] tabular-nums font-medium shrink-0", scoreColor)}>
+                          {Math.round(audit.score)}
+                        </span>
+                      )}
+
                       <Badge
                         variant="outline"
                         className="text-[10px] px-1.5 py-0 shrink-0 hidden lg:inline-flex"
@@ -294,9 +393,160 @@ export function OverviewTab({
   );
 }
 
+function extractAuditItem(auditJson: unknown): PageAuditItem | null {
+  if (!auditJson || typeof auditJson !== "object") return null;
+  const json = auditJson as Record<string, unknown>;
+  const pagesArr = json.pages;
+  if (!Array.isArray(pagesArr) || pagesArr.length === 0) return null;
+  const firstPage = pagesArr[0] as Record<string, unknown> | undefined;
+  if (!firstPage) return null;
+  const tasks = firstPage.tasks as Record<string, unknown> | undefined;
+  const instant = tasks?.instant as Record<string, unknown> | undefined;
+  const result = instant?.result as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(result) || result.length === 0) return null;
+  const items = result[0].items as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(items) || items.length === 0) return null;
+  return items[0] as unknown as PageAuditItem;
+}
+
+
+function CheckItem({ label, passed }: { label: string; passed: boolean }) {
+  return (
+    <div className="flex items-center gap-2 py-1">
+      <span className={cn(
+        "size-1.5 rounded-full shrink-0",
+        passed ? "bg-emerald-400" : "bg-red-400",
+      )} />
+      <span className={cn(
+        "text-sm",
+        passed ? "text-muted-foreground" : "text-foreground",
+      )}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+const CHECK_LABELS: Record<string, string> = {
+  no_title: "Missing title tag",
+  no_description: "Missing meta description",
+  no_h1_tag: "Missing H1 tag",
+  no_favicon: "Missing favicon",
+  title_too_long: "Title too long",
+  title_too_short: "Title too short",
+  no_image_alt: "Images missing alt text",
+  low_content_rate: "Low content rate",
+  high_loading_time: "High loading time",
+  is_broken: "Broken page",
+  is_redirect: "Redirect",
+  duplicate_title_tag: "Duplicate title",
+  duplicate_description: "Duplicate description",
+  duplicate_content: "Duplicate content",
+  https_to_http_links: "HTTPS to HTTP links",
+  has_render_blocking_resources: "Render-blocking resources",
+  irrelevant_description: "Irrelevant description",
+  seo_friendly_url: "SEO-friendly URL",
+  canonical: "Canonical tag present",
+  has_html_doctype: "HTML doctype present",
+};
+
+
+function PageAuditSection({ audit }: { audit: PageAuditItem }) {
+  const [passedOpen, setPassedOpen] = useState(false);
+  const checks = audit.checks;
+
+  // Separate checks into issues and passes
+  const issues: Array<{ label: string; key: string }> = [];
+  const passes: Array<{ label: string; key: string }> = [];
+
+  if (checks) {
+    for (const [key, value] of Object.entries(checks)) {
+      const label = CHECK_LABELS[key];
+      if (!label) continue;
+      const isPositiveCheck = ["canonical", "seo_friendly_url", "has_html_doctype"].includes(key);
+      const passed = isPositiveCheck ? value : !value;
+      (passed ? passes : issues).push({ label, key });
+    }
+  }
+
+  const score = audit.onpage_score;
+  const scoreColor =
+    score != null
+      ? score >= 80
+        ? "text-emerald-500"
+        : score >= 50
+          ? "text-amber-500"
+          : "text-red-500"
+      : null;
+  const verdictLabel =
+    score != null
+      ? score >= 80
+        ? "Good"
+        : score >= 50
+          ? "Needs improvement"
+          : "Poor"
+      : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Score hero */}
+      {score != null && (
+        <div className="flex flex-col items-center gap-1 py-3">
+          <span className={cn("text-4xl tabular-nums font-normal", scoreColor)}>
+            {Math.round(score)}
+          </span>
+          <p className="text-sm text-muted-foreground">{verdictLabel}</p>
+          <p className="text-xs text-muted-foreground/50 mt-0.5">
+            {issues.length > 0 && (
+              <span className="text-red-500/70">{issues.length} issue{issues.length !== 1 ? "s" : ""}</span>
+            )}
+            {issues.length > 0 && passes.length > 0 && " · "}
+            {passes.length > 0 && (
+              <span>{passes.length} passed</span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Issues */}
+      {issues.length > 0 && (
+        <div className="rounded-lg bg-red-50/50 dark:bg-red-950/20 px-3 py-2.5">
+          <div className="space-y-1">
+            {issues.map((item) => (
+              <CheckItem key={item.key} label={item.label} passed={false} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Passed checks — collapsible */}
+      {passes.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setPassedOpen(!passedOpen)}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+          >
+            <ChevronRight className={cn("size-3.5 transition-transform", passedOpen && "rotate-90")} />
+            <span>{passes.length} check{passes.length !== 1 ? "s" : ""} passed</span>
+          </button>
+          {passedOpen && (
+            <div className="mt-2 pl-5 space-y-0.5">
+              {passes.map((item) => (
+                <CheckItem key={item.key} label={item.label} passed />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PageDetailCard({ page }: { page: SeoPage }) {
   const visibility = getVisibilityStatus(page.indexability, page.statusCode);
   const pageRole = getPageRole(page.pageType, page.isMoneyPage, page.isAuthorityAsset);
+  const auditItem = extractAuditItem(page.auditJson);
 
   return (
     <div className="space-y-4">
@@ -358,6 +608,25 @@ export function PageDetailCard({ page }: { page: SeoPage }) {
         ) : (
           <p className="text-sm text-muted-foreground/40">
             Not mapped to a keyword cluster yet
+          </p>
+        )}
+      </div>
+
+      {/* Page audit */}
+      <div className="border-t border-border/50 pt-4">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-normal text-muted-foreground">Page audit</h4>
+          {page.lastAuditedOn && (
+            <span className="text-xs text-muted-foreground/50">
+              {formatDate(page.lastAuditedOn)}
+            </span>
+          )}
+        </div>
+        {auditItem ? (
+          <PageAuditSection audit={auditItem} />
+        ) : (
+          <p className="text-sm text-muted-foreground/40">
+            No audit data available yet
           </p>
         )}
       </div>

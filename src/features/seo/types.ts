@@ -43,8 +43,55 @@ export type SeoPage = {
   isMoneyPage: boolean;
   isAuthorityAsset: boolean;
   lastCrawledAt: Date | null;
+  lastAuditedOn: Date | null;
+  auditJson: unknown;
   clusterCount: number;
   clusterNames: string[];
+};
+
+export type PageAuditItem = {
+  url: string;
+  meta: {
+    title: string | null;
+    description: string | null;
+    description_length: number | null;
+    title_length: number | null;
+    canonical: string | null;
+    favicon: string | null;
+    htags: Record<string, string[]> | null;
+    content: {
+      plain_text_size: number | null;
+      plain_text_word_count: number | null;
+      plain_text_rate: number | null;
+      flesch_kincaid_readability_index: number | null;
+      title_to_content_consistency: number | null;
+      description_to_content_consistency: number | null;
+    } | null;
+    images_count: number | null;
+    images_size: number | null;
+    scripts_count: number | null;
+    scripts_size: number | null;
+    stylesheets_count: number | null;
+    stylesheets_size: number | null;
+    internal_links_count: number | null;
+    external_links_count: number | null;
+    inbound_links_count: number | null;
+    social_media_tags: Record<string, string> | null;
+  } | null;
+  checks: Record<string, boolean> | null;
+  size: number | null;
+  encoded_size: number | null;
+  onpage_score: number | null;
+  status_code: number | null;
+  page_timing: {
+    duration_time: number | null;
+    waiting_time: number | null;
+    download_time: number | null;
+    time_to_interactive: number | null;
+    largest_contentful_paint: number | null;
+    first_input_delay: number | null;
+    cumulative_layout_shift?: number | null;
+  } | null;
 };
 
 export type SeoCluster = {

@@ -127,6 +127,8 @@ export type SeoOverview = {
     isMoneyPage: boolean;
     isAuthorityAsset: boolean;
     lastCrawledAt: Date | null;
+    lastAuditedOn: Date | null;
+    auditJson: unknown;
     clusterCount: number;
     clusterNames: string[];
   }>;
@@ -203,6 +205,8 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
         isMoneyPage: pages.isMoneyPage,
         isAuthorityAsset: pages.isAuthorityAsset,
         lastCrawledAt: pages.lastCrawledAt,
+        lastAuditedOn: pages.lastAuditedOn,
+        auditJson: pages.auditJson,
       })
       .from(pages),
     db
@@ -342,6 +346,7 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
   const normalizedPageRows = pageRows.map((page) => ({
     ...page,
     lastCrawledAt: parseOptionalDate(page.lastCrawledAt, "pages.lastCrawledAt"),
+    lastAuditedOn: parseOptionalDate(page.lastAuditedOn, "pages.lastAuditedOn"),
   }));
 
   const normalizedFootprintRows = footprintRows.map((row) => ({
@@ -547,6 +552,8 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
         isMoneyPage: page.isMoneyPage,
         isAuthorityAsset: page.isAuthorityAsset,
         lastCrawledAt: page.lastCrawledAt,
+        lastAuditedOn: page.lastAuditedOn,
+        auditJson: page.auditJson,
         clusterCount: clusterNames.length,
         clusterNames,
       };
