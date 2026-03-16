@@ -1,5 +1,5 @@
 export type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
-export type SeoViewTab = "overview" | "competitors" | "analytics" | "backlinks";
+export type SeoViewTab = "overview" | "competitors" | "keywords" | "analytics" | "backlinks";
 
 export type SeoSite = {
   id: number;
@@ -298,6 +298,41 @@ export type BacklinksByDomainPageInfo = {
 };
 
 export type BacklinksSubview = "existing" | "competitors" | "opportunities";
+
+/* ---------------------------------------------------------------------------
+ * Keywords
+ * --------------------------------------------------------------------------- */
+
+export type KeywordRow = {
+  keyword: string;
+  searchVolume: number | null;
+  keywordDifficulty: string | null;
+  searchIntent: string | null;
+  ourPosition: number | null;
+  ourClicks: number | null;
+  ourImpressions: number | null;
+  isOurs: boolean;
+  bestCompetitorRank: number | null;
+  competitorCount: number;
+};
+
+export type KeywordsData = {
+  rows: KeywordRow[];
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+  summary: {
+    totalKeywords: number;
+    ourKeywords: number;
+    sharedKeywords: number;
+    competitorOnlyKeywords: number;
+  };
+};
 
 export type SeoOverviewData = {
   summary: {

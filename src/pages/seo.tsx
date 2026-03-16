@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnalyticsTab } from "@/features/seo/analytics-tab";
 import { BacklinksTab } from "@/features/seo/backlinks-tab";
 import { CompetitorsTab } from "@/features/seo/competitors-tab";
+import { KeywordsTab } from "@/features/seo/keywords-tab";
 import { OverviewTab, PageDetailCard } from "@/features/seo/overview-tab";
 import {
   EmptyState,
@@ -189,6 +190,12 @@ export default function Seo() {
             onClick={() => setActiveTab("competitors")}
           />
           <SeoTabButton
+            active={activeTab === "keywords"}
+            label="Keywords"
+            description=""
+            onClick={() => setActiveTab("keywords")}
+          />
+          <SeoTabButton
             active={activeTab === "backlinks"}
             label="Backlinks"
             description=""
@@ -202,7 +209,7 @@ export default function Seo() {
           />
         </div>
 
-        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && activeTab !== "backlinks" && (
+        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && activeTab !== "backlinks" && activeTab !== "keywords" && (
           <div className="flex items-center gap-8 pb-2.5">
             {activeTab === "overview" ? (
               <>
@@ -236,6 +243,10 @@ export default function Seo() {
           title="No SEO sites available yet"
           description="Once pages and keyword clusters are stored in the workspace database, this tab will populate automatically."
         />
+      ) : activeTab === "keywords" ? (
+        effectiveSelectedSiteId ? (
+          <KeywordsTab siteId={effectiveSelectedSiteId} />
+        ) : null
       ) : activeTab === "backlinks" ? (
         effectiveSelectedSiteId ? (
           <BacklinksTab siteId={effectiveSelectedSiteId} />

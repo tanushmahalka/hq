@@ -1,0 +1,13 @@
+{
+  "name": "@hq/seo-cli",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "seo": "./bin/seo"
+  },
+  "scripts": {
+    "seo": "./bin/seo",
+    "test": "npx --yes tsx --test ./tests/*.test.ts"
+  }
+}

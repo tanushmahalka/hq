@@ -5,6 +5,7 @@ import {
   getAnalyticsSummary,
   getBacklinksData,
   getBacklinksByDomain,
+  getKeywordsData,
   getSeoOverview,
   updateOpportunityStatus,
 } from "../../lib/seo.ts";
@@ -40,6 +41,24 @@ export const seoRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return getBacklinksData(ctx.db, input);
+    }),
+  keywords: orgProcedure
+    .input(
+      z.object({
+        siteId: z.number(),
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(100).default(50),
+        search: z.string().optional(),
+        sortBy: z
+          .enum(["keyword", "searchVolume", "keywordDifficulty", "ourPosition", "bestCompetitorRank"])
+          .default("searchVolume"),
+        sortDirection: z.enum(["asc", "desc"]).default("desc"),
+        intentFilter: z.string().optional(),
+        sourceFilter: z.enum(["all", "ours", "shared", "competitor_only"]).default("all"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return getKeywordsData(ctx.db, input);
     }),
   backlinksByDomain: orgProcedure
     .input(z.object({

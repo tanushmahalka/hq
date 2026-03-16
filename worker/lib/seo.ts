@@ -1917,3 +1917,204 @@ export async function captureBacklinkFootprints(
     competitorCount: competitorSnapshots.length,
   };
 }
+
+/* ---------------------------------------------------------------------------
+ * Keywords universe
+ * --------------------------------------------------------------------------- */
+
+export async function getKeywordsData(
+  db: Database,
+  input: {
+    siteId: number;
+    page: number;
+    pageSize: number;
+    search?: string;
+    sortBy: string;
+    sortDirection: "asc" | "desc";
+    intentFilter?: string;
+    sourceFilter: string;
+  },
+) {
+  const { siteId, page, pageSize, search, sortBy, sortDirection, intentFilter, sourceFilter } = input;
+  const offset = (page - 1) * pageSize;
+
+  // Build the base query using raw SQL for the complex aggregation
+  const searchCondition = search
+    ? sql`AND kw.keyword ILIKE ${"%" + search + "%"}`
+    : sql``;
+
+  const intentCondition = intentFilter
+    ? sql`AND kw.search_intent = ${intentFilter}`
+    : sql``;
+
+  // Source filter applied in WHERE on the final joined result
+  const sourceCondition =
+    sourceFilter === "ours"
+      ? sql`AND our_q.id IS NOT NULL`
+      : sourceFilter === "shared"
+        ? sql`AND our_q.id IS NOT NULL AND kw.keyword IS NOT NULL`
+        : sourceFilter === "competitor_only"
+          ? sql`AND our_q.id IS NULL`
+          : sql``;
+
+  // Sort mapping
+  const sortColumn: Record<string, string> = {
+    keyword: "kw.keyword",
+    searchVolume: "kw.search_volume",
+    keywordDifficulty: "CAST(kw.keyword_difficulty AS numeric)",
+    ourPosition: "COALESCE(scd.avg_position, 999999)",
+    bestCompetitorRank: "kw.best_rank",
+  };
+  const sortCol = sortColumn[sortBy] ?? "kw.search_volume";
+  const sortDir = sortDirection === "asc" ? sql`ASC` : sql`DESC`;
+
+  const mainQuery = sql`
+    WITH competitor_kws AS (
+      SELECT
+        crk.keyword,
+        MAX(crk.search_volume) AS search_volume,
+        MIN(crk.rank) AS best_rank,
+        COUNT(DISTINCT crk.site_competitor_id) AS competitor_count,
+        (array_agg(crk.search_intent ORDER BY crk.captured_at DESC)
+          FILTER (WHERE crk.search_intent IS NOT NULL))[1] AS search_intent,
+        (array_agg(crk.keyword_difficulty ORDER BY crk.captured_at DESC)
+          FILTER (WHERE crk.keyword_difficulty IS NOT NULL))[1] AS keyword_difficulty
+      FROM competitor_ranked_keywords crk
+      INNER JOIN site_competitors sc ON sc.id = crk.site_competitor_id
+      WHERE sc.site_id = ${siteId}
+      GROUP BY crk.keyword
+    ),
+    our_queries AS (
+      SELECT q.id, q.query AS keyword
+      FROM queries q
+      INNER JOIN query_clusters qc ON qc.id = q.cluster_id
+      WHERE qc.site_id = ${siteId}
+    ),
+    all_keywords AS (
+      SELECT
+        COALESCE(kw.keyword, our_q.keyword) AS keyword,
+        kw.search_volume,
+        kw.best_rank,
+        kw.competitor_count,
+        kw.search_intent,
+        kw.keyword_difficulty,
+        our_q.id AS our_query_id
+      FROM competitor_kws kw
+      FULL OUTER JOIN our_queries our_q ON LOWER(kw.keyword) = LOWER(our_q.keyword)
+    )
+    SELECT
+      kw.keyword,
+      kw.search_volume AS "searchVolume",
+      kw.keyword_difficulty AS "keywordDifficulty",
+      kw.search_intent AS "searchIntent",
+      kw.our_query_id IS NOT NULL AS "isOurs",
+      kw.best_rank AS "bestCompetitorRank",
+      COALESCE(kw.competitor_count, 0)::int AS "competitorCount",
+      scd.avg_position AS "ourPosition",
+      scd.clicks AS "ourClicks",
+      scd.impressions AS "ourImpressions",
+      COUNT(*) OVER() AS "totalCount"
+    FROM all_keywords kw
+    LEFT JOIN LATERAL (
+      SELECT s.avg_position, s.clicks, s.impressions
+      FROM search_console_daily s
+      WHERE s.query_id = kw.our_query_id AND s.site_id = ${siteId}
+      ORDER BY s.event_date DESC
+      LIMIT 1
+    ) scd ON true
+    WHERE 1=1
+    ${searchCondition}
+    ${intentCondition}
+    ${sourceCondition}
+    ORDER BY ${sql.raw(sortCol)} ${sortDir} NULLS LAST, kw.keyword ASC
+    LIMIT ${pageSize}
+    OFFSET ${offset}
+  `;
+
+  const summaryQuery = sql`
+    WITH competitor_kws AS (
+      SELECT crk.keyword
+      FROM competitor_ranked_keywords crk
+      INNER JOIN site_competitors sc ON sc.id = crk.site_competitor_id
+      WHERE sc.site_id = ${siteId}
+      GROUP BY crk.keyword
+    ),
+    our_queries AS (
+      SELECT q.query AS keyword
+      FROM queries q
+      INNER JOIN query_clusters qc ON qc.id = q.cluster_id
+      WHERE qc.site_id = ${siteId}
+    )
+    SELECT
+      (SELECT COUNT(DISTINCT keyword) FROM (
+        SELECT keyword FROM competitor_kws
+        UNION
+        SELECT keyword FROM our_queries
+      ) u)::int AS "totalKeywords",
+      (SELECT COUNT(*) FROM our_queries)::int AS "ourKeywords",
+      (SELECT COUNT(*) FROM our_queries oq WHERE EXISTS (
+        SELECT 1 FROM competitor_kws ck WHERE LOWER(ck.keyword) = LOWER(oq.keyword)
+      ))::int AS "sharedKeywords",
+      (SELECT COUNT(*) FROM competitor_kws ck WHERE NOT EXISTS (
+        SELECT 1 FROM our_queries oq WHERE LOWER(oq.keyword) = LOWER(ck.keyword)
+      ))::int AS "competitorOnlyKeywords"
+  `;
+
+  const [mainRows, summaryRows] = await Promise.all([
+    db.execute(mainQuery),
+    db.execute(summaryQuery),
+  ]);
+
+  const rows = mainRows.rows as Array<{
+    keyword: string;
+    searchVolume: number | null;
+    keywordDifficulty: string | null;
+    searchIntent: string | null;
+    isOurs: boolean;
+    bestCompetitorRank: number | null;
+    competitorCount: number;
+    ourPosition: string | null;
+    ourClicks: number | null;
+    ourImpressions: number | null;
+    totalCount: string;
+  }>;
+
+  const total = rows.length > 0 ? Number(rows[0].totalCount) : 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  const summaryRow = (summaryRows.rows[0] ?? {
+    totalKeywords: 0,
+    ourKeywords: 0,
+    sharedKeywords: 0,
+    competitorOnlyKeywords: 0,
+  }) as {
+    totalKeywords: number;
+    ourKeywords: number;
+    sharedKeywords: number;
+    competitorOnlyKeywords: number;
+  };
+
+  return {
+    rows: rows.map((r) => ({
+      keyword: r.keyword,
+      searchVolume: r.searchVolume,
+      keywordDifficulty: r.keywordDifficulty,
+      searchIntent: r.searchIntent,
+      ourPosition: r.ourPosition ? Number(r.ourPosition) : null,
+      ourClicks: r.ourClicks,
+      ourImpressions: r.ourImpressions,
+      isOurs: r.isOurs,
+      bestCompetitorRank: r.bestCompetitorRank,
+      competitorCount: r.competitorCount,
+    })),
+    pageInfo: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasPreviousPage: page > 1,
+      hasNextPage: page < totalPages,
+    },
+    summary: summaryRow,
+  };
+}
