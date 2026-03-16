@@ -55,6 +55,29 @@ const taskUpdateInput = z.object({
   campaignId: z.number().int().positive().nullable().optional(),
 });
 
+function normalizeAgentId(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === "Unknown") {
+    return null;
+  }
+  return trimmed;
+}
+
+export function resolveSimpleTaskNotificationAgentId(params: {
+  isAgent: boolean;
+  assignee?: string | null;
+  leadAgentId?: string | null;
+}): string | null {
+  const assignee = normalizeAgentId(params.assignee);
+  const leadAgentId = normalizeAgentId(params.leadAgentId);
+
+  if (params.isAgent && assignee) {
+    return assignee;
+  }
+
+  return leadAgentId ?? assignee ?? null;
+}
+
 async function attachWorkflowSummaries<
   T extends {
     id: string;
@@ -269,13 +292,17 @@ export const taskRouter = router({
       return withSummary;
     }
 
-    const leadId = ctx.leadAgentId;
-    if (!leadId || leadId === "Unknown") {
+    const notificationAgentId = resolveSimpleTaskNotificationAgentId({
+      isAgent: ctx.isAgent,
+      assignee: task.assignee ?? null,
+      leadAgentId: ctx.leadAgentId,
+    });
+    if (!notificationAgentId) {
       const [withSummary] = await attachWorkflowSummaries(ctx, [task]);
       return withSummary;
     }
 
-    const sessionKey = `agent:${leadId}:task:${id}`;
+    const sessionKey = `agent:${notificationAgentId}:task:${id}`;
     const taskPayload: Record<string, unknown> = buildSimpleTaskPayload({
       ...task,
       campaignId: input.campaignId ?? null,
@@ -290,7 +317,7 @@ export const taskRouter = router({
 
     ctx.waitUntil(
       notifyAgent(ctx, {
-        agentId: leadId,
+        agentId: notificationAgentId,
         message: JSON.stringify(taskPayload),
         sessionKey,
       }),
