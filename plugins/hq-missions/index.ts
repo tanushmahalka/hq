@@ -23,16 +23,9 @@ interface PluginAPI {
   on: (
     hookName: string,
     handler: (
-      event: { prompt: string; messages: unknown[] },
+      event: Record<string, unknown>,
       ctx: { agentId?: string; sessionKey?: string }
-    ) =>
-      | Promise<{
-          prependSystemContext?: string;
-        } | void>
-      | {
-          prependSystemContext?: string;
-        }
-      | void,
+    ) => Promise<Record<string, unknown> | void> | Record<string, unknown> | void,
     opts?: { priority?: number }
   ) => void;
 }
@@ -144,6 +137,31 @@ function toOptionalDate(value: unknown): Date | undefined {
   if (!raw) return undefined;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function applyDefaultTaskAssignee(params: {
+  toolName?: unknown;
+  rawParams: unknown;
+  agentId?: string;
+}) {
+  if (params.toolName !== "create_task") {
+    return undefined;
+  }
+
+  const agentId = toNonEmptyString(params.agentId);
+  if (!agentId || typeof params.rawParams !== "object" || params.rawParams === null) {
+    return undefined;
+  }
+
+  const rawParams = params.rawParams as Record<string, unknown>;
+  if (toNonEmptyString(rawParams.assignee)) {
+    return undefined;
+  }
+
+  return {
+    ...rawParams,
+    assignee: agentId,
+  };
 }
 
 function buildTaskPlanPath(taskId: string) {
@@ -1128,6 +1146,20 @@ export default function register(api: PluginAPI) {
 
   api.registerGatewayMethod("hq-missions.status", async ({ respond }) => {
     respond(true, { ok: true, connected: true });
+  });
+
+  api.on("before_tool_call", (event, ctx) => {
+    const nextParams = applyDefaultTaskAssignee({
+      toolName: event.toolName,
+      rawParams: event.params,
+      agentId: ctx.agentId,
+    });
+
+    if (!nextParams) {
+      return;
+    }
+
+    return { params: nextParams };
   });
 
   api.on("before_prompt_build", async (_event, ctx) => {

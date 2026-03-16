@@ -37,15 +37,12 @@ type ToolDef = {
 };
 
 type HookHandler = (
-  ctx: {
-    prompt: string;
-    messages: unknown[];
-  },
+  event: Record<string, unknown>,
   meta: {
     agentId?: string;
     sessionKey?: string;
   }
-) => Promise<{ prependSystemContext?: string } | void>;
+) => Promise<Record<string, unknown> | void> | Record<string, unknown> | void;
 
 function createPlugin() {
   const tools = new Map<string, ToolDef>();
@@ -103,6 +100,50 @@ describe("hq-missions plugin", () => {
       campaignId: 99,
       workflowMode: "simple",
     });
+  });
+
+  it("defaults create_task assignee to the calling agent", async () => {
+    const { hooks } = createPlugin();
+
+    const result = await hooks.get("before_tool_call")!(
+      {
+        toolName: "create_task",
+        params: {
+          title: "Write brief",
+          workflowMode: "simple",
+        },
+      },
+      {
+        agentId: "mira-seo",
+      }
+    );
+
+    expect(result).toEqual({
+      params: {
+        title: "Write brief",
+        workflowMode: "simple",
+        assignee: "mira-seo",
+      },
+    });
+  });
+
+  it("does not overwrite an explicit create_task assignee", async () => {
+    const { hooks } = createPlugin();
+
+    const result = await hooks.get("before_tool_call")!(
+      {
+        toolName: "create_task",
+        params: {
+          title: "Write brief",
+          assignee: "leo-team-lead",
+        },
+      },
+      {
+        agentId: "mira-seo",
+      }
+    );
+
+    expect(result).toBeUndefined();
   });
 
   it("coerces numeric comment ids before deleting task comments", async () => {
