@@ -918,7 +918,6 @@ export async function getGeoPromptResults(db: Database, siteId: number): Promise
   }
 
   // Get citations from geoCitations for ownership/competitor flags
-  const resultIds = rows.map((r) => r.resultId);
   const citationRows = await db
     .select({
       resultId: geoCitations.resultId,
