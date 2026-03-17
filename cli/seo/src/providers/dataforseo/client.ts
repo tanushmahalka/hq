@@ -33,12 +33,46 @@ export interface AuditRequestOptions {
   device: "desktop" | "mobile" | "tablet";
 }
 
+export type DataForSeoBacklinksRankScale = "one_hundred" | "one_thousand";
 export type DataForSeoMentionsPlatform = "google" | "chat_gpt";
 export type DataForSeoMentionsSearchScope = "sources" | "search_results";
 export type DataForSeoLlmResponseEngine = "chatgpt" | "claude" | "gemini" | "perplexity";
 
 export interface DataForSeoAuditClient {
   auditInstantPage(url: string, options: AuditRequestOptions): Promise<DataForSeoTask<DataForSeoInstantPageResult>>;
+}
+
+export interface DataForSeoBacklinksBulkRankItem {
+  target: string;
+  rank: number;
+  [key: string]: unknown;
+}
+
+export interface DataForSeoBacklinksBulkRankResult {
+  items_count?: number;
+  items?: DataForSeoBacklinksBulkRankItem[];
+  [key: string]: unknown;
+}
+
+export interface BacklinksBulkRanksRequestOptions {
+  targets: string[];
+  rankScale?: DataForSeoBacklinksRankScale;
+}
+
+export interface DataForSeoBacklinksBulkSpamScoreItem {
+  target: string;
+  spam_score: number;
+  [key: string]: unknown;
+}
+
+export interface DataForSeoBacklinksBulkSpamScoreResult {
+  items_count?: number;
+  items?: DataForSeoBacklinksBulkSpamScoreItem[];
+  [key: string]: unknown;
+}
+
+export interface BacklinksBulkSpamScoreRequestOptions {
+  targets: string[];
 }
 
 export interface DataForSeoAiKeywordDataResult {
@@ -111,7 +145,19 @@ export interface DataForSeoGeoClient {
   ): Promise<DataForSeoTask<DataForSeoLlmResponseResult>>;
 }
 
-export class DataForSeoClient implements DataForSeoAuditClient, DataForSeoGeoClient {
+export interface DataForSeoBacklinksClient {
+  backlinksBulkRanks(
+    options: BacklinksBulkRanksRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoBacklinksBulkRankResult>>;
+}
+
+export interface DataForSeoBacklinksSpamScoreClient {
+  backlinksBulkSpamScore(
+    options: BacklinksBulkSpamScoreRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoBacklinksBulkSpamScoreResult>>;
+}
+
+export class DataForSeoClient implements DataForSeoAuditClient, DataForSeoGeoClient, DataForSeoBacklinksClient, DataForSeoBacklinksSpamScoreClient {
   constructor(
     private readonly config: ResolvedDataForSeoProviderConfig,
     private readonly fetchImpl: typeof fetch = fetch,
@@ -235,6 +281,27 @@ export class DataForSeoClient implements DataForSeoAuditClient, DataForSeoGeoCli
         model_name: options.modelName,
         web_search: options.webSearch,
         max_output_tokens: options.maxOutputTokens,
+      },
+    ]);
+  }
+
+  async backlinksBulkRanks(
+    options: BacklinksBulkRanksRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoBacklinksBulkRankResult>> {
+    return this.post<DataForSeoBacklinksBulkRankResult>("/v3/backlinks/bulk_ranks/live", [
+      {
+        targets: options.targets,
+        rank_scale: options.rankScale,
+      },
+    ]);
+  }
+
+  async backlinksBulkSpamScore(
+    options: BacklinksBulkSpamScoreRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoBacklinksBulkSpamScoreResult>> {
+    return this.post<DataForSeoBacklinksBulkSpamScoreResult>("/v3/backlinks/bulk_spam_score/live", [
+      {
+        targets: options.targets,
       },
     ]);
   }

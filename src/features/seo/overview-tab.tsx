@@ -42,7 +42,6 @@ export function OverviewTab({
   onPageSearchChange,
   selectedPageId,
   onSelectPage,
-  activeCluster,
   selectedIntent,
   onIntentChange,
   intentOptions,
@@ -61,7 +60,6 @@ export function OverviewTab({
   onPageSearchChange: (value: string) => void;
   selectedPageId: number | null;
   onSelectPage: (value: number) => void;
-  activeCluster: SeoCluster | null;
   selectedIntent: string;
   onIntentChange: (value: string) => void;
   intentOptions: string[];
@@ -257,136 +255,57 @@ export function OverviewTab({
 
       {/* Clusters section */}
       <section>
-        <div className="grid gap-6 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.5fr)]">
-          {/* Cluster focus */}
-          <div>
-            <h2 className="text-sm font-medium text-muted-foreground mb-3">
-              Cluster focus
-            </h2>
-            <div className="rounded-xl border border-border/40 bg-card p-4">
-              {activeCluster ? (
-                <ClusterDetailCard cluster={activeCluster} />
-              ) : (
-                <p className="text-sm text-muted-foreground/40 text-center py-8">
-                  Select a cluster to inspect
-                </p>
-              )}
-            </div>
-          </div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Keyword clusters
+          </h2>
+          <span className="text-xs text-muted-foreground/60">
+            {formatNumber(filteredClusters.length)} shown
+          </span>
+        </div>
 
-          {/* Cluster grid */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-medium text-muted-foreground">
-                Keyword clusters
-              </h2>
-              <span className="text-xs text-muted-foreground/60">
-                {formatNumber(filteredClusters.length)} shown
-              </span>
-            </div>
-
-            {/* Search + filters */}
-            <div className="flex flex-col gap-2 mb-3">
-              <input
-                value={clusterSearch}
-                onChange={(event) => onClusterSearchChange(event.target.value)}
-                placeholder="Search by cluster name, intent, or keyword..."
-                className="text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/50 w-full"
+        {/* Search + filters */}
+        <div className="flex flex-col gap-2 mb-3">
+          <input
+            value={clusterSearch}
+            onChange={(event) => onClusterSearchChange(event.target.value)}
+            placeholder="Search by cluster name, intent, or keyword..."
+            className="text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/50 w-full"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            <FilterChip
+              active={selectedIntent === "all"}
+              onClick={() => onIntentChange("all")}
+              label="All intents"
+            />
+            {intentOptions.map((intent) => (
+              <FilterChip
+                key={intent}
+                active={selectedIntent === intent}
+                onClick={() => onIntentChange(intent)}
+                label={toTitleCase(intent)}
               />
-              <div className="flex flex-wrap gap-1.5">
-                <FilterChip
-                  active={selectedIntent === "all"}
-                  onClick={() => onIntentChange("all")}
-                  label="All intents"
-                />
-                {intentOptions.map((intent) => (
-                  <FilterChip
-                    key={intent}
-                    active={selectedIntent === intent}
-                    onClick={() => onIntentChange(intent)}
-                    label={toTitleCase(intent)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {filteredClusters.length === 0 ? (
-              <InlineEmptyState
-                title="No clusters match these filters"
-                description="Clear the search or switch back to all intents."
-              />
-            ) : (
-              <div className="grid gap-2 md:grid-cols-2">
-                {filteredClusters.map((cluster) => {
-                  const priority = getPriorityStatus(cluster.priorityScore);
-                  return (
-                    <button
-                      key={cluster.id}
-                      type="button"
-                      onClick={() => onSelectCluster(cluster.id)}
-                      className={cn(
-                        "group relative overflow-hidden rounded-xl border p-4 text-left transition-all swarm-card",
-                        selectedClusterId === cluster.id
-                          ? "border-[var(--swarm-violet)]/20 bg-[var(--swarm-violet-dim)]"
-                          : "border-border/40 bg-card hover:bg-muted/20",
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">
-                            {cluster.name}
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className="text-xs text-muted-foreground/50">
-                              {toTitleCase(cluster.primaryIntent)}
-                            </span>
-                            {cluster.funnelStage && (
-                              <>
-                                <span className="text-xs text-muted-foreground/30">·</span>
-                                <span className="text-xs text-muted-foreground/50">
-                                  {toTitleCase(cluster.funnelStage)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <Badge variant={priority.variant} className="text-[10px] px-1.5 py-0 shrink-0">
-                          {priority.label}
-                        </Badge>
-                      </div>
-
-                      <div className="mt-3 text-[13px] text-muted-foreground">
-                        <span className="text-foreground">
-                          {cluster.primaryKeyword ?? "No lead keyword"}
-                        </span>
-                        {" · "}
-                        {formatNumber(cluster.keywordCount)} keyword{cluster.keywordCount !== 1 ? "s" : ""}
-                      </div>
-
-                      {cluster.keywords.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {cluster.keywords.slice(0, 3).map((keyword) => (
-                            <span
-                              key={keyword}
-                              className="text-[10px] text-muted-foreground/60 border border-border/30 rounded px-1.5 py-0.5"
-                            >
-                              {keyword}
-                            </span>
-                          ))}
-                          {cluster.keywords.length > 3 && (
-                            <span className="text-[10px] text-muted-foreground/40 px-1 py-0.5">
-                              +{cluster.keywords.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            ))}
           </div>
         </div>
+
+        {filteredClusters.length === 0 ? (
+          <InlineEmptyState
+            title="No clusters match these filters"
+            description="Clear the search or switch back to all intents."
+          />
+        ) : (
+          <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
+            {filteredClusters.map((cluster) => (
+              <ClusterRow
+                key={cluster.id}
+                cluster={cluster}
+                isOpen={selectedClusterId === cluster.id}
+                onToggle={() => onSelectCluster(cluster.id)}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -666,76 +585,104 @@ export function PageDetailCard({ page }: { page: SeoPage }) {
   );
 }
 
-function ClusterDetailCard({ cluster }: { cluster: SeoCluster }) {
+function ClusterRow({
+  cluster,
+  isOpen,
+  onToggle,
+}: {
+  cluster: SeoCluster;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
   const priority = getPriorityStatus(cluster.priorityScore);
+  const priorityDotColor =
+    priority.label === "High priority"
+      ? "bg-red-400"
+      : priority.label === "Medium priority"
+        ? "bg-amber-400"
+        : "bg-gray-400";
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-medium">{cluster.name}</h3>
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          <Badge variant="secondary" className="text-[11px] px-2 py-0.5">
-            {toTitleCase(cluster.primaryIntent)}
-          </Badge>
-          {cluster.funnelStage && (
-            <Badge variant="outline" className="text-[11px] px-2 py-0.5">
-              {toTitleCase(cluster.funnelStage)}
-            </Badge>
-          )}
-          <Badge variant={priority.variant} className="text-[11px] px-2 py-0.5">
-            {priority.label}
-          </Badge>
-        </div>
-      </div>
+    <div className={cn(
+      "border-b border-border/30 last:border-b-0 transition-colors",
+      isOpen && "bg-muted/20",
+    )}>
+      {/* Collapsed row */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/10 transition-colors"
+      >
+        <ChevronRight className={cn(
+          "size-3.5 text-muted-foreground/40 shrink-0 transition-transform",
+          isOpen && "rotate-90",
+        )} />
+        <span className={cn("size-1.5 rounded-full shrink-0", priorityDotColor)} />
+        <span className="flex-1 text-sm truncate">{cluster.name}</span>
+        <span className="text-xs text-muted-foreground/50 tabular-nums shrink-0">
+          {formatNumber(cluster.keywordCount)} keyword{cluster.keywordCount !== 1 ? "s" : ""}
+        </span>
+      </button>
 
-      {/* Properties */}
-      <div className="space-y-0">
-        <InfoTile
-          label="Lead keyword"
-          value={cluster.primaryKeyword ?? "Not selected yet"}
-        />
-        <InfoTile
-          label="Keywords"
-          value={`${formatNumber(cluster.keywordCount)} total`}
-        />
-        <InfoTile
-          label="Linked pages"
-          value={`${formatNumber(cluster.pageUrls.length)} pages`}
-        />
-        <InfoTile
-          label="Priority score"
-          value={cluster.priorityScore ?? "Not set"}
-        />
-      </div>
-
-      {/* Keywords */}
-      {cluster.keywords.length > 0 && (
-        <div className="border-t border-border/50 pt-3">
-          <h4 className="text-sm font-normal mb-2 text-muted-foreground">Keywords</h4>
-          <div className="flex flex-wrap gap-1.5">
-            {cluster.keywords.map((keyword) => (
-              <Badge key={keyword} variant="outline" className="text-[11px] px-2 py-0.5">
-                {keyword}
-              </Badge>
-            ))}
+      {/* Expanded detail */}
+      {isOpen && (
+        <div className="px-4 pb-4 pl-11 space-y-4">
+          {/* Meta line */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground/60">
+            <span>{toTitleCase(cluster.primaryIntent)}</span>
+            {cluster.funnelStage && (
+              <>
+                <span className="text-muted-foreground/30">·</span>
+                <span>{toTitleCase(cluster.funnelStage)}</span>
+              </>
+            )}
+            <span className="text-muted-foreground/30">·</span>
+            <span>{priority.label}</span>
+            {cluster.primaryKeyword && (
+              <>
+                <span className="text-muted-foreground/30">·</span>
+                <span className="text-foreground text-xs">
+                  Lead: {cluster.primaryKeyword}
+                </span>
+              </>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* Connected pages */}
-      {cluster.pageUrls.length > 0 && (
-        <div className="border-t border-border/50 pt-3">
-          <h4 className="text-sm font-normal mb-2 text-muted-foreground">Connected pages</h4>
-          <div className="space-y-1">
-            {cluster.pageUrls.map((pageUrl) => (
-              <div
-                key={pageUrl}
-                className="text-[13px] text-muted-foreground truncate"
-              >
-                {pageUrl}
+          {/* Keywords */}
+          {cluster.keywords.length > 0 && (
+            <div>
+              <h4 className="text-xs text-muted-foreground/50 mb-2">Keywords</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {cluster.keywords.map((keyword) => (
+                  <span
+                    key={keyword}
+                    className="text-[11px] text-muted-foreground border border-border/30 rounded-md px-2 py-0.5"
+                  >
+                    {keyword}
+                  </span>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* Connected pages */}
+          {cluster.pageUrls.length > 0 && (
+            <div>
+              <h4 className="text-xs text-muted-foreground/50 mb-2">
+                {formatNumber(cluster.pageUrls.length)} connected page{cluster.pageUrls.length !== 1 ? "s" : ""}
+              </h4>
+              <div className="space-y-1">
+                {cluster.pageUrls.map((pageUrl) => (
+                  <div
+                    key={pageUrl}
+                    className="text-[13px] text-muted-foreground/60 truncate"
+                  >
+                    {pageUrl}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -6,6 +6,9 @@
   "bin": {
     "seo": "./bin/seo"
   },
+  "dependencies": {
+    "pg": "^8.20.0"
+  },
   "scripts": {
     "seo": "./bin/seo",
     "test": "npx --yes tsx --test ./tests/*.test.ts"

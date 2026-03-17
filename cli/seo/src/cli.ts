@@ -4,6 +4,8 @@ import { runProvidersCommand } from "./commands/providers.ts";
 import { runPageAuditCommand } from "./commands/page/audit/index.ts";
 import { runKeywordsListCommand } from "./commands/keywords/list.ts";
 import { runGeoCommand } from "./commands/geo/index.ts";
+import { runDomainRatingCommand } from "./commands/domain/rating.ts";
+import { runDomainSpamScoreCommand } from "./commands/domain/spam-score.ts";
 
 async function main(argv: string[]): Promise<void> {
   const [group, action, ...rest] = argv;
@@ -28,6 +30,16 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
+  if (group === "domain" && action === "rating") {
+    await runDomainRatingCommand(rest);
+    return;
+  }
+
+  if (group === "domain" && action === "spam-score") {
+    await runDomainSpamScoreCommand(rest);
+    return;
+  }
+
   if (group === "geo") {
     await runGeoCommand([action, ...rest].filter(Boolean) as string[]);
     return;
@@ -48,6 +60,9 @@ function printHelp(): void {
   printLine("  seo providers exchange-code google --callback-url <url> [--json]");
   printLine("  seo page audit --page <url> [--page <url> ...] [--json]");
   printLine("  seo keywords list --site <sc-property> --from <yyyy-mm-dd> --to <yyyy-mm-dd> [--json]");
+  printLine("  seo domain rating (--domain <domain> | --file <path|->) [--scale <100|1000>] [--json]");
+  printLine("  seo domain spam-score (--domain <domain> | --file <path|->) [--json]");
+  printLine("  seo domain spam-score sync-db [--dry-run] [--json]");
   printLine("  seo geo brand-visibility --domain <domain> [--json]");
   printLine("  seo geo competitor-gap --domain <domain> --vs <domain> [--vs <domain> ...] [--json]");
   printLine("  seo geo prompt-audit --prompt <text> --domain <domain> [--json]");

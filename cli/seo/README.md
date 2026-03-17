@@ -13,6 +13,10 @@ JSON-first SEO tooling for AI agents.
 ./bin/seo page audit --page "https://example.com" --json
 ./bin/seo page audit --page "https://example.com" --page "https://example.com/pricing"
 ./bin/seo keywords list --site "sc-domain:example.com" --from "2026-03-01" --to "2026-03-07" --json
+./bin/seo domain rating --domain "example.com" --json
+./bin/seo domain rating --file "./domains.txt" --json
+./bin/seo domain spam-score --domain "example.com" --json
+./bin/seo domain spam-score sync-db --dry-run
 ./bin/seo geo brand-visibility --domain "example.com" --json
 ./bin/seo geo competitor-gap --domain "example.com" --vs "competitor-a.com" --vs "competitor-b.com"
 ./bin/seo geo prompt-audit --prompt "Best CRM for seed-stage startups" --domain "example.com" --brand "Example CRM" --json
@@ -87,6 +91,56 @@ Notes:
 - Core audit: `on_page/instant_pages`
 
 Use `--json` to print the full machine-friendly payload.
+
+## Domain Rating
+
+Use DataForSEO Backlinks `bulk_ranks/live` to fetch the current rank score for a domain.
+
+```bash
+./bin/seo domain rating --domain "example.com"
+./bin/seo domain rating --domain "example.com" --domain "example.org"
+./bin/seo domain rating --file "./domains.txt"
+./bin/seo domain rating --domain "example.com" --scale 100 --json
+```
+
+Notes:
+
+- The CLI normalizes domains to the format DataForSEO expects, without `https://` or leading `www.`.
+- `--scale 1000` is the default and matches DataForSEO's default `rank_scale=one_thousand`.
+- `--file` accepts newline-delimited text, a JSON array, or a JSON object like `{"domains":["example.com"]}`.
+- Use `--file -` to read domains from stdin.
+- The CLI batches rating lookups into chunks of 1000 targets per API call.
+
+## Domain Spam Score
+
+Use DataForSEO Backlinks `bulk_spam_score/live` to fetch spam scores for one or many domains.
+
+```bash
+./bin/seo domain spam-score --domain "example.com"
+./bin/seo domain spam-score --file "./domains.txt" --json
+```
+
+Notes:
+
+- `spam-score` supports the same `--file` formats as `rating`.
+- The CLI batches spam score lookups into chunks of 1000 targets per API call.
+
+### Sync Back to Postgres
+
+Use the `sync-db` subcommand to read backlink source rows from Postgres in batches, resolve source domains, fetch spam scores from DataForSEO, and write `backlink_spam_score` back to `competitor_backlink_sources`.
+
+```bash
+./bin/seo domain spam-score sync-db --dry-run
+./bin/seo domain spam-score sync-db --batch-size 5000
+./bin/seo domain spam-score sync-db --from-id 250000 --limit 10000
+```
+
+Notes:
+
+- `sync-db` uses `DATABASE_URL` by default, or `--database-url <url>`.
+- It reads only the required columns: `id` and `source_url`.
+- By default it updates only rows where `backlink_spam_score` is still `NULL`, which makes reruns naturally resumable.
+- The DataForSEO requests are still batched at up to 1000 domains per API call under the hood.
 
 ## GEO Workflows
 

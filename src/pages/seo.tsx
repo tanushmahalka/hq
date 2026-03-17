@@ -133,10 +133,6 @@ export default function Seo() {
   );
 
   const activePage = sitePages.find((page) => page.id === selectedPageId) ?? null;
-  const activeCluster =
-    filteredClusters.find((cluster) => cluster.id === selectedClusterId) ??
-    filteredClusters[0] ??
-    null;
   const activeCompetitor =
     filteredCompetitors.find((competitor) => competitor.id === selectedCompetitorId) ?? null;
 
@@ -283,14 +279,15 @@ export default function Seo() {
           onPageSearchChange={setPageSearch}
           selectedPageId={selectedPageId}
           onSelectPage={setSelectedPageId}
-          activeCluster={activeCluster}
           selectedIntent={selectedIntent}
           onIntentChange={setSelectedIntent}
           intentOptions={intentOptions}
           clusterSearch={clusterSearch}
           onClusterSearchChange={setClusterSearch}
           selectedClusterId={selectedClusterId}
-          onSelectCluster={setSelectedClusterId}
+          onSelectCluster={(id: number) =>
+            setSelectedClusterId((prev) => (prev === id ? null : id))
+          }
         />
       ) : (
         <CompetitorsTab
