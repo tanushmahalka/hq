@@ -13,8 +13,10 @@ import { useGateway } from "@/hooks/use-gateway";
 import type { EventFrame, GatewayClient } from "@/lib/gateway-client";
 import {
   buildAssistantTextMessage,
+  buildMessageTextWithAttachmentUrls,
   buildOptimisticUserMessage,
   extractText,
+  hasBlockingAttachmentState,
   isAssistantSilentReplyMessage,
   normalizePendingAttachments,
   parseRawMessage,
@@ -79,6 +81,13 @@ type MessengerChatStore = {
   addAttachments: (
     sessionKey: string,
     attachments: PendingImageAttachment[],
+  ) => void;
+  updateAttachment: (
+    sessionKey: string,
+    attachmentId: string,
+    patch: Partial<
+      Pick<PendingImageAttachment, "status" | "publicUrl" | "error">
+    >,
   ) => void;
   removeAttachment: (sessionKey: string, attachmentId: string) => void;
   clearAttachments: (sessionKey: string) => void;
@@ -323,8 +332,15 @@ function createMessengerChatStore(): MessengerChatStore {
 
     const trimmed = text.trim();
     const normalizedAttachments = normalizePendingAttachments(attachments);
+    if (hasBlockingAttachmentState(normalizedAttachments)) {
+      return "ignored";
+    }
+    const messageText = buildMessageTextWithAttachmentUrls(
+      trimmed,
+      normalizedAttachments,
+    );
     const serializedAttachments = serializeAttachments(normalizedAttachments);
-    if (!trimmed && !serializedAttachments?.length) {
+    if (!messageText && !serializedAttachments?.length) {
       return "ignored";
     }
 
@@ -339,7 +355,7 @@ function createMessengerChatStore(): MessengerChatStore {
         {
           role: "user",
           content:
-            trimmed ||
+            messageText ||
             `Image${normalizedAttachments.length > 1 ? "s" : ""} (${
               normalizedAttachments.length
             })`,
@@ -349,7 +365,12 @@ function createMessengerChatStore(): MessengerChatStore {
       ],
       rawMessages: [
         ...session.rawMessages,
-        buildOptimisticUserMessage(trimmed, normalizedAttachments, now, localId),
+        buildOptimisticUserMessage(
+          messageText,
+          normalizedAttachments,
+          now,
+          localId,
+        ),
       ],
       activeRunId: runId,
       stream: "",
@@ -363,7 +384,7 @@ function createMessengerChatStore(): MessengerChatStore {
     try {
       await client.request("chat.send", {
         sessionKey,
-        message: trimmed,
+        message: messageText,
         deliver: false,
         idempotencyKey: runId,
         attachments: serializedAttachments,
@@ -424,8 +445,21 @@ function createMessengerChatStore(): MessengerChatStore {
     },
 
     setGatewayState(value) {
+      const clientChanged = client !== value.client;
+      const connectedChanged = connected !== value.connected;
+
       client = value.client;
       connected = value.connected;
+
+      if (!clientChanged && !connectedChanged) {
+        return;
+      }
+
+      if (connected && client) {
+        for (const sessionKey of visibleCounts.keys()) {
+          void loadHistory(sessionKey);
+        }
+      }
     },
 
     retainSession(sessionKey) {
@@ -451,6 +485,9 @@ function createMessengerChatStore(): MessengerChatStore {
 
     async sendMessage(sessionKey, text, attachments = []) {
       const normalizedAttachments = normalizePendingAttachments(attachments);
+      if (hasBlockingAttachmentState(normalizedAttachments)) {
+        return "ignored";
+      }
       if (!client || !connected) {
         return "ignored";
       }
@@ -514,6 +551,32 @@ function createMessengerChatStore(): MessengerChatStore {
         ...session,
         attachments: [...session.attachments, ...attachments],
       }));
+    },
+
+    updateAttachment(sessionKey, attachmentId, patch) {
+      updateSession(sessionKey, (session) => {
+        let didUpdate = false;
+        const nextAttachments = session.attachments.map((attachment) => {
+          if (attachment.id !== attachmentId) {
+            return attachment;
+          }
+
+          didUpdate = true;
+          return {
+            ...attachment,
+            ...patch,
+          };
+        });
+
+        if (!didUpdate) {
+          return session;
+        }
+
+        return {
+          ...session,
+          attachments: nextAttachments,
+        };
+      });
     },
 
     removeAttachment(sessionKey, attachmentId) {
@@ -783,6 +846,18 @@ export function useMessengerChat(sessionKey: string) {
     [sessionKey, store],
   );
 
+  const updateAttachment = useCallback(
+    (
+      attachmentId: string,
+      patch: Partial<
+        Pick<PendingImageAttachment, "status" | "publicUrl" | "error">
+      >,
+    ) => {
+      store.updateAttachment(sessionKey, attachmentId, patch);
+    },
+    [sessionKey, store],
+  );
+
   const clearAttachments = useCallback(() => {
     store.clearAttachments(sessionKey);
   }, [sessionKey, store]);
@@ -817,6 +892,7 @@ export function useMessengerChat(sessionKey: string) {
     setDraft,
     attachments: session.attachments,
     addAttachments,
+    updateAttachment,
     removeAttachment,
     clearAttachments,
   };

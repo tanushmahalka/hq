@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import { MessengerComposer } from "./messenger-panel";
 import type { PendingImageAttachment } from "@/hooks/use-chat";
+import { uploadChatImage } from "@/lib/chat-image-upload";
 
 vi.mock("@/hooks/use-approvals", () => ({
   useApprovals: () => ({ approvals: [] }),
@@ -22,6 +23,10 @@ vi.mock("@/hooks/use-messenger-panel", () => ({
 
 vi.mock("@/hooks/use-agent-activity", () => ({
   useAgentActivity: () => ({ active: false }),
+}));
+
+vi.mock("@/lib/chat-image-upload", () => ({
+  uploadChatImage: vi.fn(),
 }));
 
 class MockFileReader {
@@ -62,6 +67,13 @@ function ComposerHarness({
       onDraftChange={setDraft}
       attachments={attachments}
       onAddAttachments={(next) => setAttachments((prev) => [...prev, ...next])}
+      onUpdateAttachment={(attachmentId, patch) =>
+        setAttachments((prev) =>
+          prev.map((attachment) =>
+            attachment.id === attachmentId ? { ...attachment, ...patch } : attachment,
+          ),
+        )
+      }
       onRemoveAttachment={(attachmentId) =>
         setAttachments((prev) =>
           prev.filter((attachment) => attachment.id !== attachmentId),
@@ -77,6 +89,13 @@ function ComposerHarness({
 describe("MessengerComposer", () => {
   beforeEach(() => {
     vi.stubGlobal("FileReader", MockFileReader);
+    vi.mocked(uploadChatImage).mockReset();
+    vi.mocked(uploadChatImage).mockResolvedValue({
+      url: "https://cdn.example.com/chat-images/demo.png",
+      key: "chat-images/demo.png",
+      contentType: "image/png",
+      size: 12,
+    });
   });
 
   it("adds pasted images as removable previews", async () => {
@@ -121,6 +140,9 @@ describe("MessengerComposer", () => {
     await waitFor(() =>
       expect(screen.getByAltText("Attachment preview")).toBeInTheDocument()
     );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled()
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
@@ -129,6 +151,9 @@ describe("MessengerComposer", () => {
     expect(onSend.mock.calls[0]?.[0]).toBe("");
     expect(attachments).toHaveLength(1);
     expect(attachments?.[0]?.mimeType).toBe("image/png");
+    expect(attachments?.[0]?.publicUrl).toBe(
+      "https://cdn.example.com/chat-images/demo.png",
+    );
   });
 
   it("keeps Send and shows Stop while busy", () => {
@@ -137,5 +162,61 @@ describe("MessengerComposer", () => {
     expect(screen.getByText("Send")).toBeInTheDocument();
     expect(screen.getByLabelText("Send message")).toBeInTheDocument();
     expect(screen.getByLabelText("Stop run")).toBeInTheDocument();
+  });
+
+  it("shows an upload loader and disables Send until the upload finishes", async () => {
+    let resolveUpload:
+      | ((value: Awaited<ReturnType<typeof uploadChatImage>>) => void)
+      | undefined;
+    vi.mocked(uploadChatImage).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveUpload = resolve;
+        }),
+    );
+
+    const { container } = render(<ComposerHarness />);
+    const input = container.querySelector('input[type="file"]');
+
+    fireEvent.change(input!, {
+      target: {
+        files: [new File(["image"], "uploading.png", { type: "image/png" })],
+      },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText("Uploading...")).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+
+    resolveUpload?.({
+      url: "https://cdn.example.com/chat-images/uploading.png",
+      key: "chat-images/uploading.png",
+      contentType: "image/png",
+      size: 12,
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByText("Uploading...")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Send message" })).toBeEnabled();
+  });
+
+  it("shows a failed upload state and keeps Send disabled", async () => {
+    vi.mocked(uploadChatImage).mockRejectedValue(new Error("Bucket unavailable"));
+
+    const { container } = render(<ComposerHarness />);
+    const input = container.querySelector('input[type="file"]');
+
+    fireEvent.change(input!, {
+      target: {
+        files: [new File(["image"], "broken.png", { type: "image/png" })],
+      },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText("Upload failed")).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
   });
 });

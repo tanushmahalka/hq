@@ -17,6 +17,9 @@ export type PendingImageAttachment = {
   dataUrl: string;
   mimeType: string;
   fileName?: string;
+  status?: "uploading" | "uploaded" | "failed";
+  publicUrl?: string;
+  error?: string;
 };
 
 export type SendOutcome = "sent" | "queued" | "error" | "ignored";
@@ -253,6 +256,31 @@ export function normalizePendingAttachments(
         parsed.mimeType
     );
   });
+}
+
+export function hasBlockingAttachmentState(
+  attachments: PendingImageAttachment[]
+): boolean {
+  return attachments.some(
+    (attachment) =>
+      attachment.status === "uploading" || attachment.status === "failed"
+  );
+}
+
+export function buildMessageTextWithAttachmentUrls(
+  text: string,
+  attachments: PendingImageAttachment[]
+): string {
+  const trimmed = text.trim();
+  const urls = attachments
+    .map((attachment) => attachment.publicUrl?.trim())
+    .filter((url): url is string => Boolean(url));
+
+  if (urls.length === 0) {
+    return trimmed;
+  }
+
+  return [trimmed, urls.join("\n")].filter(Boolean).join("\n\n");
 }
 
 export function serializeAttachments(
@@ -631,8 +659,15 @@ export function useChat(sessionKey: string) {
 
       const trimmed = text.trim();
       const normalizedAttachments = normalizePendingAttachments(attachments);
+      if (hasBlockingAttachmentState(normalizedAttachments)) {
+        return "ignored";
+      }
+      const messageText = buildMessageTextWithAttachmentUrls(
+        trimmed,
+        normalizedAttachments
+      );
       const serializedAttachments = serializeAttachments(normalizedAttachments);
-      if (!trimmed && !serializedAttachments?.length) {
+      if (!messageText && !serializedAttachments?.length) {
         return "ignored";
       }
 
@@ -643,7 +678,7 @@ export function useChat(sessionKey: string) {
         {
           role: "user",
           content:
-            trimmed ||
+            messageText ||
             `Image${normalizedAttachments.length > 1 ? "s" : ""} (${
               normalizedAttachments.length
             })`,
@@ -654,7 +689,7 @@ export function useChat(sessionKey: string) {
       setRawMessages((prev) => [
         ...prev,
         buildOptimisticUserMessage(
-          trimmed,
+          messageText,
           normalizedAttachments,
           now,
           localId
@@ -673,7 +708,7 @@ export function useChat(sessionKey: string) {
       try {
         await client.request("chat.send", {
           sessionKey,
-          message: trimmed,
+          message: messageText,
           deliver: false,
           idempotencyKey: runId,
           attachments: serializedAttachments,
@@ -789,6 +824,9 @@ export function useChat(sessionKey: string) {
       attachments: PendingImageAttachment[] = []
     ): Promise<SendOutcome> => {
       const normalizedAttachments = normalizePendingAttachments(attachments);
+      if (hasBlockingAttachmentState(normalizedAttachments)) {
+        return "ignored";
+      }
       if (!client || !connected) {
         return "ignored";
       }

@@ -27,6 +27,10 @@ import {
   renderMarketingAssetPdf,
 } from "./lib/marketing-asset-pdf.ts";
 import {
+  ChatImageUploadError,
+  uploadChatImageToS3,
+} from "./lib/chat-image-upload.ts";
+import {
   createMarketingEbook,
   getMarketingEbook,
   listMarketingEbooks,
@@ -143,6 +147,43 @@ export function createApp({ env, waitUntil }: AppOptions) {
     const db = createDb(env.DATABASE_URL);
     const auth = createAuthInstance(env, db);
     return auth.handler(c.req.raw);
+  });
+
+  app.post("/api/chat/uploads/image", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.user && !requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const formData = await c.req.raw.formData();
+    const file = formData.get("file");
+    if (!(file instanceof File)) {
+      return c.json({ message: "Image file is required." }, 400);
+    }
+
+    if (!file.type.startsWith("image/")) {
+      return c.json({ message: "Only image uploads are supported." }, 400);
+    }
+
+    if (file.size <= 0) {
+      return c.json({ message: "Image upload is empty." }, 400);
+    }
+
+    try {
+      const result = await uploadChatImageToS3(env, file);
+      return c.json(result, 200);
+    } catch (error) {
+      if (error instanceof ChatImageUploadError) {
+        return new Response(JSON.stringify({ message: error.message }), {
+          status: error.status,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+          },
+        });
+      }
+
+      throw error;
+    }
   });
 
   app.get("/api/marketing/assets/:id/preview", async (c) => {

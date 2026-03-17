@@ -10,6 +10,7 @@ type GatewaySubscriber = (event: {
 }) => void;
 
 const subscribers = new Set<GatewaySubscriber>();
+let connected = true;
 const request = vi.fn<
   (method: string, params?: Record<string, unknown>) => Promise<unknown>
 >();
@@ -18,7 +19,7 @@ const client = { request };
 vi.mock("./use-gateway", () => ({
   useGateway: () => ({
     client,
-    connected: true,
+    connected,
     subscribe: (handler: GatewaySubscriber) => {
       subscribers.add(handler);
       return () => subscribers.delete(handler);
@@ -69,6 +70,7 @@ async function emitAgent(payload: {
 describe("useMessengerChat", () => {
   beforeEach(() => {
     subscribers.clear();
+    connected = true;
     request.mockReset();
     request.mockImplementation(async (method, params) => {
       if (method === "chat.history") {
@@ -127,12 +129,44 @@ describe("useMessengerChat", () => {
     ).toHaveLength(1);
   });
 
+  it("loads initial history once the gateway connection becomes ready", async () => {
+    connected = false;
+
+    const { result, rerender } = renderHook(
+      ({ sessionKey }) => useMessengerChat(sessionKey),
+      {
+        initialProps: { sessionKey: getSessionKey("agent-a") },
+        wrapper: Wrapper,
+      },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(
+      request.mock.calls.filter(([method]) => method === "chat.history"),
+    ).toHaveLength(0);
+
+    connected = true;
+    rerender({ sessionKey: getSessionKey("agent-a") });
+
+    await waitFor(() =>
+      expect(
+        request.mock.calls.filter(
+          ([method, params]) =>
+            method === "chat.history" &&
+            params?.sessionKey === getSessionKey("agent-a"),
+        ),
+      ).toHaveLength(1),
+    );
+  });
+
   it("preserves per-session drafts and attachments", async () => {
     const attachment = {
       id: "attachment-1",
       dataUrl: "data:image/png;base64,Zm9v",
       mimeType: "image/png",
       fileName: "draft.png",
+      status: "uploaded" as const,
+      publicUrl: "https://cdn.example.com/chat-images/draft.png",
     };
 
     const { result, rerender } = renderHook(
@@ -165,6 +199,100 @@ describe("useMessengerChat", () => {
 
     expect(result.current.draft).toBe("Draft A");
     expect(result.current.attachments).toMatchObject([attachment]);
+  });
+
+  it("updates attachment upload state in place", async () => {
+    const { result } = renderHook(() => useMessengerChat(getSessionKey("agent-a")), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.addAttachments([
+        {
+          id: "attachment-1",
+          dataUrl: "data:image/png;base64,Zm9v",
+          mimeType: "image/png",
+          status: "uploading",
+        },
+      ]);
+    });
+
+    act(() => {
+      result.current.updateAttachment("attachment-1", {
+        status: "uploaded",
+        publicUrl: "https://cdn.example.com/chat-images/uploaded.png",
+      });
+    });
+
+    expect(result.current.attachments).toMatchObject([
+      {
+        id: "attachment-1",
+        status: "uploaded",
+        publicUrl: "https://cdn.example.com/chat-images/uploaded.png",
+      },
+    ]);
+  });
+
+  it("appends uploaded public urls to the outgoing message text", async () => {
+    const { result } = renderHook(() => useMessengerChat(getSessionKey("agent-a")), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.sendMessage("Check this", [
+        {
+          id: "attachment-1",
+          dataUrl: "data:image/png;base64,Zm9v",
+          mimeType: "image/png",
+          status: "uploaded",
+          publicUrl: "https://cdn.example.com/chat-images/example.png",
+        },
+      ]);
+    });
+
+    expect(request).toHaveBeenCalledWith("chat.send", {
+      sessionKey: getSessionKey("agent-a"),
+      message:
+        "Check this\n\nhttps://cdn.example.com/chat-images/example.png",
+      deliver: false,
+      idempotencyKey: expect.any(String),
+      attachments: [
+        {
+          type: "image",
+          mimeType: "image/png",
+          content: "Zm9v",
+        },
+      ],
+    });
+  });
+
+  it("blocks sends while an attachment upload is still pending", async () => {
+    const { result } = renderHook(() => useMessengerChat(getSessionKey("agent-a")), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let outcome: Awaited<ReturnType<typeof result.current.sendMessage>> = "sent";
+    await act(async () => {
+      outcome = await result.current.sendMessage("", [
+        {
+          id: "attachment-1",
+          dataUrl: "data:image/png;base64,Zm9v",
+          mimeType: "image/png",
+          status: "uploading",
+        },
+      ]);
+    });
+
+    expect(outcome).toBe("ignored");
+    expect(
+      request.mock.calls.filter(([method]) => method === "chat.send"),
+    ).toHaveLength(0);
   });
 
   it("shows cached thinking when reopening a hidden in-flight session, then reconciles", async () => {

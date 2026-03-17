@@ -20,6 +20,7 @@ import { UXMessageList } from "@/components/chat/session-blocks";
 import { MessageContent } from "./message-content";
 import { LoaderFive } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
+import { uploadChatImage } from "@/lib/chat-image-upload";
 import { parseAgentName } from "@/lib/mentions";
 import { useAgentActivity } from "@/hooks/use-agent-activity";
 import {
@@ -57,6 +58,7 @@ async function readFileAsAttachment(
     dataUrl,
     mimeType: file.type,
     fileName: file.name,
+    status: "uploading",
   };
 }
 
@@ -183,6 +185,7 @@ export function Session({
     setDraft,
     attachments,
     addAttachments,
+    updateAttachment,
     removeAttachment,
     clearAttachments,
   } = useMessengerChat(sessionKey);
@@ -211,6 +214,7 @@ export function Session({
           onDraftChange={setDraft}
           attachments={attachments}
           onAddAttachments={addAttachments}
+          onUpdateAttachment={updateAttachment}
           onRemoveAttachment={removeAttachment}
           onClearAttachments={clearAttachments}
           onSend={(text, attachments) => sendMessage(text, attachments)}
@@ -295,6 +299,7 @@ export function SessionInput({
   onDraftChange,
   attachments,
   onAddAttachments,
+  onUpdateAttachment,
   onRemoveAttachment,
   onClearAttachments,
   onSend,
@@ -306,6 +311,12 @@ export function SessionInput({
   onDraftChange: (draft: string) => void;
   attachments: PendingImageAttachment[];
   onAddAttachments: (attachments: PendingImageAttachment[]) => void;
+  onUpdateAttachment: (
+    attachmentId: string,
+    patch: Partial<
+      Pick<PendingImageAttachment, "status" | "publicUrl" | "error">
+    >
+  ) => void;
   onRemoveAttachment: (attachmentId: string) => void;
   onClearAttachments: () => void;
   onSend: (
@@ -318,24 +329,57 @@ export function SessionInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const placeholder = connected ? "Message..." : "Connecting...";
 
+  const uploadAttachment = async (file: File, attachmentId: string) => {
+    try {
+      const result = await uploadChatImage(file);
+      onUpdateAttachment(attachmentId, {
+        status: "uploaded",
+        publicUrl: result.url,
+        error: undefined,
+      });
+    } catch (error) {
+      onUpdateAttachment(attachmentId, {
+        status: "failed",
+        error:
+          error instanceof Error ? error.message : "Image upload failed.",
+      });
+    }
+  };
+
   const addFiles = async (files: FileList | File[]) => {
-    const nextAttachments = (
+    const uploadableEntries = (
       await Promise.all(
-        Array.from(files).map((file) => readFileAsAttachment(file))
+        Array.from(files).map(async (file) => ({
+          file,
+          attachment: await readFileAsAttachment(file),
+        }))
       )
-    ).filter(
-      (attachment): attachment is PendingImageAttachment => attachment !== null
+    ).filter((entry): entry is { file: File; attachment: PendingImageAttachment } =>
+      entry.attachment !== null
     );
 
-    if (nextAttachments.length === 0) {
+    if (uploadableEntries.length === 0) {
       return;
     }
 
+    const nextAttachments = uploadableEntries.map((entry) => entry.attachment);
     onAddAttachments(nextAttachments);
+
+    for (const entry of uploadableEntries) {
+      void uploadAttachment(entry.file, entry.attachment.id);
+    }
   };
 
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
+    if (
+      attachments.some(
+        (attachment) =>
+          attachment.status === "uploading" || attachment.status === "failed"
+      )
+    ) {
+      return;
+    }
     const outcome = await onSend(draft, attachments);
     if (outcome === "sent" || outcome === "queued") {
       onDraftChange("");
@@ -356,7 +400,14 @@ export function SessionInput({
   }, [draft]);
 
   const hasDraft = draft.trim().length > 0 || attachments.length > 0;
-  const sendDisabled = !connected || !hasDraft;
+  const hasUploadingAttachments = attachments.some(
+    (attachment) => attachment.status === "uploading"
+  );
+  const hasFailedAttachments = attachments.some(
+    (attachment) => attachment.status === "failed"
+  );
+  const sendDisabled =
+    !connected || !hasDraft || hasUploadingAttachments || hasFailedAttachments;
 
   return (
     <>
@@ -388,13 +439,33 @@ export function SessionInput({
             {attachments.map((attachment) => (
               <div
                 key={attachment.id}
-                className="relative overflow-hidden rounded-md border border-border/40 bg-muted/20"
+                className={cn(
+                  "relative overflow-hidden rounded-md border bg-muted/20",
+                  attachment.status === "failed"
+                    ? "border-destructive/30"
+                    : "border-border/40"
+                )}
               >
                 <img
                   src={attachment.dataUrl}
                   alt="Attachment preview"
                   className="size-16 object-cover"
                 />
+                {attachment.status === "uploading" && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background/78 text-center backdrop-blur-[1px]">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--swarm-violet)]/25 border-t-[var(--swarm-violet)]" />
+                    <span className="px-2 text-[10px] text-muted-foreground">
+                      Uploading...
+                    </span>
+                  </div>
+                )}
+                {attachment.status === "failed" && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-destructive/12 px-2 text-center">
+                    <span className="text-[10px] leading-tight text-destructive">
+                      Upload failed
+                    </span>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => onRemoveAttachment(attachment.id)}
