@@ -1,15 +1,18 @@
 import dns from "node:dns";
 import net from "node:net";
-import * as schema from "../../shared/schema.ts";
-import * as authSchema from "../../shared/auth-schema.ts";
-import * as customSchema from "../../shared/custom/schema.ts";
+import * as schema from "../../drizzle/schema/core.ts";
+import * as authSchema from "../../drizzle/schema/auth.ts";
+import * as customSchema from "../../drizzle/schema/custom.ts";
+import * as marketingSchema from "../../drizzle/schema/marketing.ts";
 import * as seoSchema from "../../drizzle/schema/seo.ts";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 
 const mergedSchema = {
   ...schema,
   ...authSchema,
   ...customSchema,
+  ...marketingSchema,
   ...seoSchema,
 };
 
@@ -17,6 +20,8 @@ const databases = new Map<
   string,
   ReturnType<typeof drizzle<typeof mergedSchema>>
 >();
+
+const SEARCH_PATH_SQL = "SET search_path TO public";
 
 function readBooleanEnv(name: string): boolean | undefined {
   const value = process.env[name]?.trim().toLowerCase();
@@ -84,13 +89,23 @@ function getDbConnectionConfig(databaseUrl: string) {
   };
 }
 
+function createPool(databaseUrl: string) {
+  const pool = new Pool(getDbConnectionConfig(databaseUrl));
+  pool.on("connect", (client) => {
+    void client.query(SEARCH_PATH_SQL).catch(() => {
+      // A failed initialization query will surface on the first real query too.
+      // We keep startup non-fatal here so connection errors remain attributable
+      // to the actual request path.
+    });
+  });
+
+  return pool;
+}
+
 export function createDb(databaseUrl: string) {
   let db = databases.get(databaseUrl);
   if (!db) {
-    db = drizzle({
-      connection: getDbConnectionConfig(databaseUrl),
-      schema: mergedSchema,
-    });
+    db = drizzle(createPool(databaseUrl), { schema: mergedSchema });
     databases.set(databaseUrl, db);
   }
   return db;

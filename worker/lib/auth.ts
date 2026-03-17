@@ -5,7 +5,7 @@ import { and, eq, gt } from "drizzle-orm";
 import {
   invitation as invitationTable,
   user as userTable,
-} from "../../shared/auth-schema.ts";
+} from "../../drizzle/schema/auth.ts";
 import type { Database } from "../db/client.ts";
 
 interface AuthConfig {

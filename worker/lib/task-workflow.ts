@@ -5,7 +5,7 @@ import {
   taskSubtasks,
   tasks,
   taskWorkflows,
-} from "../../shared/schema.ts";
+} from "../../drizzle/schema/core.ts";
 import type {
   TaskSessionRole,
   TaskSubtaskStatus,

@@ -5,7 +5,7 @@ import {
   taskSessions,
   taskSubtasks,
   tasks,
-} from "../../../shared/schema.ts";
+} from "../../../drizzle/schema/core.ts";
 import {
   TASK_SESSION_ROLES,
   TASK_SUBTASK_STATUSES,

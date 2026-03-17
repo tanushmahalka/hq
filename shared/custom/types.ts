@@ -1,5 +1,3 @@
-// Mission framework enums and label maps
-
 export const MISSION_STATUSES = [
   "active",
   "paused",
@@ -16,11 +14,7 @@ export const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
   archived: "Archived",
 };
 
-export const OBJECTIVE_STATUSES = [
-  "active",
-  "paused",
-  "completed",
-] as const;
+export const OBJECTIVE_STATUSES = ["active", "paused", "completed"] as const;
 
 export type ObjectiveStatus = (typeof OBJECTIVE_STATUSES)[number];
 

@@ -6,7 +6,7 @@ import {
   taskSubtasks,
   tasks,
   taskWorkflows,
-} from "../../../shared/schema.ts";
+} from "../../../drizzle/schema/core.ts";
 import { TASK_STATUSES } from "../../../shared/types.ts";
 import { TASK_WORKFLOW_MODES } from "../../../shared/task-workflow.ts";
 import { generateTaskSlug } from "../../../shared/slug.ts";

@@ -6,7 +6,7 @@ import type { Database } from "../db/client.ts";
 import {
   marketingAssetRevisions,
   marketingAssets,
-} from "../../shared/schema.ts";
+} from "../../drizzle/schema/marketing.ts";
 import { publishMarketingAssetEvent } from "./marketing-asset-events.ts";
 
 const MARKETING_ASSET_TYPES = [

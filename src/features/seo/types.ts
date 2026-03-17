@@ -230,6 +230,48 @@ export type GeoOverviewData = {
 };
 
 /* ---------------------------------------------------------------------------
+ * GEO Visibility
+ * --------------------------------------------------------------------------- */
+
+export type GeoVisibilityProvider = {
+  platform: string;
+  mentionRate: number;
+  citationRate: number;
+  totalResults: number;
+};
+
+export type GeoVisibilityClusterProvider = {
+  platform: string;
+  mentioned: boolean;
+  cited: boolean;
+  competitors: Array<{ domain: string; label: string }>;
+};
+
+export type GeoVisibilityCluster = {
+  clusterId: number;
+  clusterName: string;
+  intent: string | null;
+  funnelStage: string | null;
+  promptCount: number;
+  providers: GeoVisibilityClusterProvider[];
+  prompts: Array<{ id: number; prompt: string }>;
+};
+
+export type GeoVisibilityData = {
+  hasResults: boolean;
+  summary: {
+    totalPromptsRun: number;
+    brandMentionRate: number;
+    brandCitationRate: number;
+    providersWithMentions: number;
+    totalProviders: number;
+  };
+  providers: GeoVisibilityProvider[];
+  clusters: GeoVisibilityCluster[];
+  platforms: string[];
+};
+
+/* ---------------------------------------------------------------------------
  * Backlinks
  * --------------------------------------------------------------------------- */
 

@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
+import { campaigns } from "../../drizzle/schema/marketing.ts";
 import {
-  campaigns,
   objectives,
   missions,
-} from "../../shared/custom/schema.ts";
+} from "../../drizzle/schema/custom.ts";
 import type { Database } from "../db/client.ts";
 
 export interface MissionChain {

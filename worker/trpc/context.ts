@@ -1,6 +1,6 @@
 import { createDb, type Database } from "../db/client.ts";
 import { createAuth, type Auth } from "../lib/auth.ts";
-import { agentDatabases as agentDatabasesTable } from "../../shared/schema.ts";
+import { agentDatabases as agentDatabasesTable } from "../../drizzle/schema/core.ts";
 
 export interface Env {
   DATABASE_URL: string;

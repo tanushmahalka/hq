@@ -10,7 +10,7 @@ import {
   invitation as invitationTable,
   organization as organizationTable,
   user as userTable,
-} from "../shared/auth-schema.ts";
+} from "../drizzle/schema/auth.ts";
 import {
   MarketingAssetServiceError,
   createMarketingAsset,

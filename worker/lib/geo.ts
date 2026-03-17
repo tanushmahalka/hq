@@ -1,11 +1,15 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, inArray } from "drizzle-orm";
 import type { Database } from "../db/client.ts";
 import {
+  geoCitations,
+  geoPromptResults,
   geoPrompts,
+  geoRuns,
   pageClusterTargets,
   pages,
   queryClusters,
   queries,
+  siteCompetitors,
   sites,
 } from "../../drizzle/schema/seo.ts";
 
@@ -501,6 +505,272 @@ function buildClusterPromptGroups(args: {
       };
     })
     .sort(sortClusters);
+}
+
+/* ---------------------------------------------------------------------------
+ * GEO Visibility (results-driven view for CEO dashboard)
+ * --------------------------------------------------------------------------- */
+
+export type GeoVisibilityProvider = {
+  platform: string;
+  mentionRate: number;
+  citationRate: number;
+  totalResults: number;
+};
+
+export type GeoVisibilityClusterProvider = {
+  platform: string;
+  mentioned: boolean;
+  cited: boolean;
+  competitors: Array<{ domain: string; label: string }>;
+};
+
+export type GeoVisibilityCluster = {
+  clusterId: number;
+  clusterName: string;
+  intent: string | null;
+  funnelStage: string | null;
+  promptCount: number;
+  providers: GeoVisibilityClusterProvider[];
+  prompts: Array<{ id: number; prompt: string }>;
+};
+
+export type GeoVisibility = {
+  hasResults: boolean;
+  summary: {
+    totalPromptsRun: number;
+    brandMentionRate: number;
+    brandCitationRate: number;
+    providersWithMentions: number;
+    totalProviders: number;
+  };
+  providers: GeoVisibilityProvider[];
+  clusters: GeoVisibilityCluster[];
+  platforms: string[];
+};
+
+export async function getGeoVisibility(db: Database, siteId: number): Promise<GeoVisibility> {
+  const schemaReady = await hasGeoSchema(db);
+
+  if (!schemaReady) {
+    return {
+      hasResults: false,
+      summary: {
+        totalPromptsRun: 0,
+        brandMentionRate: 0,
+        brandCitationRate: 0,
+        providersWithMentions: 0,
+        totalProviders: 0,
+      },
+      providers: [],
+      clusters: [],
+      platforms: [],
+    };
+  }
+
+  // Fetch all results joined with runs (for platform) and prompts (for clusterId)
+  const resultRows = await db
+    .select({
+      resultId: geoPromptResults.id,
+      brandMentioned: geoPromptResults.brandMentioned,
+      brandCited: geoPromptResults.brandCited,
+      promptId: geoPromptResults.promptId,
+      platform: geoRuns.platform,
+      clusterId: geoPrompts.queryClusterId,
+    })
+    .from(geoPromptResults)
+    .innerJoin(geoRuns, eq(geoPromptResults.runId, geoRuns.id))
+    .innerJoin(geoPrompts, eq(geoPromptResults.promptId, geoPrompts.id))
+    .where(eq(geoPromptResults.siteId, siteId));
+
+  if (resultRows.length === 0) {
+    return {
+      hasResults: false,
+      summary: {
+        totalPromptsRun: 0,
+        brandMentionRate: 0,
+        brandCitationRate: 0,
+        providersWithMentions: 0,
+        totalProviders: 0,
+      },
+      providers: [],
+      clusters: [],
+      platforms: [],
+    };
+  }
+
+  // Fetch competitor citations for these results
+  const resultIds = resultRows.map((r) => r.resultId);
+  const citationRows = await db
+    .select({
+      resultId: geoCitations.resultId,
+      domain: geoCitations.domain,
+      isCompetitor: geoCitations.isCompetitor,
+      siteCompetitorId: geoCitations.siteCompetitorId,
+    })
+    .from(geoCitations)
+    .where(and(eq(geoCitations.siteId, siteId), eq(geoCitations.isCompetitor, true)));
+
+  // Fetch competitor labels
+  const competitorRows = await db
+    .select({
+      id: siteCompetitors.id,
+      domain: siteCompetitors.competitorDomain,
+      label: siteCompetitors.label,
+    })
+    .from(siteCompetitors)
+    .where(eq(siteCompetitors.siteId, siteId));
+
+  const competitorById = new Map(competitorRows.map((c) => [c.id, c]));
+
+  // Fetch cluster metadata
+  const clusterIds = [...new Set(resultRows.map((r) => r.clusterId))];
+  const clusterMetaRows =
+    clusterIds.length > 0
+      ? await db
+          .select({
+            id: queryClusters.id,
+            name: queryClusters.name,
+            primaryIntent: queryClusters.primaryIntent,
+            funnelStage: queryClusters.funnelStage,
+          })
+          .from(queryClusters)
+          .where(inArray(queryClusters.id, clusterIds))
+      : [];
+
+  const clusterMeta = new Map(clusterMetaRows.map((c) => [c.id, c]));
+
+  // Fetch prompts per cluster
+  const promptRows = await db
+    .select({
+      id: geoPrompts.id,
+      prompt: geoPrompts.prompt,
+      clusterId: geoPrompts.queryClusterId,
+    })
+    .from(geoPrompts)
+    .where(eq(geoPrompts.siteId, siteId));
+
+  const promptsByCluster = new Map<number, Array<{ id: number; prompt: string }>>();
+  for (const p of promptRows) {
+    const arr = promptsByCluster.get(p.clusterId) ?? [];
+    arr.push({ id: p.id, prompt: p.prompt });
+    promptsByCluster.set(p.clusterId, arr);
+  }
+
+  // Build competitor citations index: resultId → Set of competitor domains
+  const competitorsByResult = new Map<number, Set<string>>();
+  for (const cit of citationRows) {
+    const set = competitorsByResult.get(cit.resultId) ?? new Set();
+    set.add(cit.domain);
+    competitorsByResult.set(cit.resultId, set);
+  }
+
+  // --- Aggregate summary ---
+  const platforms = [...new Set(resultRows.map((r) => r.platform))].sort();
+  const totalResults = resultRows.length;
+  const mentionedCount = resultRows.filter((r) => r.brandMentioned).length;
+  const citedCount = resultRows.filter((r) => r.brandCited).length;
+
+  // Per-provider stats
+  const providerMap = new Map<string, { mentioned: number; cited: number; total: number }>();
+  for (const r of resultRows) {
+    const stats = providerMap.get(r.platform) ?? { mentioned: 0, cited: 0, total: 0 };
+    stats.total++;
+    if (r.brandMentioned) stats.mentioned++;
+    if (r.brandCited) stats.cited++;
+    providerMap.set(r.platform, stats);
+  }
+
+  const providers: GeoVisibilityProvider[] = [...providerMap.entries()]
+    .map(([platform, stats]) => ({
+      platform,
+      mentionRate: stats.total > 0 ? stats.mentioned / stats.total : 0,
+      citationRate: stats.total > 0 ? stats.cited / stats.total : 0,
+      totalResults: stats.total,
+    }))
+    .sort((a, b) => b.mentionRate - a.mentionRate);
+
+  const providersWithMentions = providers.filter((p) => p.mentionRate > 0).length;
+
+  // --- Cluster × Provider matrix ---
+  type CellKey = `${number}:${string}`;
+  const clusterProviderCells = new Map<
+    CellKey,
+    { mentioned: boolean; cited: boolean; competitorDomains: Set<string>; resultIds: number[] }
+  >();
+
+  for (const r of resultRows) {
+    const key: CellKey = `${r.clusterId}:${r.platform}`;
+    const cell = clusterProviderCells.get(key) ?? {
+      mentioned: false,
+      cited: false,
+      competitorDomains: new Set(),
+      resultIds: [],
+    };
+    if (r.brandMentioned) cell.mentioned = true;
+    if (r.brandCited) cell.cited = true;
+    cell.resultIds.push(r.resultId);
+    // Merge competitor domains from citations
+    const compDomains = competitorsByResult.get(r.resultId);
+    if (compDomains) {
+      for (const d of compDomains) cell.competitorDomains.add(d);
+    }
+    clusterProviderCells.set(key, cell);
+  }
+
+  // Build cluster rows
+  const clusterIdSet = new Set(resultRows.map((r) => r.clusterId));
+  const clusters: GeoVisibilityCluster[] = [...clusterIdSet]
+    .map((clusterId) => {
+      const meta = clusterMeta.get(clusterId);
+      const clusterProviders: GeoVisibilityClusterProvider[] = platforms.map((platform) => {
+        const key: CellKey = `${clusterId}:${platform}`;
+        const cell = clusterProviderCells.get(key);
+        const competitors: Array<{ domain: string; label: string }> = [];
+        if (cell) {
+          for (const domain of cell.competitorDomains) {
+            const comp = competitorRows.find((c) => c.domain === domain);
+            competitors.push({ domain, label: comp?.label ?? domain });
+          }
+        }
+        return {
+          platform,
+          mentioned: cell?.mentioned ?? false,
+          cited: cell?.cited ?? false,
+          competitors,
+        };
+      });
+
+      return {
+        clusterId,
+        clusterName: meta?.name ?? `Cluster ${clusterId}`,
+        intent: meta?.primaryIntent ?? null,
+        funnelStage: meta?.funnelStage ?? null,
+        promptCount: promptsByCluster.get(clusterId)?.length ?? 0,
+        providers: clusterProviders,
+        prompts: promptsByCluster.get(clusterId) ?? [],
+      };
+    })
+    .sort((a, b) => {
+      // Sort by how many providers mention them (desc)
+      const aMentions = a.providers.filter((p) => p.mentioned).length;
+      const bMentions = b.providers.filter((p) => p.mentioned).length;
+      return bMentions - aMentions || a.clusterName.localeCompare(b.clusterName);
+    });
+
+  return {
+    hasResults: true,
+    summary: {
+      totalPromptsRun: totalResults,
+      brandMentionRate: totalResults > 0 ? mentionedCount / totalResults : 0,
+      brandCitationRate: totalResults > 0 ? citedCount / totalResults : 0,
+      providersWithMentions,
+      totalProviders: platforms.length,
+    },
+    providers,
+    clusters,
+    platforms,
+  };
 }
 
 export async function getGeoOverview(db: Database, siteId: number): Promise<GeoOverview> {

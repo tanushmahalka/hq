@@ -16,11 +16,11 @@ import { trpc } from "@/lib/trpc";
 
 type EbookTab = "ebooks";
 
-function formatUpdatedAt(value: string): string {
+function formatUpdatedAt(value: string | Date): string {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value));
+  }).format(typeof value === "string" ? new Date(value) : value);
 }
 
 function EbookTabButton({

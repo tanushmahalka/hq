@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
-import { missions } from "../../../../shared/custom/schema.ts";
-import { MISSION_STATUSES } from "../../../../shared/custom/types.ts";
+import { missions } from "../../../../drizzle/schema/custom.ts";
+import { MISSION_STATUSES } from "../../../../drizzle/schema/custom.ts";
 import { router, orgProcedure } from "../../init.ts";
 import { notifyAgent } from "../../../lib/notify-agent.ts";
 import { fetchMissionChain } from "../../../lib/mission-chain.ts";
@@ -31,15 +31,15 @@ export const missionRouter = router({
       }
 
       const where =
-        conditions.length > 1
-          ? and(...conditions)
-          : conditions[0] ?? undefined;
+        conditions.length > 1 ? and(...conditions) : conditions[0] ?? undefined;
 
       const rows = await ctx.db.query.missions.findMany({
         where,
         with: {
           objectives: {
-            with: { campaigns: { orderBy: (c, { asc }) => [asc(c.sortOrder)] } },
+            with: {
+              campaigns: { orderBy: (c, { asc }) => [asc(c.sortOrder)] },
+            },
             orderBy: (o, { asc }) => [asc(o.sortOrder)],
           },
         },
@@ -60,7 +60,9 @@ export const missionRouter = router({
         where: conditions.length > 1 ? and(...conditions) : conditions[0],
         with: {
           objectives: {
-            with: { campaigns: { orderBy: (c, { asc }) => [asc(c.sortOrder)] } },
+            with: {
+              campaigns: { orderBy: (c, { asc }) => [asc(c.sortOrder)] },
+            },
             orderBy: (o, { asc }) => [asc(o.sortOrder)],
           },
         },

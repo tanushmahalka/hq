@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { campaigns, objectives, missions } from "../../../../shared/custom/schema.ts";
-import { CAMPAIGN_STATUSES } from "../../../../shared/custom/types.ts";
+import { objectives, missions } from "../../../../drizzle/schema/custom.ts";
+import {
+  campaigns,
+  CAMPAIGN_STATUSES,
+} from "../../../../drizzle/schema/marketing.ts";
 import { router, orgProcedure } from "../../init.ts";
 import { notifyAgent } from "../../../lib/notify-agent.ts";
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { taskComments, tasks } from "../../../shared/schema.ts";
+import { taskComments, tasks } from "../../../drizzle/schema/core.ts";
 import { router, authedProcedure } from "../init.ts";
 import { extractMentions, notifyMentionedAgents } from "../../lib/mentions.ts";
 

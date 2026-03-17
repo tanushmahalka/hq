@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization as organizationPlugin, admin } from "better-auth/plugins";
-import * as authSchema from "../shared/auth-schema.ts";
+import * as authSchema from "../drizzle/schema/auth.ts";
 
 function getEnv(name: string) {
   const value = process.env[name];

@@ -14,8 +14,9 @@
     "erasableSyntaxOnly": true,
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./shared/*"],
+      "@drizzle/*": ["./drizzle/*"]
     }
   },
-  "include": ["server", "worker", "shared"]
+  "include": ["server", "worker", "shared", "drizzle/schema"]
 }

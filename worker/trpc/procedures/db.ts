@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { router, authedProcedure, adminProcedure } from "../init.ts";
 import { listTables, getTableData, executeSQL } from "../../lib/agent-db.ts";
 import { getPool } from "../../db/local-pg.ts";
-import { agentDatabases } from "../../../shared/schema.ts";
+import { agentDatabases } from "../../../drizzle/schema/core.ts";
 
 export const dbRouter = router({
   agents: adminProcedure.query(({ ctx }) => {

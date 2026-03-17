@@ -17,6 +17,8 @@
     "bootstrap:hq": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/bootstrap-hq.ts",
     "grant:super-admin": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/grant-super-admin.ts",
     "db:migrate:uuid-ids": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/migrate-uuid-ids-to-integers.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },

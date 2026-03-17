@@ -9,7 +9,7 @@ import {
   getSeoOverview,
   updateOpportunityStatus,
 } from "../../lib/seo.ts";
-import { getGeoOverview } from "../../lib/geo.ts";
+import { getGeoOverview, getGeoVisibility } from "../../lib/geo.ts";
 
 export const seoRouter = router({
   overview: orgProcedure.query(async ({ ctx }) => {
@@ -69,6 +69,15 @@ export const seoRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return getGeoOverview(ctx.db, input.siteId);
+    }),
+  geoVisibility: orgProcedure
+    .input(
+      z.object({
+        siteId: z.number(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return getGeoVisibility(ctx.db, input.siteId);
     }),
   backlinksByDomain: orgProcedure
     .input(z.object({
