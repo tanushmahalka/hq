@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { CliError } from "./core/errors.ts";
 import { getBooleanFlag, getStringFlag, parseArgs } from "./core/args.ts";
+import { getConfigPath, readConfig, saveDatabaseUrl } from "./core/config.ts";
 import { printJson, printLine } from "./core/output.ts";
 import { requestAgentJson } from "./core/http.ts";
 
@@ -241,6 +242,54 @@ async function runUpdateCommand(argv: string[]): Promise<void> {
   printEbookSummary(result.item);
 }
 
+async function runConfigCommand(argv: string[]): Promise<void> {
+  const [subcommand, ...rest] = argv;
+
+  if (!subcommand || subcommand === "help" || subcommand === "--help") {
+    printLine("Usage:");
+    printLine("  ebook config set --database-url <url>");
+    printLine("  ebook config get [--json]");
+    printLine("  ebook config path");
+    return;
+  }
+
+  if (subcommand === "set") {
+    const parsed = parseArgs(rest, {
+      "--database-url": "string",
+    });
+    const databaseUrl = requireFlag(
+      getStringFlag(parsed, "--database-url"),
+      "--database-url",
+    );
+
+    await saveDatabaseUrl(databaseUrl);
+    printLine(`Saved database URL to ${getConfigPath()}`);
+    return;
+  }
+
+  if (subcommand === "get") {
+    const parsed = parseArgs(rest, {
+      "--json": "boolean",
+    });
+    const config = await readConfig();
+
+    if (getBooleanFlag(parsed, "--json")) {
+      printJson(config);
+      return;
+    }
+
+    printLine(`databaseUrl: ${config.databaseUrl ?? "not set"}`);
+    return;
+  }
+
+  if (subcommand === "path") {
+    printLine(getConfigPath());
+    return;
+  }
+
+  throw new CliError(`Unknown config command: ${subcommand}`, 2);
+}
+
 function printHelp(): void {
   printLine("Ebook CLI");
   printLine("");
@@ -249,9 +298,15 @@ function printHelp(): void {
   printLine("  ebook get --id <ebook-id> [--json]");
   printLine("  ebook create --org <organization-id> --title <title> [--slug <slug>] [--description <text>] [--file <path>|--file -|--html <html>] [--status <draft|published|archived>] [--json]");
   printLine("  ebook update --id <ebook-id> [--title <title>] [--slug <slug>] [--description <text>] [--file <path>|--file -|--html <html>] [--status <draft|published|archived>] [--json]");
+  printLine("  ebook config set --database-url <url>");
+  printLine("  ebook config get [--json]");
+  printLine("  ebook config path");
   printLine("");
   printLine("Auth:");
   printLine("  Set AGENT_API_TOKEN and optionally HQ_API_URL, or pass --token / --api-url.");
+  printLine("");
+  printLine("Config:");
+  printLine("  Saves local CLI config to a JSON file in your config directory.");
 }
 
 async function main(argv: string[]): Promise<void> {
@@ -279,6 +334,11 @@ async function main(argv: string[]): Promise<void> {
 
   if (command === "update") {
     await runUpdateCommand(rest);
+    return;
+  }
+
+  if (command === "config") {
+    await runConfigCommand(rest);
     return;
   }
 
