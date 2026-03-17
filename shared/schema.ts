@@ -33,6 +33,15 @@ export const taskSessionRoleEnum = pgEnum(
   "task_session_role",
   TASK_SESSION_ROLES,
 );
+export const marketingEbookStatusEnum = pgEnum("marketing_ebook_status", [
+  "draft",
+  "published",
+  "archived",
+]);
+export const marketingEbookRevisionSourceEnum = pgEnum(
+  "marketing_ebook_revision_source",
+  ["user", "agent", "cli"],
+);
 
 export const tasks = pgTable("tasks", {
   id: text("id").primaryKey(),
@@ -149,6 +158,66 @@ export const taskSessions = pgTable("task_sessions", {
     .$onUpdate(() => new Date()),
 });
 
+export const marketingEbooks = pgTable(
+  "marketing_ebooks",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    organizationId: text("organization_id").notNull(),
+    title: text("title").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    status: marketingEbookStatusEnum("status").notNull().default("draft"),
+    currentHtml: text("current_html").notNull(),
+    currentVersion: integer("current_version").notNull().default(1),
+    storagePath: text("storage_path"),
+    lastUpdatedBy: text("last_updated_by"),
+    lastUpdateSource: marketingEbookRevisionSourceEnum("last_update_source")
+      .notNull()
+      .default("user"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    organizationSlugUnique: unique("marketing_ebooks_org_slug_unique").on(
+      table.organizationId,
+      table.slug,
+    ),
+  }),
+);
+
+export const marketingEbookRevisions = pgTable(
+  "marketing_ebook_revisions",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    ebookId: integer("ebook_id")
+      .notNull()
+      .references(() => marketingEbooks.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    title: text("title").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    status: marketingEbookStatusEnum("status").notNull(),
+    html: text("html").notNull(),
+    summary: text("summary"),
+    updatedBy: text("updated_by"),
+    source: marketingEbookRevisionSourceEnum("source").notNull().default("user"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    ebookVersionUnique: unique("marketing_ebook_revisions_ebook_version_unique").on(
+      table.ebookId,
+      table.version,
+    ),
+  }),
+);
+
 export const tasksRelations = relations(tasks, ({ many, one }) => ({
   comments: many(taskComments),
   workflow: one(taskWorkflows, {
@@ -191,6 +260,23 @@ export const taskSessionsRelations = relations(taskSessions, ({ one }) => ({
     references: [taskSubtasks.id],
   }),
 }));
+
+export const marketingEbooksRelations = relations(
+  marketingEbooks,
+  ({ many }) => ({
+    revisions: many(marketingEbookRevisions),
+  }),
+);
+
+export const marketingEbookRevisionsRelations = relations(
+  marketingEbookRevisions,
+  ({ one }) => ({
+    ebook: one(marketingEbooks, {
+      fields: [marketingEbookRevisions.ebookId],
+      references: [marketingEbooks.id],
+    }),
+  }),
+);
 
 export const agentDatabases = pgTable("agent_databases", {
   agentId: text("agent_id").primaryKey(),

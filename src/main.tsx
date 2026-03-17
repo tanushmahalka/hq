@@ -23,6 +23,7 @@ import Dashboard from "./pages/dashboard";
 import Tasks from "./pages/tasks";
 import Agents from "./pages/agents";
 import Missions from "./pages/missions";
+import Marketing from "./pages/marketing";
 import Files from "./pages/files";
 import Db from "./pages/db";
 import Seo from "./pages/seo";
@@ -123,6 +124,7 @@ createRoot(document.getElementById("root")!).render(
               <Route index element={<Dashboard />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="missions" element={<Missions />} />
+              <Route path="marketing" element={<Marketing />} />
               <Route path="seo" element={<Seo />} />
               <Route path="files" element={<Files />} />
               <Route path="settings" element={<SettingsLayout />}>

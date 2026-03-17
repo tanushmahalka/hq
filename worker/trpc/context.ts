@@ -7,6 +7,7 @@ export interface Env {
   OPENCLAW_HOOKS_URL?: string;
   OPENCLAW_HOOKS_TOKEN?: string;
   LOCAL_PG_ADMIN_URL?: string;
+  HQ_EBOOK_STORAGE_DIR?: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   SUPER_ADMIN_EMAILS?: string;
@@ -23,6 +24,7 @@ export interface Context {
   waitUntil: (promise: Promise<unknown>) => void;
   agentDatabases: Map<string, string>;
   localPgAdminUrl?: string;
+  ebookStorageRoot?: string;
   leadAgentId: string;
   user: {
     id: string;
@@ -112,6 +114,7 @@ export async function createContext(
     waitUntil: executionCtx.waitUntil.bind(executionCtx),
     agentDatabases,
     localPgAdminUrl: env.LOCAL_PG_ADMIN_URL,
+    ebookStorageRoot: env.HQ_EBOOK_STORAGE_DIR,
     leadAgentId: env.LEAD_AGENT_ID ?? "Unknown",
     user,
     session,
