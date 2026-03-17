@@ -5,6 +5,7 @@ import { workflowRouter } from "./procedures/task-workflow.ts";
 import { commentRouter } from "./procedures/comment.ts";
 import { dbRouter } from "./procedures/db.ts";
 import { seoRouter } from "./procedures/seo.ts";
+import { marketingEbookRouter } from "./procedures/marketing/ebook.ts";
 import { exampleRouter } from "./procedures/custom/example.ts";
 import { missionRouter } from "./procedures/custom/mission.ts";
 import { objectiveRouter } from "./procedures/custom/objective.ts";
@@ -21,6 +22,9 @@ export const appRouter = router({
   ),
   db: dbRouter,
   seo: seoRouter,
+  marketing: router({
+    ebook: marketingEbookRouter,
+  }),
   custom: router({
     example: exampleRouter,
     mission: missionRouter,

@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "preview": "PORT=4173 node ./dist-server/server/index.js",
     "start": "node ./dist-server/server/index.js",
+    "ebook": "./cli/ebook/bin/ebook",
     "bootstrap:hq": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/bootstrap-hq.ts",
     "grant:super-admin": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/grant-super-admin.ts",
     "db:migrate:uuid-ids": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/migrate-uuid-ids-to-integers.ts",

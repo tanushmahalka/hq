@@ -1,7 +1,8 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { appRouter } from "./trpc/router.ts";
 import { createContext, createAuthInstance, type Env } from "./trpc/context.ts";
 import { createDb } from "./db/client.ts";
@@ -10,6 +11,17 @@ import {
   organization as organizationTable,
   user as userTable,
 } from "../shared/auth-schema.ts";
+import {
+  MarketingEbookServiceError,
+  createMarketingEbook,
+  getMarketingEbook,
+  listMarketingEbooks,
+  marketingEbookCreateInputSchema,
+  marketingEbookUpdateInputSchema,
+  resolveMarketingEbookStorageRoot,
+  updateMarketingEbook,
+} from "./lib/marketing-ebook.ts";
+import { subscribeToMarketingEbook } from "./lib/marketing-ebook-events.ts";
 
 interface AppOptions {
   env: Env;
@@ -18,6 +30,38 @@ interface AppOptions {
 
 export function createApp({ env, waitUntil }: AppOptions) {
   const app = new Hono();
+  const ebookStorageRoot = resolveMarketingEbookStorageRoot(
+    env.HQ_EBOOK_STORAGE_DIR,
+  );
+
+  async function getRequestContext(request: Request) {
+    return createContext(env, { waitUntil }, request);
+  }
+
+  function unauthorizedResponse(c: Context) {
+    return c.json({ message: "Unauthorized." }, 401);
+  }
+
+  function handleMarketingError(c: Context, error: unknown) {
+    if (error instanceof z.ZodError) {
+      return c.json(
+        { message: "Invalid request.", issues: error.flatten() },
+        400,
+      );
+    }
+
+    if (error instanceof MarketingEbookServiceError) {
+      const status =
+        error.code === "not_found"
+          ? 404
+          : error.code === "conflict"
+            ? 409
+            : 400;
+      return c.json({ message: error.message }, status);
+    }
+
+    throw error;
+  }
 
   app.use("/api/*", async (c, next) => {
     const allowedOrigins = env.ALLOWED_ORIGINS
@@ -85,6 +129,197 @@ export function createApp({ env, waitUntil }: AppOptions) {
     const db = createDb(env.DATABASE_URL);
     const auth = createAuthInstance(env, db);
     return auth.handler(c.req.raw);
+  });
+
+  app.get("/api/marketing/ebooks/:id/preview", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.user && !requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const ebookId = Number.parseInt(c.req.param("id"), 10);
+    if (!Number.isInteger(ebookId) || ebookId <= 0) {
+      return c.json({ message: "Invalid ebook id." }, 400);
+    }
+
+    const organizationId = requestContext.isAgent
+      ? c.req.query("organizationId") ?? undefined
+      : requestContext.organizationId ?? undefined;
+    const ebook = await getMarketingEbook(
+      requestContext.db,
+      ebookId,
+      organizationId,
+    );
+
+    if (!ebook) {
+      return c.json({ message: "Ebook not found." }, 404);
+    }
+
+    return c.body(ebook.currentHtml, 200, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store, no-cache, must-revalidate",
+      "x-content-type-options": "nosniff",
+    });
+  });
+
+  app.get("/api/marketing/ebooks/:id/stream", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.user && !requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const ebookId = Number.parseInt(c.req.param("id"), 10);
+    if (!Number.isInteger(ebookId) || ebookId <= 0) {
+      return c.json({ message: "Invalid ebook id." }, 400);
+    }
+
+    const organizationId = requestContext.isAgent
+      ? c.req.query("organizationId") ?? undefined
+      : requestContext.organizationId ?? undefined;
+    const ebook = await getMarketingEbook(
+      requestContext.db,
+      ebookId,
+      organizationId,
+    );
+
+    if (!ebook) {
+      return c.json({ message: "Ebook not found." }, 404);
+    }
+
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const send = (payload: unknown) => {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(payload)}\n\n`),
+          );
+        };
+
+        send({
+          ebookId: ebook.id,
+          version: ebook.currentVersion,
+          updatedAt: new Date(ebook.updatedAt).toISOString(),
+        });
+
+        const unsubscribe = subscribeToMarketingEbook(ebook.id, (event) => {
+          send(event);
+        });
+
+        const keepAlive = setInterval(() => {
+          controller.enqueue(encoder.encode(": keep-alive\n\n"));
+        }, 15_000);
+
+        const closeStream = () => {
+          clearInterval(keepAlive);
+          unsubscribe();
+          try {
+            controller.close();
+          } catch {
+            // Stream may already be closed.
+          }
+        };
+
+        c.req.raw.signal.addEventListener("abort", closeStream, { once: true });
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-store, no-cache, must-revalidate",
+        connection: "keep-alive",
+        "x-accel-buffering": "no",
+      },
+    });
+  });
+
+  app.get("/api/marketing/agent/ebooks", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const organizationId = c.req.query("organizationId");
+    if (!organizationId) {
+      return c.json({ message: "organizationId is required." }, 400);
+    }
+
+    const ebooks = await listMarketingEbooks(requestContext.db, organizationId);
+    return c.json({ items: ebooks });
+  });
+
+  app.get("/api/marketing/agent/ebooks/:id", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const ebookId = Number.parseInt(c.req.param("id"), 10);
+    if (!Number.isInteger(ebookId) || ebookId <= 0) {
+      return c.json({ message: "Invalid ebook id." }, 400);
+    }
+
+    const ebook = await getMarketingEbook(requestContext.db, ebookId);
+    if (!ebook) {
+      return c.json({ message: "Ebook not found." }, 404);
+    }
+
+    return c.json({ item: ebook });
+  });
+
+  app.post("/api/marketing/agent/ebooks", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    try {
+      const rawBody = await c.req.json();
+      const body = rawBody && typeof rawBody === "object" ? rawBody : {};
+      const input = marketingEbookCreateInputSchema.parse({
+        ...body,
+        source: "source" in body ? body.source : "cli",
+      });
+      const ebook = await createMarketingEbook(
+        requestContext.db,
+        input,
+        ebookStorageRoot,
+      );
+      return c.json({ item: ebook }, 201);
+    } catch (error) {
+      return handleMarketingError(c, error);
+    }
+  });
+
+  app.patch("/api/marketing/agent/ebooks/:id", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const ebookId = Number.parseInt(c.req.param("id"), 10);
+    if (!Number.isInteger(ebookId) || ebookId <= 0) {
+      return c.json({ message: "Invalid ebook id." }, 400);
+    }
+
+    try {
+      const rawBody = await c.req.json();
+      const body = rawBody && typeof rawBody === "object" ? rawBody : {};
+      const input = marketingEbookUpdateInputSchema.parse({
+        ...body,
+        id: ebookId,
+        source: "source" in body ? body.source : "cli",
+      });
+      const ebook = await updateMarketingEbook(
+        requestContext.db,
+        input,
+        ebookStorageRoot,
+      );
+      return c.json({ item: ebook });
+    } catch (error) {
+      return handleMarketingError(c, error);
+    }
   });
 
   app.all("/api/trpc/*", async (c) => {

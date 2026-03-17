@@ -39,6 +39,14 @@ type ChatEventPayload = {
   errorMessage?: string;
 };
 
+type AgentEventPayload = {
+  runId: string;
+  sessionKey?: string;
+  stream: string;
+  ts?: number;
+  data?: Record<string, unknown>;
+};
+
 type SessionState = {
   messages: ChatMessage[];
   rawMessages: RawMessage[];
@@ -75,6 +83,7 @@ type MessengerChatStore = {
   removeAttachment: (sessionKey: string, attachmentId: string) => void;
   clearAttachments: (sessionKey: string) => void;
   handleChatEvent: (payload: ChatEventPayload) => void;
+  handleAgentEvent: (payload: AgentEventPayload) => void;
 };
 
 const MessengerChatContext = createContext<MessengerChatStore | null>(null);
@@ -117,15 +126,29 @@ function rawMessageToChatMessage(message: RawMessage): ChatMessage | null {
   };
 }
 
+function buildRunKey(sessionKey: string, runId: string): string {
+  return `${sessionKey}::${runId}`;
+}
+
 function createMessengerChatStore(): MessengerChatStore {
   const sessions = new Map<string, SessionState>();
   const listeners = new Set<() => void>();
   const visibleCounts = new Map<string, number>();
+  const agentFallbackFinalizedRuns = new Map<string, number>();
   let client: GatewayClient | null = null;
   let connected = false;
 
   const emitChange = () => {
     for (const listener of listeners) listener();
+  };
+
+  const pruneAgentFallbackFinalizedRuns = () => {
+    const cutoff = Date.now() - 5 * 60_000;
+    for (const [key, ts] of agentFallbackFinalizedRuns) {
+      if (ts < cutoff) {
+        agentFallbackFinalizedRuns.delete(key);
+      }
+    }
   };
 
   const ensureSession = (sessionKey: string): SessionState => {
@@ -160,6 +183,14 @@ function createMessengerChatStore(): MessengerChatStore {
       activeRunId: null,
       streamStartedAt: null,
     }));
+  };
+
+  const refreshSessionHistory = (sessionKey: string) => {
+    updateSession(sessionKey, (session) => ({
+      ...session,
+      needsRefresh: true,
+    }));
+    void loadHistory(sessionKey, true);
   };
 
   const appendAssistantMessage = (
@@ -509,12 +540,30 @@ function createMessengerChatStore(): MessengerChatStore {
       const sessionKey = payload.sessionKey;
       const session = ensureSession(sessionKey);
       const isVisible = (visibleCounts.get(sessionKey) ?? 0) > 0;
+      const finalizedRunKey =
+        payload.runId && payload.sessionKey
+          ? buildRunKey(payload.sessionKey, payload.runId)
+          : null;
+
+      pruneAgentFallbackFinalizedRuns();
 
       if (!isVisible) {
         updateSession(sessionKey, (current) => ({
           ...current,
           needsRefresh: true,
         }));
+        return;
+      }
+
+      if (
+        finalizedRunKey &&
+        agentFallbackFinalizedRuns.has(finalizedRunKey) &&
+        (payload.state === "final" ||
+          payload.state === "aborted" ||
+          payload.state === "error")
+      ) {
+        agentFallbackFinalizedRuns.delete(finalizedRunKey);
+        refreshSessionHistory(sessionKey);
         return;
       }
 
@@ -563,6 +612,105 @@ function createMessengerChatStore(): MessengerChatStore {
           break;
       }
     },
+
+    handleAgentEvent(payload) {
+      const sessionKey =
+        typeof payload?.sessionKey === "string" ? payload.sessionKey : null;
+      if (!sessionKey) {
+        return;
+      }
+
+      const session = ensureSession(sessionKey);
+      const isVisible = (visibleCounts.get(sessionKey) ?? 0) > 0;
+      const runKey =
+        typeof payload.runId === "string" && payload.runId
+          ? buildRunKey(sessionKey, payload.runId)
+          : null;
+
+      pruneAgentFallbackFinalizedRuns();
+
+      if (!isVisible) {
+        updateSession(sessionKey, (current) => ({
+          ...current,
+          needsRefresh: true,
+        }));
+        return;
+      }
+
+      if (payload.stream === "assistant") {
+        const nextText = extractText(payload.data);
+        if (!nextText || isAssistantSilentReplyMessage({ role: "assistant", text: nextText })) {
+          return;
+        }
+
+        clearSessionPending(sessionKey);
+        updateSession(sessionKey, (current) => ({
+          ...current,
+          streamStartedAt:
+            current.streamStartedAt ??
+            (typeof payload.ts === "number" ? payload.ts : Date.now()),
+          stream:
+            nextText.length >= (current.stream?.length ?? 0)
+              ? nextText
+              : current.stream,
+        }));
+        return;
+      }
+
+      if (payload.stream === "lifecycle") {
+        const phase =
+          typeof payload.data?.phase === "string" ? payload.data.phase : null;
+        if (phase === "end") {
+          if (runKey) {
+            agentFallbackFinalizedRuns.set(runKey, Date.now());
+          }
+          if (session.stream?.trim()) {
+            appendAssistantMessage(sessionKey, undefined, session.stream);
+          }
+          clearStreaming(sessionKey);
+          refreshSessionHistory(sessionKey);
+          void flushNextQueuedMessage(sessionKey);
+          return;
+        }
+
+        if (phase === "error") {
+          if (runKey) {
+            agentFallbackFinalizedRuns.set(runKey, Date.now());
+          }
+          clearStreaming(sessionKey);
+          updateSession(sessionKey, (current) => ({
+            ...current,
+            error:
+              typeof payload.data?.error === "string"
+                ? payload.data.error
+                : typeof payload.data?.reason === "string"
+                  ? payload.data.reason
+                  : "chat error",
+          }));
+          refreshSessionHistory(sessionKey);
+          void flushNextQueuedMessage(sessionKey);
+        }
+        return;
+      }
+
+      if (payload.stream === "error") {
+        if (runKey) {
+          agentFallbackFinalizedRuns.set(runKey, Date.now());
+        }
+        clearStreaming(sessionKey);
+        updateSession(sessionKey, (current) => ({
+          ...current,
+          error:
+            typeof payload.data?.error === "string"
+              ? payload.data.error
+              : typeof payload.data?.reason === "string"
+                ? payload.data.reason
+                : "chat error",
+        }));
+        refreshSessionHistory(sessionKey);
+        void flushNextQueuedMessage(sessionKey);
+      }
+    },
   };
 }
 
@@ -576,10 +724,14 @@ export function MessengerChatProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return subscribe((event: EventFrame) => {
-      if (event.event !== "chat") {
+      if (event.event === "chat") {
+        store.handleChatEvent(event.payload as ChatEventPayload);
         return;
       }
-      store.handleChatEvent(event.payload as ChatEventPayload);
+
+      if (event.event === "agent") {
+        store.handleAgentEvent(event.payload as AgentEventPayload);
+      }
     });
   }, [store, subscribe]);
 

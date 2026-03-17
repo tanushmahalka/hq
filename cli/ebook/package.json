@@ -1,0 +1,12 @@
+{
+  "name": "@hq/ebook-cli",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "ebook": "./bin/ebook"
+  },
+  "scripts": {
+    "ebook": "./bin/ebook"
+  }
+}

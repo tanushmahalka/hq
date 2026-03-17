@@ -51,6 +51,21 @@ async function emitChat(payload: {
   });
 }
 
+async function emitAgent(payload: {
+  sessionKey?: string;
+  runId: string;
+  stream: string;
+  ts?: number;
+  data?: Record<string, unknown>;
+}) {
+  await act(async () => {
+    for (const subscriber of subscribers) {
+      subscriber({ type: "event", event: "agent", payload });
+    }
+    await Promise.resolve();
+  });
+}
+
 describe("useMessengerChat", () => {
   beforeEach(() => {
     subscribers.clear();
@@ -227,5 +242,163 @@ describe("useMessengerChat", () => {
         ),
       ),
     ).toBe(true);
+  });
+
+  it("streams assistant text from raw agent websocket events", async () => {
+    const { result } = renderHook(
+      ({ sessionKey }) => useMessengerChat(sessionKey),
+      {
+        initialProps: { sessionKey: getSessionKey("agent-a") },
+        wrapper: Wrapper,
+      },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await emitAgent({
+      sessionKey: getSessionKey("agent-a"),
+      runId: "run-agent-stream",
+      stream: "assistant",
+      data: {
+        text:
+          "I've confirmed the site itself is on Framer. The remaining question is whether I can only",
+        delta: " only",
+      },
+    });
+
+    expect(result.current.stream).toBe(
+      "I've confirmed the site itself is on Framer. The remaining question is whether I can only",
+    );
+    expect(result.current.rawMessages).toHaveLength(0);
+  });
+
+  it("reconciles a visible session from raw agent lifecycle events when chat events are absent", async () => {
+    let agentAFinalVisible = false;
+    request.mockImplementation(async (method, params) => {
+      if (method === "chat.history") {
+        if (params?.sessionKey === getSessionKey("agent-a") && agentAFinalVisible) {
+          const now = Date.now();
+          return {
+            messages: [
+              {
+                role: "user",
+                timestamp: now - 50,
+                content: [{ type: "text", text: "hello" }],
+              },
+              {
+                role: "assistant",
+                timestamp: now + 50,
+                content: [{ type: "text", text: "Done" }],
+              },
+            ],
+          };
+        }
+        return { messages: [] };
+      }
+      return {};
+    });
+
+    const { result } = renderHook(
+      ({ sessionKey }) => useMessengerChat(sessionKey),
+      {
+        initialProps: { sessionKey: getSessionKey("agent-a") },
+        wrapper: Wrapper,
+      },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await emitAgent({
+      sessionKey: getSessionKey("agent-a"),
+      runId: "run-agent-lifecycle",
+      stream: "assistant",
+      data: {
+        text: "Working",
+        delta: "Working",
+      },
+    });
+
+    expect(result.current.stream).toBe("Working");
+
+    agentAFinalVisible = true;
+    await emitAgent({
+      sessionKey: getSessionKey("agent-a"),
+      runId: "run-agent-lifecycle",
+      stream: "lifecycle",
+      data: {
+        phase: "end",
+      },
+    });
+
+    await waitFor(() => expect(result.current.stream).toBeNull());
+    expect(
+      result.current.rawMessages.some((message) =>
+        message.blocks.some(
+          (block) => block.type === "text" && block.text === "Done",
+        ),
+      ),
+    ).toBe(true);
+
+  });
+
+  it("marks hidden sessions dirty when only raw agent lifecycle events arrive", async () => {
+    let agentAFinalVisible = false;
+    request.mockImplementation(async (method, params) => {
+      if (method === "chat.history") {
+        if (params?.sessionKey === getSessionKey("agent-a") && agentAFinalVisible) {
+          const now = Date.now();
+          return {
+            messages: [
+              {
+                role: "user",
+                timestamp: now - 50,
+                content: [{ type: "text", text: "hello" }],
+              },
+              {
+                role: "assistant",
+                timestamp: now + 50,
+                content: [{ type: "text", text: "Done" }],
+              },
+            ],
+          };
+        }
+        return { messages: [] };
+      }
+      return {};
+    });
+
+    const { result, rerender } = renderHook(
+      ({ sessionKey }) => useMessengerChat(sessionKey),
+      {
+        initialProps: { sessionKey: getSessionKey("agent-a") },
+        wrapper: Wrapper,
+      },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    rerender({ sessionKey: getSessionKey("agent-b") });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    agentAFinalVisible = true;
+    await emitAgent({
+      sessionKey: getSessionKey("agent-a"),
+      runId: "run-agent-hidden",
+      stream: "lifecycle",
+      data: {
+        phase: "end",
+      },
+    });
+
+    rerender({ sessionKey: getSessionKey("agent-a") });
+    await waitFor(() =>
+      expect(
+        result.current.rawMessages.some((message) =>
+          message.blocks.some(
+            (block) => block.type === "text" && block.text === "Done",
+          ),
+        ),
+      ).toBe(true),
+    );
   });
 });
