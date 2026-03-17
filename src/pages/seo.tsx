@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnalyticsTab } from "@/features/seo/analytics-tab";
 import { BacklinksTab } from "@/features/seo/backlinks-tab";
 import { CompetitorsTab } from "@/features/seo/competitors-tab";
+import { GeoTab } from "@/features/seo/geo-tab";
 import { KeywordsTab } from "@/features/seo/keywords-tab";
 import { OverviewTab, PageDetailCard, getPageAuditSummary } from "@/features/seo/overview-tab";
 import {
@@ -201,6 +202,12 @@ export default function Seo() {
             onClick={() => setActiveTab("keywords")}
           />
           <SeoTabButton
+            active={activeTab === "geo"}
+            label="GEO"
+            description=""
+            onClick={() => setActiveTab("geo")}
+          />
+          <SeoTabButton
             active={activeTab === "backlinks"}
             label="Backlinks"
             description=""
@@ -214,7 +221,7 @@ export default function Seo() {
           />
         </div>
 
-        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && activeTab !== "backlinks" && activeTab !== "keywords" && (
+        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && activeTab !== "backlinks" && activeTab !== "keywords" && activeTab !== "geo" && (
           <div className="flex items-center gap-8 pb-2.5">
             {activeTab === "overview" ? (
               <>
@@ -251,6 +258,10 @@ export default function Seo() {
       ) : activeTab === "keywords" ? (
         effectiveSelectedSiteId ? (
           <KeywordsTab siteId={effectiveSelectedSiteId} />
+        ) : null
+      ) : activeTab === "geo" ? (
+        effectiveSelectedSiteId ? (
+          <GeoTab siteId={effectiveSelectedSiteId} />
         ) : null
       ) : activeTab === "backlinks" ? (
         effectiveSelectedSiteId ? (

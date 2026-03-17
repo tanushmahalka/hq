@@ -1299,3 +1299,266 @@ export const competitorBacklinkFootprints = pgTable(
     }),
   ],
 );
+
+export const geoPrompts = pgTable(
+  "geo_prompts",
+  {
+    prompt: text().notNull(),
+    normalizedPrompt: text("normalized_prompt").notNull(),
+    intent: text(),
+    journeyStage: text("journey_stage"),
+    priorityScore: numeric("priority_score", { precision: 10, scale: 2 }),
+    aiSearchVolume: integer("ai_search_volume"),
+    location: text(),
+    languageCode: text("language_code"),
+    status: text().notNull(),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "geo_prompts_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    siteId: integer("site_id").notNull(),
+    queryClusterId: integer("query_cluster_id").notNull(),
+    mappedPageId: integer("mapped_page_id"),
+  },
+  (table) => [
+    index("idx_geo_prompts_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_geo_prompts_cluster").using(
+      "btree",
+      table.queryClusterId.asc().nullsLast().op("int4_ops"),
+    ),
+    uniqueIndex("geo_prompts_cluster_prompt_unique").using(
+      "btree",
+      table.queryClusterId.asc().nullsLast().op("int4_ops"),
+      table.normalizedPrompt.asc().nullsLast().op("text_ops"),
+    ),
+    foreignKey({
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "geo_prompts_site_id_sites_id_fk",
+    }),
+    foreignKey({
+      columns: [table.queryClusterId],
+      foreignColumns: [queryClusters.id],
+      name: "geo_prompts_query_cluster_id_query_clusters_id_fk",
+    }),
+    foreignKey({
+      columns: [table.mappedPageId],
+      foreignColumns: [pages.id],
+      name: "geo_prompts_mapped_page_id_pages_id_fk",
+    }),
+  ],
+);
+
+export const geoRuns = pgTable(
+  "geo_runs",
+  {
+    provider: text().notNull(),
+    endpoint: text().notNull(),
+    platform: text().notNull(),
+    searchScope: text("search_scope"),
+    matchType: text("match_type"),
+    capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
+    requestPayloadJson: jsonb("request_payload_json"),
+    responsePayloadJson: jsonb("response_payload_json"),
+    costMetadataJson: jsonb("cost_metadata_json"),
+    errorMessage: text("error_message"),
+    status: text().notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "geo_runs_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    siteId: integer("site_id").notNull(),
+    promptId: integer("prompt_id").notNull(),
+  },
+  (table) => [
+    index("idx_geo_runs_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_geo_runs_prompt").using("btree", table.promptId.asc().nullsLast().op("int4_ops")),
+    index("idx_geo_runs_captured_at").using(
+      "btree",
+      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+    ),
+    foreignKey({
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "geo_runs_site_id_sites_id_fk",
+    }),
+    foreignKey({
+      columns: [table.promptId],
+      foreignColumns: [geoPrompts.id],
+      name: "geo_runs_prompt_id_geo_prompts_id_fk",
+    }),
+  ],
+);
+
+export const geoPromptResults = pgTable(
+  "geo_prompt_results",
+  {
+    brandMentioned: boolean("brand_mentioned").default(false).notNull(),
+    brandCited: boolean("brand_cited").default(false).notNull(),
+    answerText: text("answer_text"),
+    fanOutQueriesJson: jsonb("fan_out_queries_json"),
+    searchResultsJson: jsonb("search_results_json"),
+    monthlySearchesJson: jsonb("monthly_searches_json"),
+    aiSummaryType: text("ai_summary_type"),
+    capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "geo_prompt_results_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    runId: integer("run_id").notNull(),
+    siteId: integer("site_id").notNull(),
+    promptId: integer("prompt_id").notNull(),
+  },
+  (table) => [
+    index("idx_geo_prompt_results_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_geo_prompt_results_prompt").using(
+      "btree",
+      table.promptId.asc().nullsLast().op("int4_ops"),
+    ),
+    index("idx_geo_prompt_results_captured_at").using(
+      "btree",
+      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+    ),
+    foreignKey({
+      columns: [table.runId],
+      foreignColumns: [geoRuns.id],
+      name: "geo_prompt_results_run_id_geo_runs_id_fk",
+    }),
+    foreignKey({
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "geo_prompt_results_site_id_sites_id_fk",
+    }),
+    foreignKey({
+      columns: [table.promptId],
+      foreignColumns: [geoPrompts.id],
+      name: "geo_prompt_results_prompt_id_geo_prompts_id_fk",
+    }),
+  ],
+);
+
+export const geoCitations = pgTable(
+  "geo_citations",
+  {
+    domain: text().notNull(),
+    url: text(),
+    title: text(),
+    citationType: text("citation_type").notNull(),
+    isOwned: boolean("is_owned").default(false).notNull(),
+    isCompetitor: boolean("is_competitor").default(false).notNull(),
+    position: integer(),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "geo_citations_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    resultId: integer("result_id").notNull(),
+    siteId: integer("site_id").notNull(),
+    siteCompetitorId: integer("site_competitor_id"),
+  },
+  (table) => [
+    index("idx_geo_citations_result").using("btree", table.resultId.asc().nullsLast().op("int4_ops")),
+    index("idx_geo_citations_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_geo_citations_domain").using("btree", table.domain.asc().nullsLast().op("text_ops")),
+    foreignKey({
+      columns: [table.resultId],
+      foreignColumns: [geoPromptResults.id],
+      name: "geo_citations_result_id_geo_prompt_results_id_fk",
+    }),
+    foreignKey({
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "geo_citations_site_id_sites_id_fk",
+    }),
+    foreignKey({
+      columns: [table.siteCompetitorId],
+      foreignColumns: [siteCompetitors.id],
+      name: "geo_citations_site_competitor_id_site_competitors_id_fk",
+    }),
+  ],
+);
+
+export const geoRecommendations = pgTable(
+  "geo_recommendations",
+  {
+    recommendationType: text("recommendation_type").notNull(),
+    title: text().notNull(),
+    rationale: text().notNull(),
+    impactScore: numeric("impact_score", { precision: 5, scale: 2 }),
+    effortScore: numeric("effort_score", { precision: 5, scale: 2 }),
+    status: text().notNull(),
+    ownerAgent: text("owner_agent"),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "geo_recommendations_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    siteId: integer("site_id").notNull(),
+    promptId: integer("prompt_id"),
+    pageId: integer("page_id"),
+    siteCompetitorId: integer("site_competitor_id"),
+  },
+  (table) => [
+    index("idx_geo_recommendations_site").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops"),
+    ),
+    index("idx_geo_recommendations_status").using(
+      "btree",
+      table.status.asc().nullsLast().op("text_ops"),
+    ),
+    foreignKey({
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "geo_recommendations_site_id_sites_id_fk",
+    }),
+    foreignKey({
+      columns: [table.promptId],
+      foreignColumns: [geoPrompts.id],
+      name: "geo_recommendations_prompt_id_geo_prompts_id_fk",
+    }),
+    foreignKey({
+      columns: [table.pageId],
+      foreignColumns: [pages.id],
+      name: "geo_recommendations_page_id_pages_id_fk",
+    }),
+    foreignKey({
+      columns: [table.siteCompetitorId],
+      foreignColumns: [siteCompetitors.id],
+      name: "geo_recommendations_site_competitor_id_site_competitors_id_fk",
+    }),
+  ],
+);

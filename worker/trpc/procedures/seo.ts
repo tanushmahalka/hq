@@ -9,6 +9,7 @@ import {
   getSeoOverview,
   updateOpportunityStatus,
 } from "../../lib/seo.ts";
+import { getGeoOverview } from "../../lib/geo.ts";
 
 export const seoRouter = router({
   overview: orgProcedure.query(async ({ ctx }) => {
@@ -59,6 +60,15 @@ export const seoRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return getKeywordsData(ctx.db, input);
+    }),
+  geoOverview: orgProcedure
+    .input(
+      z.object({
+        siteId: z.number(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return getGeoOverview(ctx.db, input.siteId);
     }),
   backlinksByDomain: orgProcedure
     .input(z.object({

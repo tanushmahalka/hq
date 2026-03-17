@@ -1,5 +1,5 @@
 export type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
-export type SeoViewTab = "overview" | "competitors" | "keywords" | "analytics" | "backlinks";
+export type SeoViewTab = "overview" | "competitors" | "keywords" | "geo" | "analytics" | "backlinks";
 
 export type SeoSite = {
   id: number;
@@ -155,6 +155,78 @@ export type SeoCompetitor = {
   } | null;
   history: SeoCompetitorHistoryPoint[];
   topKeywords: SeoCompetitorKeyword[];
+};
+
+/* ---------------------------------------------------------------------------
+ * GEO
+ * --------------------------------------------------------------------------- */
+
+export type GeoSetupState = {
+  hasSchema: boolean;
+  hasSavedPrompts: boolean;
+  headline: string;
+  description: string;
+  nextStep: string;
+};
+
+export type GeoSummary = {
+  clusterCount: number;
+  totalPrompts: number;
+  clusterCoverage: number;
+  mappedClusterCount: number;
+  conversationalPromptCount: number;
+  activeRecommendations: number;
+};
+
+export type GeoClusterPrompt = {
+  id: number | null;
+  prompt: string;
+  source: "geo_prompt" | "query_seed";
+  isPrimaryQuerySeed: boolean;
+  isConversational: boolean;
+};
+
+export type GeoClusterRow = {
+  clusterId: number;
+  clusterName: string;
+  intent: string | null;
+  funnelStage: string | null;
+  priorityScore: number | null;
+  promptCount: number;
+  conversationalPromptCount: number;
+  mappedPageTitle: string | null;
+  mappedPageUrl: string | null;
+  prompts: GeoClusterPrompt[];
+};
+
+export type GeoRecommendation = {
+  id: number | null;
+  type: string;
+  title: string;
+  rationale: string;
+  status: string;
+  impactScore: number | null;
+  effortScore: number | null;
+  clusterId: number | null;
+  clusterName: string | null;
+  prompt: string | null;
+  pageTitle: string | null;
+  pageUrl: string | null;
+};
+
+export type GeoOverviewData = {
+  site: {
+    id: number;
+    name: string;
+    domain: string;
+    businessType: string;
+    pageCount: number;
+    clusterCount: number;
+  };
+  setup: GeoSetupState;
+  summary: GeoSummary;
+  clusters: GeoClusterRow[];
+  recommendations: GeoRecommendation[];
 };
 
 /* ---------------------------------------------------------------------------

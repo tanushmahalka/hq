@@ -1957,11 +1957,11 @@ export async function getKeywordsData(
   // Source filter applied in WHERE on the final joined result
   const sourceCondition =
     sourceFilter === "ours"
-      ? sql`AND our_q.id IS NOT NULL`
+      ? sql`AND kw.our_query_id IS NOT NULL`
       : sourceFilter === "shared"
-        ? sql`AND our_q.id IS NOT NULL AND kw.keyword IS NOT NULL`
+        ? sql`AND kw.our_query_id IS NOT NULL AND kw.competitor_count > 0`
         : sourceFilter === "competitor_only"
-          ? sql`AND our_q.id IS NULL`
+          ? sql`AND kw.our_query_id IS NULL`
           : sql``;
 
   // Sort mapping

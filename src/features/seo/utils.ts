@@ -195,6 +195,11 @@ export function formatPercent(value: number) {
   }).format(value);
 }
 
+export function formatNullablePercent(value: number | null | undefined) {
+  if (value === null || value === undefined) return "Not captured";
+  return formatPercent(value);
+}
+
 export function formatDuration(seconds: number) {
   const mins = Math.floor(seconds / 60);
   const secs = Math.round(seconds % 60);
