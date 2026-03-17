@@ -600,7 +600,6 @@ export async function getGeoVisibility(db: Database, siteId: number): Promise<Ge
   }
 
   // Fetch competitor citations for these results
-  const resultIds = resultRows.map((r) => r.resultId);
   const citationRows = await db
     .select({
       resultId: geoCitations.resultId,
@@ -620,8 +619,6 @@ export async function getGeoVisibility(db: Database, siteId: number): Promise<Ge
     })
     .from(siteCompetitors)
     .where(eq(siteCompetitors.siteId, siteId));
-
-  const competitorById = new Map(competitorRows.map((c) => [c.id, c]));
 
   // Fetch cluster metadata
   const clusterIds = [...new Set(resultRows.map((r) => r.clusterId))];

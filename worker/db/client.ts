@@ -5,7 +5,7 @@ import * as authSchema from "../../drizzle/schema/auth.ts";
 import * as customSchema from "../../drizzle/schema/custom.ts";
 import * as marketingSchema from "../../drizzle/schema/marketing.ts";
 import * as seoSchema from "../../drizzle/schema/seo.ts";
-import { drizzle } from "drizzle-orm/node-postgres";
+import { drizzle, type NodePgClient } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 const mergedSchema = {
@@ -105,7 +105,7 @@ function createPool(databaseUrl: string) {
 export function createDb(databaseUrl: string) {
   let db = databases.get(databaseUrl);
   if (!db) {
-    db = drizzle(createPool(databaseUrl), { schema: mergedSchema });
+    db = drizzle(createPool(databaseUrl) as unknown as NodePgClient, { schema: mergedSchema });
     databases.set(databaseUrl, db);
   }
   return db;

@@ -111,11 +111,13 @@ function VisibilityCell({
           />
         )}
         {cell.cited && (
-          <Link2
-            className="size-3"
-            title="Brand cited with link"
-            style={{ color: "var(--swarm-violet)" }}
-          />
+          <span title="Brand cited with link">
+            <Link2
+              className="size-3"
+              aria-label="Brand cited with link"
+              style={{ color: "var(--swarm-violet)" }}
+            />
+          </span>
         )}
         {!cell.mentioned && !cell.cited && (
           <span className="size-2 rounded-full bg-border/40" />
