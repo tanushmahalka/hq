@@ -29,9 +29,9 @@ export function EbookCreateDialog({
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
 
-  const createEbook = trpc.marketing.ebook.create.useMutation({
+  const createEbook = trpc.marketing.asset.create.useMutation({
     onSuccess: (ebook) => {
-      utils.marketing.ebook.list.invalidate();
+      utils.marketing.asset.list.invalidate({ assetType: "ebook" });
       resetForm();
       onOpenChange(false);
       onCreated(ebook.id);
@@ -55,6 +55,7 @@ export function EbookCreateDialog({
     }
 
     createEbook.mutate({
+      assetType: "ebook",
       title: title.trim(),
       slug: slug.trim() || undefined,
       description: description.trim() || undefined,

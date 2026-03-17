@@ -7,6 +7,7 @@ import { requestAgentJson } from "./core/http.ts";
 type EbookItem = {
   id: number;
   organizationId: string;
+  assetType: string;
   title: string;
   slug: string;
   description: string | null;
@@ -88,7 +89,7 @@ async function runListCommand(argv: string[]): Promise<void> {
   const result = await requestAgentJson<{ items: EbookItem[] }>({
     apiUrl: getStringFlag(parsed, "--api-url"),
     token: getStringFlag(parsed, "--token"),
-    path: `/api/marketing/agent/ebooks?organizationId=${encodeURIComponent(organizationId)}`,
+    path: `/api/marketing/agent/assets?organizationId=${encodeURIComponent(organizationId)}&assetType=ebook`,
   });
 
   if (getBooleanFlag(parsed, "--json")) {
@@ -117,7 +118,7 @@ async function runGetCommand(argv: string[]): Promise<void> {
   const result = await requestAgentJson<{ item: EbookItem }>({
     apiUrl: getStringFlag(parsed, "--api-url"),
     token: getStringFlag(parsed, "--token"),
-    path: `/api/marketing/agent/ebooks/${parseId(getStringFlag(parsed, "--id"))}`,
+    path: `/api/marketing/agent/assets/${parseId(getStringFlag(parsed, "--id"))}`,
   });
 
   if (getBooleanFlag(parsed, "--json")) {
@@ -153,9 +154,10 @@ async function runCreateCommand(argv: string[]): Promise<void> {
     apiUrl: getStringFlag(parsed, "--api-url"),
     token: getStringFlag(parsed, "--token"),
     method: "POST",
-    path: "/api/marketing/agent/ebooks",
+    path: "/api/marketing/agent/assets",
     body: {
       organizationId: requireFlag(getStringFlag(parsed, "--org"), "--org"),
+      assetType: "ebook",
       title: requireFlag(getStringFlag(parsed, "--title"), "--title"),
       slug: getStringFlag(parsed, "--slug"),
       description: getStringFlag(parsed, "--description"),
@@ -226,7 +228,7 @@ async function runUpdateCommand(argv: string[]): Promise<void> {
     apiUrl: getStringFlag(parsed, "--api-url"),
     token: getStringFlag(parsed, "--token"),
     method: "PATCH",
-    path: `/api/marketing/agent/ebooks/${id}`,
+    path: `/api/marketing/agent/assets/${id}`,
     body,
   });
 

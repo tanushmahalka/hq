@@ -33,13 +33,19 @@ export const taskSessionRoleEnum = pgEnum(
   "task_session_role",
   TASK_SESSION_ROLES,
 );
-export const marketingEbookStatusEnum = pgEnum("marketing_ebook_status", [
+export const marketingAssetTypeEnum = pgEnum("marketing_asset_type", [
+  "ebook",
+  "email",
+  "landing_page",
+  "social",
+]);
+export const marketingAssetStatusEnum = pgEnum("marketing_asset_status", [
   "draft",
   "published",
   "archived",
 ]);
-export const marketingEbookRevisionSourceEnum = pgEnum(
-  "marketing_ebook_revision_source",
+export const marketingAssetRevisionSourceEnum = pgEnum(
+  "marketing_asset_revision_source",
   ["user", "agent", "cli"],
 );
 
@@ -158,20 +164,21 @@ export const taskSessions = pgTable("task_sessions", {
     .$onUpdate(() => new Date()),
 });
 
-export const marketingEbooks = pgTable(
-  "marketing_ebooks",
+export const marketingAssets = pgTable(
+  "marketing_assets",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     organizationId: text("organization_id").notNull(),
+    assetType: marketingAssetTypeEnum("asset_type").notNull(),
     title: text("title").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
-    status: marketingEbookStatusEnum("status").notNull().default("draft"),
+    status: marketingAssetStatusEnum("status").notNull().default("draft"),
     currentHtml: text("current_html").notNull(),
     currentVersion: integer("current_version").notNull().default(1),
     storagePath: text("storage_path"),
     lastUpdatedBy: text("last_updated_by"),
-    lastUpdateSource: marketingEbookRevisionSourceEnum("last_update_source")
+    lastUpdateSource: marketingAssetRevisionSourceEnum("last_update_source")
       .notNull()
       .default("user"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -183,36 +190,38 @@ export const marketingEbooks = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => ({
-    organizationSlugUnique: unique("marketing_ebooks_org_slug_unique").on(
+    organizationTypeSlugUnique: unique("marketing_assets_org_type_slug_unique").on(
       table.organizationId,
+      table.assetType,
       table.slug,
     ),
   }),
 );
 
-export const marketingEbookRevisions = pgTable(
-  "marketing_ebook_revisions",
+export const marketingAssetRevisions = pgTable(
+  "marketing_asset_revisions",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    ebookId: integer("ebook_id")
+    assetId: integer("asset_id")
       .notNull()
-      .references(() => marketingEbooks.id, { onDelete: "cascade" }),
+      .references(() => marketingAssets.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
+    assetType: marketingAssetTypeEnum("asset_type").notNull(),
     title: text("title").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
-    status: marketingEbookStatusEnum("status").notNull(),
+    status: marketingAssetStatusEnum("status").notNull(),
     html: text("html").notNull(),
     summary: text("summary"),
     updatedBy: text("updated_by"),
-    source: marketingEbookRevisionSourceEnum("source").notNull().default("user"),
+    source: marketingAssetRevisionSourceEnum("source").notNull().default("user"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => ({
-    ebookVersionUnique: unique("marketing_ebook_revisions_ebook_version_unique").on(
-      table.ebookId,
+    assetVersionUnique: unique("marketing_asset_revisions_asset_version_unique").on(
+      table.assetId,
       table.version,
     ),
   }),
@@ -261,19 +270,19 @@ export const taskSessionsRelations = relations(taskSessions, ({ one }) => ({
   }),
 }));
 
-export const marketingEbooksRelations = relations(
-  marketingEbooks,
+export const marketingAssetsRelations = relations(
+  marketingAssets,
   ({ many }) => ({
-    revisions: many(marketingEbookRevisions),
+    revisions: many(marketingAssetRevisions),
   }),
 );
 
-export const marketingEbookRevisionsRelations = relations(
-  marketingEbookRevisions,
+export const marketingAssetRevisionsRelations = relations(
+  marketingAssetRevisions,
   ({ one }) => ({
-    ebook: one(marketingEbooks, {
-      fields: [marketingEbookRevisions.ebookId],
-      references: [marketingEbooks.id],
+    asset: one(marketingAssets, {
+      fields: [marketingAssetRevisions.assetId],
+      references: [marketingAssets.id],
     }),
   }),
 );
