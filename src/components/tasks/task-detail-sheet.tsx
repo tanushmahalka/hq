@@ -35,8 +35,16 @@ import {
   ListTodo,
   ChevronDown,
   Check,
+  Tag,
 } from "lucide-react";
-import { TASK_STATUSES, STATUS_LABELS, type TaskStatus } from "@shared/types";
+import {
+  TASK_CATEGORIES,
+  TASK_CATEGORY_LABELS,
+  TASK_STATUSES,
+  type TaskCategory,
+  STATUS_LABELS,
+  type TaskStatus,
+} from "@shared/types";
 import {
   TASK_SUBTASK_STATUS_LABELS,
   TASK_WORKFLOW_STATUS_LABELS,
@@ -156,6 +164,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
   const [description, setDescription] = useState("");
   const [assignor, setAssignor] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [category, setCategory] = useState<TaskCategory | null>(null);
   const [dueDate, setDueDate] = useState("");
   const [urgent, setUrgent] = useState(false);
   const [important, setImportant] = useState(false);
@@ -167,6 +176,7 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
       setDescription(task.description ?? "");
       setAssignor(task.assignor ?? "");
       setAssignee(task.assignee ?? "");
+      setCategory(task.category ?? null);
       setDueDate(
         task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : ""
       );
@@ -360,6 +370,30 @@ export function TaskDetailSheet({ taskId, onClose }: TaskDetailSheetProps) {
                   </Badge>
                 </button>
               </div>
+            </PropertyRow>
+
+            <PropertyRow icon={<Tag className="size-4" />} label="Category">
+              <Select
+                value={category ?? "__uncategorized__"}
+                onValueChange={(value) => {
+                  const nextCategory =
+                    value === "__uncategorized__" ? null : (value as TaskCategory);
+                  setCategory(nextCategory);
+                  save("category", nextCategory);
+                }}
+              >
+                <SelectTrigger className="h-8 w-full border-none px-0 shadow-none text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__uncategorized__">Uncategorised</SelectItem>
+                  {TASK_CATEGORIES.map((taskCategory) => (
+                    <SelectItem key={taskCategory} value={taskCategory}>
+                      {TASK_CATEGORY_LABELS[taskCategory]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </PropertyRow>
 
             <PropertyRow

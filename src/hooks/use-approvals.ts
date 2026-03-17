@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { TaskStatus } from "@shared/types";
+import type { TaskCategory, TaskStatus } from "@shared/types";
 import type {
   TaskWorkflowMode,
   TaskWorkflowSummary,
@@ -34,6 +34,7 @@ export type BoardTask = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  category?: TaskCategory | null;
   workflowMode?: TaskWorkflowMode;
   workflowSummary?: TaskWorkflowSummary | null;
   assignee: string | null;

@@ -879,6 +879,7 @@ Once confirmed, execute in this exact sequence:
 
 4. **Create initial tasks for the first active campaign (when requested):**
    Use `create_task` to create 3–7 concrete tasks linked to the active campaign.
+   When a task clearly belongs to SEO or Marketing work, include the task `category`.
 
 5. **If work must recur, create automation instead of normal task:**
    Use `cron.add`/`cron.update` for recurring execution. In HQ, this appears as an automation/recurring task to operators.

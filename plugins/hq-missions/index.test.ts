@@ -71,13 +71,14 @@ beforeEach(() => {
 });
 
 describe("hq-missions plugin", () => {
-  it("coerces campaign ids and forwards workflowMode for task create and update", async () => {
+  it("coerces campaign ids and forwards workflowMode and category for task create and update", async () => {
     const { tools } = createPlugin();
     callMock.mockResolvedValue({ id: "task-1" });
 
     await tools.get("create_task")!.execute("1", {
       title: "Write brief",
       campaignId: "42",
+      category: "seo",
       workflowMode: "complex",
     });
     expect(callMock).toHaveBeenNthCalledWith(
@@ -86,6 +87,7 @@ describe("hq-missions plugin", () => {
       expect.objectContaining({
         title: "Write brief",
         campaignId: 42,
+        category: "seo",
         workflowMode: "complex",
       })
     );
@@ -93,11 +95,13 @@ describe("hq-missions plugin", () => {
     await tools.get("update_task")!.execute("1", {
       taskId: "task-1",
       campaignId: "99",
+      category: null,
       workflowMode: "simple",
     });
     expect(callMock).toHaveBeenNthCalledWith(2, "task.update", {
       id: "task-1",
       campaignId: 99,
+      category: null,
       workflowMode: "simple",
     });
   });
@@ -203,6 +207,7 @@ describe("hq-missions plugin", () => {
         title: "Complex task",
         description: "Ship the workflow",
         status: "doing",
+        category: "seo",
         workflowMode: "complex",
         assignor: "lead",
         assignee: "agent-1",
@@ -312,6 +317,7 @@ describe("hq-missions plugin", () => {
     expect(result?.prependSystemContext).toContain(
       "Push the planner toward failure-isolating subtasks: independent targets should usually become separate subtasks or very small deterministic batches."
     );
+    expect(result?.prependSystemContext).toContain("Category: SEO");
     expect(result?.prependSystemContext).not.toContain("validator subagent");
     expect(result?.prependSystemContext).toContain("MISSION CONTEXT");
   });

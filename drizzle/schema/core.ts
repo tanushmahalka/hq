@@ -8,7 +8,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { TASK_STATUSES } from "../../shared/types.ts";
+import { TASK_CATEGORIES, TASK_STATUSES } from "../../shared/types.ts";
 import {
   TASK_SESSION_ROLES,
   TASK_SUBTASK_STATUSES,
@@ -17,6 +17,7 @@ import {
 } from "../../shared/task-workflow.ts";
 
 export const taskStatusEnum = pgEnum("task_status", TASK_STATUSES);
+export const taskCategoryEnum = pgEnum("task_category", TASK_CATEGORIES);
 export const taskWorkflowModeEnum = pgEnum(
   "task_workflow_mode",
   TASK_WORKFLOW_MODES,
@@ -39,6 +40,7 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   status: taskStatusEnum("status").notNull().default("todo"),
+  category: taskCategoryEnum("category"),
   workflowMode: taskWorkflowModeEnum("workflow_mode")
     .notNull()
     .default("simple"),

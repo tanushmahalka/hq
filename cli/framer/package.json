@@ -1,0 +1,13 @@
+{
+  "name": "@hq/framer-cli",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "framer": "./bin/framer"
+  },
+  "scripts": {
+    "framer": "./bin/framer",
+    "test": "npx --yes tsx --test ./tests/*.test.ts"
+  }
+}

@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { TASK_CATEGORY_LABELS, type TaskCategory } from "@shared/types";
 import { useGateway } from "./use-gateway";
 
 /**
@@ -33,6 +34,7 @@ export function formatTaskNotification(
     id: string;
     title: string;
     status?: string | null;
+    category?: TaskCategory | null;
     assignee?: string | null;
     assignor?: string | null;
     urgent?: boolean;
@@ -46,6 +48,7 @@ export function formatTaskNotification(
   lines.push(`Task ${action}: "${task.title}" (${task.id})`);
 
   if (task.status != null) lines.push(`Status: ${task.status}`);
+  if (task.category) lines.push(`Category: ${TASK_CATEGORY_LABELS[task.category]}`);
   if (task.assignee) lines.push(`Assignee: ${task.assignee}`);
   if (task.assignor) lines.push(`Assignor: ${task.assignor}`);
   if (task.urgent) lines.push(`Urgent: true`);

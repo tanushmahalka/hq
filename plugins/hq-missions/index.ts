@@ -1,6 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import { createHQClient, type HQClient } from "./hq-client";
 import { formatMissionContext } from "./format-context";
+import { TASK_CATEGORY_LABELS, type TaskCategory } from "../../shared/types.ts";
 
 interface PluginAPI {
   config: unknown;
@@ -79,6 +80,7 @@ type WorkflowDetail = {
     title: string;
     description: string | null;
     status: string;
+    category?: TaskCategory | null;
     workflowMode: "simple" | "complex";
     assignor: string | null;
     assignee: string | null;
@@ -137,6 +139,13 @@ function toOptionalDate(value: unknown): Date | undefined {
   if (!raw) return undefined;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function formatTaskCategory(category: TaskCategory | null | undefined): string | null {
+  if (!category) {
+    return null;
+  }
+  return TASK_CATEGORY_LABELS[category];
 }
 
 function applyDefaultTaskAssignee(params: {
@@ -297,6 +306,7 @@ async function maybeBuildWorkflowPromptContext(params: {
     detail.task.description ? `Description: ${detail.task.description}` : null,
     detail.task.assignor ? `Assignor: ${detail.task.assignor}` : null,
     detail.task.assignee ? `Assignee: ${detail.task.assignee}` : null,
+    detail.task.category ? `Category: ${formatTaskCategory(detail.task.category)}` : null,
     "",
     "Global Contract:",
     "- HQ is the source of truth for workflow state, subtasks, and linked sessions.",
@@ -680,12 +690,14 @@ export default function register(api: PluginAPI) {
       const tasks = (await hq.call<
         {
           campaignId?: number | null;
+          category?: TaskCategory | null;
           id: string;
           title: string;
           status: string;
         }[]
       >("task.list", undefined, { type: "query" })) as {
         campaignId?: number | null;
+        category?: TaskCategory | null;
         id: string;
         title: string;
         status: string;
@@ -713,6 +725,9 @@ export default function register(api: PluginAPI) {
           Type.Literal("stuck"),
           Type.Literal("done"),
         ])
+      ),
+      category: Type.Optional(
+        Type.Union([Type.Literal("seo"), Type.Literal("marketing"), Type.Null()])
       ),
       workflowMode: Type.Optional(
         Type.Union([Type.Literal("simple"), Type.Literal("complex")])
@@ -747,6 +762,7 @@ export default function register(api: PluginAPI) {
           | "stuck"
           | "done"
           | undefined,
+        category: (params.category ?? undefined) as TaskCategory | null | undefined,
         workflowMode: params.workflowMode as "simple" | "complex" | undefined,
         assignor: params.assignor as string | undefined,
         assignee: params.assignee as string | undefined,
@@ -826,6 +842,9 @@ export default function register(api: PluginAPI) {
           Type.Literal("done"),
         ])
       ),
+      category: Type.Optional(
+        Type.Union([Type.Literal("seo"), Type.Literal("marketing"), Type.Null()])
+      ),
       workflowMode: Type.Optional(
         Type.Union([Type.Literal("simple"), Type.Literal("complex")])
       ),
@@ -851,6 +870,7 @@ export default function register(api: PluginAPI) {
       if (params.description !== undefined)
         payload.description = params.description;
       if (params.status !== undefined) payload.status = params.status;
+      if (params.category !== undefined) payload.category = params.category;
       if (params.workflowMode !== undefined)
         payload.workflowMode = params.workflowMode;
       if (params.assignor !== undefined) payload.assignor = params.assignor;

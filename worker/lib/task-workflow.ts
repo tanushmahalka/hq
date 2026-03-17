@@ -13,7 +13,11 @@ import type {
   TaskWorkflowStatus,
   TaskWorkflowSummary,
 } from "../../shared/task-workflow.ts";
-import type { TaskStatus } from "../../shared/types.ts";
+import {
+  TASK_CATEGORY_LABELS,
+  type TaskCategory,
+  type TaskStatus,
+} from "../../shared/types.ts";
 import type { Database } from "../db/client.ts";
 
 export type TaskWorkflowRecord = InferSelectModel<typeof taskWorkflows>;
@@ -354,6 +358,7 @@ export function buildComplexTaskRootPrompt(task: {
   description: string | null;
   assignee: string | null;
   assignor: string | null;
+  category?: TaskCategory | null;
   campaignId?: number | null;
 }) {
   const lines = [
@@ -363,6 +368,7 @@ export function buildComplexTaskRootPrompt(task: {
     task.description ? `Description:\n${task.description}` : null,
     task.assignor ? `Assignor: ${task.assignor}` : null,
     task.assignee ? `Assignee: ${task.assignee}` : null,
+    task.category ? `Category: ${TASK_CATEGORY_LABELS[task.category]}` : null,
     task.campaignId ? `Campaign ID: ${task.campaignId}` : null,
     "",
     "Use the HQ complex task workflow contract for this session.",

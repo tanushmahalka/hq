@@ -1,0 +1,1787 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KFD China Pulse #009</title>
+    <style>
+      :root {
+        --page-width: 297mm;
+        --page-height: 210mm;
+        --page-pad-x: 16mm;
+        --page-pad-y: 13mm;
+        --page-gap: 8mm;
+        --radius-sm: 2.4mm;
+        --radius-md: 4mm;
+        --radius-lg: 6mm;
+        --rule: #dbe2f0;
+        --rule-strong: #c9d4ea;
+        --paper: #f7f8fb;
+        --paper-strong: #ffffff;
+        --paper-soft: #eef2f8;
+        --ink: #17304f;
+        --ink-soft: #4f617a;
+        --accent: #2f57f4;
+        --accent-deep: #173eaf;
+        --navy: #18314d;
+        --navy-deep: #10263f;
+        --navy-soft: #264663;
+        --display-font: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+        --body-font: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+        --text-xs: 8.2pt;
+        --text-sm: 9.1pt;
+        --text-md: 10.2pt;
+        --text-lg: 12.4pt;
+        --text-xl: 18pt;
+        --display-sm: 22pt;
+        --display-md: 28pt;
+        --display-lg: 38pt;
+        --lh-tight: 1.1;
+        --lh-copy: 1.45;
+        --shadow-screen: 0 18px 40px rgba(15, 28, 48, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #dfe7f2;
+        color: var(--ink);
+        font-family: var(--body-font);
+      }
+
+      body {
+        padding: var(--page-gap) 0 14mm;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .document {
+        display: grid;
+        justify-content: center;
+        gap: var(--page-gap);
+      }
+
+      .page {
+        width: var(--page-width);
+        height: var(--page-height);
+        page-break-after: always;
+        break-after: page;
+        overflow: hidden;
+        background: var(--paper);
+        box-shadow: var(--shadow-screen);
+      }
+
+      .page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      .page__inner {
+        height: 100%;
+        padding: var(--page-pad-y) var(--page-pad-x);
+        display: flex;
+        flex-direction: column;
+        gap: 4.2mm;
+      }
+
+      .page__inner--tight {
+        gap: 3.2mm;
+      }
+
+      .page__inner--spread {
+        gap: 5mm;
+      }
+
+      .page__header {
+        display: flex;
+        flex-direction: column;
+        gap: 2.2mm;
+      }
+
+      .page__footer {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4mm;
+        font-size: var(--text-xs);
+        color: var(--ink-soft);
+      }
+
+      .page__footer--light {
+        color: rgba(255, 255, 255, 0.72);
+      }
+
+      .eyebrow {
+        font-size: var(--text-xs);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+      }
+
+      .eyebrow--light {
+        color: rgba(255, 255, 255, 0.76);
+      }
+
+      .headline,
+      .subhead,
+      .card__title,
+      .stat__value,
+      .chapter__title {
+        margin: 0;
+        font-family: var(--display-font);
+        font-weight: 600;
+        color: var(--ink);
+      }
+
+      .headline {
+        font-size: var(--display-md);
+        line-height: var(--lh-tight);
+        letter-spacing: -0.03em;
+      }
+
+      .headline--large {
+        font-size: 30pt;
+      }
+
+      .headline--cover {
+        font-size: var(--display-lg);
+        line-height: 0.96;
+        color: #fff;
+      }
+
+      .headline--light,
+      .subhead--light,
+      .card__title--light {
+        color: #fff;
+      }
+
+      .accent {
+        color: var(--accent);
+      }
+
+      .lede,
+      .copy,
+      .quote__body,
+      .checklist__body,
+      .metric-strip__label,
+      .cta-copy {
+        margin: 0;
+        font-size: var(--text-md);
+        line-height: var(--lh-copy);
+        color: var(--ink-soft);
+      }
+
+      .copy--strong,
+      .lede strong,
+      .copy strong {
+        color: var(--ink);
+      }
+
+      .copy--light,
+      .cta-copy,
+      .lede--light {
+        color: rgba(255, 255, 255, 0.84);
+      }
+
+      .subhead {
+        font-size: 17pt;
+        line-height: 1.15;
+      }
+
+      .subhead--small {
+        font-size: 14.5pt;
+      }
+
+      .cover-page {
+        background:
+          linear-gradient(145deg, rgba(12, 26, 43, 0.92), rgba(24, 49, 77, 0.84)),
+          radial-gradient(circle at top right, rgba(47, 87, 244, 0.24), transparent 34%),
+          linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
+        color: #fff;
+      }
+
+      .cover-grid {
+        display: grid;
+        grid-template-columns: 1.35fr 0.9fr;
+        gap: 7mm;
+        flex: 1;
+      }
+
+      .cover-brand {
+        display: flex;
+        flex-direction: column;
+        gap: 7mm;
+      }
+
+      .brand-mark {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 1.2mm;
+      }
+
+      .brand-mark__name {
+        margin: 0;
+        font-family: var(--body-font);
+        font-size: 22pt;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      .brand-mark__sub {
+        margin: 0;
+        font-size: var(--text-xs);
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.66);
+      }
+
+      .cover-summary {
+        display: grid;
+        gap: 4mm;
+        align-content: start;
+      }
+
+      .issue-card,
+      .story-card,
+      .quote,
+      .banner,
+      .split-panel,
+      .chapter,
+      .mini-card,
+      .stat-tile,
+      .cta-panel {
+        border-radius: var(--radius-md);
+      }
+
+      .issue-card,
+      .story-card,
+      .mini-card,
+      .chapter,
+      .stat-tile,
+      .table-shell,
+      .figure-shell,
+      .compare-grid > article,
+      .force-grid > article,
+      .reality-grid > article {
+        border: 1px solid var(--rule);
+        background: var(--paper-strong);
+      }
+
+      .issue-card {
+        padding: 4.2mm;
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.14);
+      }
+
+      .story-card {
+        padding: 4mm;
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.14);
+      }
+
+      .story-card__kicker {
+        margin: 0 0 1.2mm;
+        font-size: var(--text-xs);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.64);
+      }
+
+      .story-card__title {
+        margin: 0;
+        font-family: var(--display-font);
+        font-size: var(--text-lg);
+        line-height: 1.2;
+        color: #fff;
+      }
+
+      .story-card__copy {
+        margin: 1.2mm 0 0;
+        font-size: var(--text-sm);
+        line-height: 1.4;
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .signal-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 3.6mm;
+      }
+
+      .signal-row article {
+        padding: 3.2mm 3.8mm;
+        border-top: 1.1mm solid rgba(255, 255, 255, 0.36);
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .signal-row h2 {
+        margin: 0 0 1mm;
+        font-size: var(--text-sm);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.72);
+      }
+
+      .signal-row p {
+        margin: 0;
+        font-size: var(--text-sm);
+        line-height: 1.45;
+        color: rgba(255, 255, 255, 0.88);
+      }
+
+      .figure-shell {
+        overflow: hidden;
+      }
+
+      .figure-shell img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .figure-shell figcaption {
+        padding: 2.2mm 3mm 2.4mm;
+        font-size: var(--text-xs);
+        color: var(--ink-soft);
+        background: var(--paper-strong);
+      }
+
+      .figure-lead {
+        height: 83mm;
+      }
+
+      .figure-lead img.art--runway {
+        object-position: center 38%;
+      }
+
+      .figure-lead img.art--mall {
+        object-position: center 36%;
+      }
+
+      .figure-detail {
+        height: 74mm;
+      }
+
+      .figure-detail img.art--store {
+        object-position: center 54%;
+      }
+
+      .figure-side {
+        height: 62mm;
+      }
+
+      .figure-side img.art--keigan {
+        object-position: center top;
+      }
+
+      .figure-side img.art--yang-mi {
+        object-position: center 12%;
+      }
+
+      .list-grid {
+        display: grid;
+        gap: 2.8mm;
+      }
+
+      .list-grid article {
+        display: grid;
+        grid-template-columns: 43mm 1fr;
+        gap: 3mm;
+        padding: 3mm 3.6mm;
+        border: 1px solid var(--rule);
+        background: var(--paper-strong);
+      }
+
+      .list-grid h3,
+      .force-grid h3,
+      .reality-grid h3,
+      .compare-grid h3,
+      .checklist h3,
+      .chapter h3,
+      .mini-card h3 {
+        margin: 0;
+        font-family: var(--display-font);
+        font-size: 13.4pt;
+        line-height: 1.15;
+        color: var(--ink);
+      }
+
+      .list-grid p,
+      .force-grid p,
+      .reality-grid p,
+      .compare-grid p,
+      .checklist p,
+      .chapter p,
+      .mini-card p,
+      .tour-list p {
+        margin: 0;
+        font-size: var(--text-sm);
+        line-height: 1.45;
+        color: var(--ink-soft);
+      }
+
+      .banner {
+        padding: 3.4mm 4mm;
+        background: #ced8ff;
+        border: 1px solid #b8c7ff;
+      }
+
+      .banner__copy {
+        margin: 0;
+        font-size: var(--text-sm);
+        line-height: 1.45;
+        color: #233d77;
+      }
+
+      .quote {
+        padding: 4mm 4.6mm;
+        border-left: 0.9mm solid var(--accent);
+        background: var(--paper-strong);
+      }
+
+      .quote__body {
+        color: var(--ink-soft);
+      }
+
+      .tour-list {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 3mm;
+      }
+
+      .tour-list article {
+        padding: 3mm 3.2mm;
+        background: var(--paper-soft);
+        border-top: 0.8mm solid var(--accent);
+      }
+
+      .tour-list h3 {
+        margin: 0 0 1mm;
+        font-family: var(--display-font);
+        font-size: 13pt;
+      }
+
+      .compare-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4mm;
+      }
+
+      .compare-grid > article {
+        padding: 4mm 4.2mm;
+      }
+
+      .compare-grid > .card-accent {
+        background: linear-gradient(180deg, var(--accent-deep), var(--accent));
+        border-color: transparent;
+      }
+
+      .card-accent h3,
+      .card-accent p,
+      .card-accent li {
+        color: #fff;
+      }
+
+      .bullets,
+      .checklist,
+      .arrow-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .bullets {
+        display: grid;
+        gap: 2mm;
+      }
+
+      .bullets li {
+        position: relative;
+        padding-left: 4mm;
+        font-size: var(--text-sm);
+        line-height: 1.45;
+      }
+
+      .bullets li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 1.7mm;
+        width: 1.6mm;
+        height: 1.6mm;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.8;
+      }
+
+      .checklist {
+        display: grid;
+        gap: 2.8mm;
+      }
+
+      .checklist li {
+        display: grid;
+        grid-template-columns: 8mm 1fr;
+        gap: 3mm;
+        align-items: start;
+      }
+
+      .checklist__num {
+        display: grid;
+        place-items: center;
+        width: 8mm;
+        height: 8mm;
+        border: 1px solid var(--rule);
+        background: var(--paper-strong);
+        font-size: var(--text-sm);
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .checklist__body {
+        color: var(--ink-soft);
+      }
+
+      .checklist__body strong {
+        display: block;
+        margin-bottom: 0.8mm;
+        font-family: var(--display-font);
+        font-size: 13pt;
+        line-height: 1.15;
+        color: var(--ink);
+      }
+
+      .table-shell {
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      thead th {
+        padding: 2.8mm 3mm;
+        text-align: left;
+        font-size: var(--text-sm);
+        color: var(--ink);
+        background: var(--paper-strong);
+        border-bottom: 1px solid var(--rule);
+      }
+
+      tbody td {
+        padding: 2.8mm 3mm;
+        vertical-align: top;
+        font-size: var(--text-sm);
+        line-height: 1.42;
+        color: var(--ink-soft);
+        border-bottom: 1px solid var(--rule);
+      }
+
+      tbody tr:nth-child(odd) td {
+        background: #f2f5fa;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .side-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.78fr;
+        gap: 5mm;
+        align-items: start;
+      }
+
+      .force-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4mm;
+      }
+
+      .force-grid article {
+        padding: 3.4mm 3.8mm;
+        border-top: 0.8mm solid var(--accent);
+      }
+
+      .reality-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 3.6mm 4mm;
+      }
+
+      .reality-grid article {
+        padding: 3.4mm 3.8mm;
+      }
+
+      .reality-grid__num,
+      .force-grid__num {
+        margin: 0 0 1.2mm;
+        font-size: var(--text-xs);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .metric-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4mm;
+      }
+
+      .metric-strip article {
+        padding: 3mm 3.4mm;
+        text-align: center;
+      }
+
+      .metric-strip__value {
+        margin: 0;
+        font-family: var(--display-font);
+        font-size: 19pt;
+        line-height: 1;
+        color: var(--ink);
+      }
+
+      .metric-strip__label {
+        margin-top: 1mm;
+        font-size: var(--text-sm);
+      }
+
+      .split-panel {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4mm;
+      }
+
+      .chapter {
+        padding: 4mm 4.2mm;
+      }
+
+      .chapter--accent {
+        background: linear-gradient(180deg, var(--accent-deep), var(--accent));
+        border-color: transparent;
+      }
+
+      .chapter--accent .chapter__title,
+      .chapter--accent p {
+        color: #fff;
+      }
+
+      .mini-card-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.08fr;
+        gap: 4mm;
+        align-items: stretch;
+      }
+
+      .mini-card-grid__left {
+        display: grid;
+        gap: 3mm;
+      }
+
+      .mini-card {
+        padding: 3.6mm 3.8mm;
+      }
+
+      .arrow-list {
+        display: grid;
+        gap: 3.4mm;
+      }
+
+      .arrow-list li {
+        display: grid;
+        grid-template-columns: 8mm 1fr;
+        gap: 3mm;
+        align-items: start;
+      }
+
+      .arrow-list__icon {
+        font-size: 17pt;
+        line-height: 1;
+        color: var(--ink-soft);
+      }
+
+      .arrow-list strong {
+        display: block;
+        margin-bottom: 0.8mm;
+        font-family: var(--display-font);
+        font-size: 13pt;
+        color: var(--ink);
+      }
+
+      .cta-page {
+        background:
+          radial-gradient(circle at top right, rgba(47, 87, 244, 0.26), transparent 28%),
+          linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
+        color: #fff;
+      }
+
+      .cta-layout {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 8mm;
+        flex: 1;
+        align-items: start;
+      }
+
+      .cta-panel {
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        overflow: hidden;
+      }
+
+      .cta-panel img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .cta-link {
+        display: inline-block;
+        margin-top: 2mm;
+        color: #b8c7ff;
+        font-size: var(--text-xl);
+        line-height: 1.2;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 2px;
+        word-break: break-word;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2mm;
+      }
+
+      .pill {
+        padding: 1.4mm 2.2mm;
+        border: 1px solid var(--rule-strong);
+        border-radius: 999px;
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--ink-soft);
+        background: var(--paper-strong);
+      }
+
+      .pill--light {
+        color: rgba(255, 255, 255, 0.78);
+        border-color: rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      @page {
+        size: A4 landscape;
+        margin: 0;
+      }
+
+      @media print {
+        html,
+        body {
+          background: transparent;
+        }
+
+        body {
+          padding: 0;
+        }
+
+        .document {
+          display: block;
+        }
+
+        .page {
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="document">
+      <!-- Editable: Page 1 cover -->
+      <section class="page cover-page" data-page="1">
+        <div class="page__inner page__inner--spread">
+          <header class="page__header" data-block-id="p1-cover-header">
+            <div class="brand-mark">
+              <p class="brand-mark__name" data-block-id="p1-brand-name">KFD</p>
+              <p class="brand-mark__sub" data-block-id="p1-brand-subtitle">Kung Fu Data</p>
+            </div>
+          </header>
+
+          <div class="cover-grid">
+            <article class="cover-brand">
+              <div class="pill-row" data-block-id="p1-cover-meta">
+                <span class="pill pill--light">China Pulse #009</span>
+                <span class="pill pill--light">Mar 9-15, 2026</span>
+              </div>
+
+              <header class="page__header">
+                <h1 class="headline headline--cover" data-block-id="p1-cover-title">China Pulse #009</h1>
+                <p class="lede lede--light" data-block-id="p1-cover-deck">
+                  A 20-page briefing on where cultural authority, mall traffic, and consumer attention are moving in
+                  China right now.
+                </p>
+              </header>
+
+              <section class="signal-row">
+                <article data-block-id="p1-signal-1">
+                  <h2>Fashion Gravity</h2>
+                  <p>Paris and Shanghai now act like twin poles, not a center and a satellite.</p>
+                </article>
+                <article data-block-id="p1-signal-2">
+                  <h2>Retail Repricing</h2>
+                  <p>Digital-native Chinese brands are stepping into premium malls with lower structural costs.</p>
+                </article>
+                <article data-block-id="p1-signal-3">
+                  <h2>Legacy Reset</h2>
+                  <p>Store closures no longer mean surrender if the underlying brand has gone lighter and more local.</p>
+                </article>
+              </section>
+            </article>
+
+            <aside class="cover-summary">
+              <article class="issue-card" data-block-id="p1-issue-note">
+                <p class="story-card__kicker">This issue</p>
+                <p class="story-card__copy">
+                  Three stories define the week: Chinese labels on Paris Fashion Week’s official calendar, Taobao-born
+                  brands entering China’s most productive luxury mall, and Victoria’s Secret turning a flagship closure
+                  into a strategy signal.
+                </p>
+              </article>
+
+              <article class="story-card" data-block-id="p1-story-1">
+                <p class="story-card__kicker">CP-009.1</p>
+                <h2 class="story-card__title">Chinese brands enter the Paris calendar while Margiela chooses Shanghai.</h2>
+                <p class="story-card__copy">Pages 2-6</p>
+              </article>
+
+              <article class="story-card" data-block-id="p1-story-2">
+                <p class="story-card__kicker">CP-009.2</p>
+                <h2 class="story-card__title">Taobao-native labels move next to Louis Vuitton in Deji Plaza.</h2>
+                <p class="story-card__copy">Pages 7-12</p>
+              </article>
+
+              <article class="story-card" data-block-id="p1-story-3">
+                <p class="story-card__kicker">CP-009.3</p>
+                <h2 class="story-card__title">Victoria’s Secret closes big, then comes back smarter.</h2>
+                <p class="story-card__copy">Pages 13-20</p>
+              </article>
+            </aside>
+          </div>
+
+          <footer class="page__footer page__footer--light" data-block-id="p1-footer">
+            <span>KFD weekly intelligence briefing</span>
+            <span>1</span>
+          </footer>
+        </div>
+      </section>
+
+      <!-- Editable: Page 2 story opener -->
+      <section class="page" data-page="2">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <p class="eyebrow" data-block-id="p2-kicker">CP-009.1</p>
+            <h1 class="headline headline--large" data-block-id="p2-title">
+              5 Chinese Brands Just Made the <span class="accent">Paris Fashion Week</span> Calendar. And Margiela
+              Picked Shanghai Over Paris.
+            </h1>
+            <p class="lede" data-block-id="p2-lede-1">
+              Read that headline again. Five Chinese fashion brands on the official Paris Fashion Week FW2026
+              schedule. Not as guests. Not in off-calendar pop-ups. On the actual programme, alongside Chanel, Dior,
+              and Louis Vuitton.
+            </p>
+            <p class="lede" data-block-id="p2-lede-2">
+              And then there’s Maison Margiela, one of fashion’s most cult European houses, choosing to skip Paris
+              entirely and debut its FW2026 collection in Shanghai instead.
+            </p>
+            <p class="lede" data-block-id="p2-lede-3">
+              If you still think “Chinese fashion” means factory floors and copycat streetwear, March 2026 just proved
+              you dead wrong.
+            </p>
+          </header>
+
+          <!-- Editable: Page 2 illustration -->
+          <figure class="figure-shell figure-lead" data-block-id="p2-figure">
+            <img
+              class="art art--runway"
+              src="./kfd-china-pulse-009-assets/page-02-runway.png"
+              alt="Editorial runway illustration"
+            />
+            <figcaption>Chinese fashion on the main stage, not on the margins.</figcaption>
+          </figure>
+
+          <footer class="page__footer" data-block-id="p2-footer">
+            <span>kungfudata.com</span>
+            <span>2</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 3 list of brands -->
+      <section class="page" data-page="3">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p3-title">The <span class="accent">Five Chinese Brands</span> on the Paris Calendar</h1>
+            <p class="lede" data-block-id="p3-intro">
+              Paris Fashion Week ran March 2-10, 2026, with 98 shows across 67 runway presentations and 31 static
+              exhibitions. Among them, five Chinese brands earned official slots:
+            </p>
+          </header>
+
+          <section class="list-grid">
+            <article data-block-id="p3-brand-1">
+              <h2 class="subhead subhead--small">Uma Wang (王汁) — March 5</h2>
+              <p>Shanghai-based designer known for poetic, layered silhouettes that blur Eastern philosophy and Western tailoring.</p>
+            </article>
+            <article data-block-id="p3-brand-2">
+              <h2 class="subhead subhead--small">ICICLE (之禾) — March 5</h2>
+              <p>A major Chinese womenswear brand with serious commercial scale, proving this moment is not only indie and niche.</p>
+            </article>
+            <article data-block-id="p3-brand-3">
+              <h2 class="subhead subhead--small">Shiatzy Chen (夏姿陈) — March 9</h2>
+              <p>A Taiwanese-Chinese house blending Eastern craft with haute couture sensibilities and long-running Paris relevance.</p>
+            </article>
+            <article data-block-id="p3-brand-4">
+              <h2 class="subhead subhead--small">Reverie by Caroline Hu (胡颖琪) — March 4</h2>
+              <p>Dreamy, tulle-heavy work from a young globally fluent designer whose references remain unapologetically Chinese.</p>
+            </article>
+            <article data-block-id="p3-brand-5">
+              <h2 class="subhead subhead--small">Ruohan (晏若涵) — March 6</h2>
+              <p>A rising name representing designers who see no contradiction between Chinese identity and global ambition.</p>
+            </article>
+          </section>
+
+          <aside class="banner" data-block-id="p3-banner">
+            <p class="banner__copy">
+              Five brands. Five different aesthetics. One shared signal: Chinese design has graduated from “emerging” to
+              “expected” on the world’s most exclusive runway calendar.
+            </p>
+          </aside>
+
+          <footer class="page__footer" data-block-id="p3-footer">
+            <span>kungfudata.com</span>
+            <span>3</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 4 Shanghai pivot -->
+      <section class="page" data-page="4">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p4-title">Margiela’s <span class="accent">Shanghai Pivot</span> Is the Bigger Story</h1>
+            <p class="lede" data-block-id="p4-lede-1">
+              Maison Margiela didn’t just skip the Paris calendar this season. The house announced its FW2026 global
+              premiere will happen in Shanghai on April 1 as the headline event of Shanghai Fashion Week.
+            </p>
+            <p class="lede" data-block-id="p4-lede-2">
+              This is the first time Margiela has moved a core collection show to China. Not a capsule preview. Not a
+              local activation. The actual global debut.
+            </p>
+          </header>
+
+          <blockquote class="quote" data-block-id="p4-quote">
+            <p class="quote__body">
+              CEO Gaetano Sciuto called it “an important signal of the brand deepening its roots in the Chinese
+              market,” framing Shanghai as a city that retains tradition while continuously blending with modern
+              elements.
+            </p>
+          </blockquote>
+
+          <p class="copy" data-block-id="p4-body">
+            But the deeper logic is customer gravity. Margiela is moving where high-intent luxury demand already sits,
+            then extending the show with a four-city public program bookable through WeChat mini-programs.
+          </p>
+
+          <section class="tour-list">
+            <article data-block-id="p4-tour-1">
+              <h3>Shanghai</h3>
+              <p>Haute couture exhibition</p>
+            </article>
+            <article data-block-id="p4-tour-2">
+              <h3>Beijing</h3>
+              <p>Mask exhibition</p>
+            </article>
+            <article data-block-id="p4-tour-3">
+              <h3>Chengdu</h3>
+              <p>Tabi collector exhibition</p>
+            </article>
+            <article data-block-id="p4-tour-4">
+              <h3>Shenzhen</h3>
+              <p>Bianchetto craft workshop</p>
+            </article>
+          </section>
+
+          <footer class="page__footer" data-block-id="p4-footer">
+            <span>kungfudata.com</span>
+            <span>4</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 5 power shift -->
+      <section class="page" data-page="5">
+        <article class="page__inner">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p5-title">What This Power Shift Actually Means</h1>
+            <p class="lede" data-block-id="p5-intro">Let’s zoom out. In a single fashion season, you have:</p>
+          </header>
+
+          <section class="compare-grid">
+            <article class="card-accent" data-block-id="p5-compare-left">
+              <h3 class="card__title card__title--light">Chinese Brands Going to Paris</h3>
+              <ul class="bullets">
+                <li>Five official slots across both independent designers and commercial brands.</li>
+                <li>Chinese celebrities dominating front rows from Loewe to Dior, Givenchy, Celine, and Vivienne Westwood.</li>
+              </ul>
+            </article>
+            <article class="card-accent" data-block-id="p5-compare-right">
+              <h3 class="card__title card__title--light">European Brands Coming to Shanghai</h3>
+              <ul class="bullets">
+                <li>Maison Margiela choosing Shanghai over Paris for its global debut.</li>
+                <li>Valentino also skipping Paris for a Rome show, confirming traffic is no longer one-way.</li>
+              </ul>
+            </article>
+          </section>
+
+          <p class="copy" data-block-id="p5-body">
+            The traffic isn’t just moving in one direction anymore. Chinese brands are going to Paris and European
+            brands are coming to Shanghai. Fashion’s center of gravity isn’t shifting so much as splitting.
+          </p>
+
+          <blockquote class="quote" data-block-id="p5-quote">
+            <p class="quote__body">
+              For Western brands, this rewrites assumptions about where cultural authority lives. If Margiela decides
+              Shanghai is worth more than Paris for a global debut, the signal is bigger than any single show.
+            </p>
+          </blockquote>
+
+          <footer class="page__footer" data-block-id="p5-footer">
+            <span>kungfudata.com</span>
+            <span>5</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 6 takeaway checklist -->
+      <section class="page" data-page="6">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p6-title">Your <span class="accent">Takeaway</span> Checklist</h1>
+          </header>
+
+          <ol class="checklist">
+            <li data-block-id="p6-item-1">
+              <span class="checklist__num">1</span>
+              <p class="checklist__body">
+                <strong>Chinese brands are no longer “emerging” at PFW.</strong>
+                Five official slots across independent designers and commercial brands makes this structural, not a token gesture.
+              </p>
+            </li>
+            <li data-block-id="p6-item-2">
+              <span class="checklist__num">2</span>
+              <p class="checklist__body">
+                <strong>Shanghai is becoming a launch market, not a secondary one.</strong>
+                Margiela’s decision says the city is no longer where you roll out after Paris. It is where you make the statement.
+              </p>
+            </li>
+            <li data-block-id="p6-item-3">
+              <span class="checklist__num">3</span>
+              <p class="checklist__body">
+                <strong>Front-row diplomacy is real.</strong>
+                If your brand lacks a China-facing celebrity strategy, you disappear at the events that matter.
+              </p>
+            </li>
+            <li data-block-id="p6-item-4">
+              <span class="checklist__num">4</span>
+              <p class="checklist__body">
+                <strong>The WeChat mini-program is the new RSVP.</strong>
+                Luxury consumers in China still live inside platform-native journeys, not email-first funnels.
+              </p>
+            </li>
+            <li data-block-id="p6-item-5">
+              <span class="checklist__num">5</span>
+              <p class="checklist__body">
+                <strong>Cultural exchange goes both ways now.</strong>
+                The old story of Western brands graciously entering China has been replaced by real competitive reciprocity.
+              </p>
+            </li>
+          </ol>
+
+          <aside class="banner" data-block-id="p6-banner">
+            <p class="banner__copy">
+              The fashion calendar used to have one center: Paris. March 2026 made it official that Shanghai is building
+              its own table, and some of fashion’s biggest names are choosing to sit there first.
+            </p>
+          </aside>
+
+          <footer class="page__footer" data-block-id="p6-footer">
+            <span>kungfudata.com</span>
+            <span>6</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 7 story opener -->
+      <section class="page" data-page="7">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <p class="eyebrow" data-block-id="p7-kicker">CP-009.2</p>
+            <h1 class="headline headline--large" data-block-id="p7-title">
+              <span class="accent">Born on Taobao.</span> Raised on Xiaohongshu. Now Sitting Next to Louis Vuitton.
+            </h1>
+            <p class="lede" data-block-id="p7-lede-1">
+              A brand that started selling clothes on Taobao just opened a store at China’s highest-grossing shopping
+              mall. Not in the basement. Not in the food court. On the premium floors. Next to the luxury houses.
+            </p>
+            <p class="lede" data-block-id="p7-lede-2">
+              This isn’t one brand getting lucky. It’s a pattern. And if you’re a Western fashion brand planning your
+              China retail strategy, the game just changed under your feet.
+            </p>
+          </header>
+
+          <!-- Editable: Page 7 illustration -->
+          <figure class="figure-shell figure-lead" data-block-id="p7-figure">
+            <img class="art art--mall" src="./kfd-china-pulse-009-assets/page-07-mall.png" alt="Premium mall interior illustration" />
+            <figcaption>Digital-native labels are moving into spaces once reserved for legacy luxury tenants.</figcaption>
+          </figure>
+
+          <footer class="page__footer" data-block-id="p7-footer">
+            <span>kungfudata.com</span>
+            <span>7</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 8 Deji Plaza table -->
+      <section class="page" data-page="8">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p8-title">The Mall That <span class="accent">Only Lets Winners In</span></h1>
+            <p class="lede" data-block-id="p8-lede">
+              Nanjing Deji Plaza is China’s “store king,” with 24.5 billion yuan in annual sales. In 2025 and early
+              2026, three brands born on Taobao entered the building:
+            </p>
+          </header>
+
+          <section class="table-shell" data-block-id="p8-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Brand</th>
+                  <th>Origin</th>
+                  <th>Deji Plaza Move</th>
+                  <th>Total Stores</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>CHICJOC</td>
+                  <td>Taobao</td>
+                  <td>Opened at Deji Plaza plus Paris and Los Angeles</td>
+                  <td>41</td>
+                </tr>
+                <tr>
+                  <td>Unica</td>
+                  <td>Taobao / Xiaohongshu</td>
+                  <td>First offline store at Deji Plaza</td>
+                  <td>1</td>
+                </tr>
+                <tr>
+                  <td>Marius</td>
+                  <td>Taobao</td>
+                  <td>First offline store at Deji Plaza</td>
+                  <td>1</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <p class="copy" data-block-id="p8-body">
+            CHICJOC is the most aggressive of the three. Forty-one stores and counting, with locations in Paris and Los
+            Angeles alongside its Deji Plaza presence. That’s a Taobao brand with international retail in 2026.
+          </p>
+
+          <footer class="page__footer" data-block-id="p8-footer">
+            <span>kungfudata.com</span>
+            <span>8</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 9 cost advantage -->
+      <section class="page" data-page="9">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p9-title"><span class="accent">The Secret Weapon:</span> Same Fabrics, a Fraction of the Price</h1>
+            <p class="lede" data-block-id="p9-lede">
+              These brands are sourcing from the same fabric suppliers and manufacturers as the luxury houses. The
+              difference is structural, not mystical.
+            </p>
+          </header>
+
+          <section class="compare-grid">
+            <article class="card-accent" data-block-id="p9-left-card">
+              <h3 class="card__title card__title--light">The Cost Advantages</h3>
+              <ul class="bullets">
+                <li>No Paris showroom rent</li>
+                <li>No global marketing campaigns</li>
+                <li>No wholesale middlemen</li>
+                <li>No legacy overhead</li>
+              </ul>
+            </article>
+
+            <article data-block-id="p9-right-card">
+              <h3 class="card__title">The Result: Their Price Range</h3>
+              <ul class="bullets">
+                <li><strong>Basics and daily wear:</strong> under 1,000 yuan ($137)</li>
+                <li><strong>Mid-range pieces:</strong> 1,000 to 3,000 yuan</li>
+                <li><strong>Premium items:</strong> up to 10,000+ yuan ($1,370)</li>
+              </ul>
+            </article>
+          </section>
+
+          <p class="copy" data-block-id="p9-body">
+            For a Deji Plaza shopper, the math is simple: spend 30,000 yuan on a luxury jacket, or spend 3,000 yuan
+            next door on comparable fabric and increasingly comparable quality. The logo is different. The quality gap
+            is shrinking fast.
+          </p>
+
+          <footer class="page__footer" data-block-id="p9-footer">
+            <span>kungfudata.com</span>
+            <span>9</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 10 KEIGAN -->
+      <section class="page" data-page="10">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p10-title"><span class="accent">KEIGAN:</span> The One That Went Full Luxury</h1>
+          </header>
+
+          <section class="side-grid">
+            <article>
+              <p class="copy" data-block-id="p10-body-1">
+                If CHICJOC represents Taobao brands moving up, KEIGAN represents something bolder. The brand opened
+                “MAISON KEIGAN 1490” on Shanghai’s Nanjing West Road, right next to Prada Rongzhai, one of Asia’s most
+                iconic luxury retail spaces.
+              </p>
+
+              <blockquote class="quote" data-block-id="p10-quote">
+                <p class="quote__body">
+                  The name tells you everything. “Maison” is a word reserved for fashion houses. “1490” references the
+                  street address. This is not a store opening. It is a claim to category status.
+                </p>
+              </blockquote>
+            </article>
+
+            <!-- Editable: Page 10 illustration -->
+            <figure class="figure-shell figure-side" data-block-id="p10-figure">
+              <img class="art art--keigan" src="./kfd-china-pulse-009-assets/page-10-keigan.png" alt="Atelier storefront illustration" />
+              <figcaption>From online origin to maison language.</figcaption>
+            </figure>
+          </section>
+
+          <p class="copy" data-block-id="p10-body-2">
+            KEIGAN is positioning as a Chinese maison with atelier-level pricing and appointment-only shopping for its
+            highest-tier collections. In other words, it is not trying to be premium fast fashion. It is trying to be
+            a house.
+          </p>
+
+          <footer class="page__footer" data-block-id="p10-footer">
+            <span>kungfudata.com</span>
+            <span>10</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 11 why now -->
+      <section class="page" data-page="11">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p11-title">Why This Is Happening <span class="accent">Now</span></h1>
+            <p class="lede" data-block-id="p11-intro">Three forces are colliding to make this moment possible.</p>
+          </header>
+
+          <section class="force-grid">
+            <article data-block-id="p11-force-1">
+              <p class="force-grid__num">01</p>
+              <h3>Chinese consumers trust Chinese brands now</h3>
+              <p>
+                Guochao has matured beyond simple patriotism. Consumers have compared fabrics, read Xiaohongshu
+                reviews, and stopped assuming European labels are automatically better.
+              </p>
+            </article>
+            <article data-block-id="p11-force-2">
+              <p class="force-grid__num">02</p>
+              <h3>Malls need traffic, and these brands bring it</h3>
+              <p>
+                CHICJOC and peers bring massive digital followings that convert into physical visits, a demographic
+                premium malls increasingly struggle to win through legacy luxury alone.
+              </p>
+            </article>
+            <article data-block-id="p11-force-3">
+              <p class="force-grid__num">03</p>
+              <h3>Fast fashion left a vacuum</h3>
+              <p>
+                As ZARA and H&amp;M pull back, premium space opens up. Mall operators are replacing them with domestic
+                brands that sit between fast fashion and luxury.
+              </p>
+            </article>
+          </section>
+
+          <footer class="page__footer" data-block-id="p11-footer">
+            <span>kungfudata.com</span>
+            <span>11</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 12 western brands -->
+      <section class="page" data-page="12">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p12-title"><span class="accent">What This Means</span> for Western Brands</h1>
+            <p class="lede" data-block-id="p12-intro">
+              It’s not just the luxury houses above you and the fast-fashion chains below you. It’s a new middle tier
+              of Chinese brands that were born digital and now show up in physical spaces you assumed required a
+              50-year history.
+            </p>
+          </header>
+
+          <section class="reality-grid">
+            <article data-block-id="p12-check-1">
+              <p class="reality-grid__num">01</p>
+              <h3>Your fabric advantage is gone.</h3>
+              <p>“Made in Italy” still carries weight, but “same fabric, same Chinese factory” is a harder story to beat.</p>
+            </article>
+            <article data-block-id="p12-check-2">
+              <p class="reality-grid__num">02</p>
+              <h3>Your offline retail costs more.</h3>
+              <p>No global HQ overhead and no legacy wholesale stack means their cost structure is leaner at every level.</p>
+            </article>
+            <article data-block-id="p12-check-3">
+              <p class="reality-grid__num">03</p>
+              <h3>Your digital following doesn’t transfer.</h3>
+              <p>Instagram followers do not equal trust inside Taobao, Xiaohongshu, and Douyin ecosystems.</p>
+            </article>
+            <article data-block-id="p12-check-4">
+              <p class="reality-grid__num">04</p>
+              <h3>Mall landlords are watching.</h3>
+              <p>If Chinese brands bring more traffic and pay the same rent, “we’re from Paris” is no longer enough.</p>
+            </article>
+          </section>
+
+          <section class="metric-strip">
+            <article class="stat-tile" data-block-id="p12-stat-1">
+              <p class="metric-strip__value">41</p>
+              <p class="metric-strip__label">CHICJOC stores, including Paris and Los Angeles</p>
+            </article>
+            <article class="stat-tile" data-block-id="p12-stat-2">
+              <p class="metric-strip__value">¥24.5B</p>
+              <p class="metric-strip__label">Deji Plaza revenue, China’s highest-revenue mall</p>
+            </article>
+            <article class="stat-tile" data-block-id="p12-stat-3">
+              <p class="metric-strip__value">59</p>
+              <p class="metric-strip__label">ZARA stores left in China, down from a peak of 183</p>
+            </article>
+          </section>
+
+          <aside class="banner" data-block-id="p12-banner">
+            <p class="banner__copy">
+              The brands born in your blind spot just moved into your neighborhood, and they know the local customer
+              better than you ever will.
+            </p>
+          </aside>
+
+          <footer class="page__footer" data-block-id="p12-footer">
+            <span>kungfudata.com</span>
+            <span>12</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 13 story opener -->
+      <section class="page" data-page="13">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <p class="eyebrow" data-block-id="p13-kicker">CP-009.3</p>
+            <h1 class="headline headline--large" data-block-id="p13-title">
+              Victoria’s Secret Just Closed Its Biggest China Store After 9 Years. Here’s Why That’s
+              <span class="accent">Actually Good News.</span>
+            </h1>
+            <p class="lede" data-block-id="p13-lede-1">
+              2,000 square meters. Nine years of operation. Shanghai’s Lipo Plaza on Huaihai Road. Victoria’s Secret
+              just shut the doors on the flagship that launched its entire China chapter.
+            </p>
+            <p class="lede" data-block-id="p13-lede-2">
+              And yet, this might be the smartest move the brand has made in China since it arrived.
+            </p>
+          </header>
+
+          <!-- Editable: Page 13 illustration -->
+          <figure class="figure-shell figure-detail" data-block-id="p13-figure">
+            <img class="art art--store" src="./kfd-china-pulse-009-assets/page-13-vs-store.png" alt="Victoria's Secret storefront illustration" />
+            <figcaption>A flagship closure as portfolio reset, not surrender.</figcaption>
+          </figure>
+
+          <footer class="page__footer" data-block-id="p13-footer">
+            <span>kungfudata.com</span>
+            <span>13</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 14 what happened -->
+      <section class="page" data-page="14">
+        <article class="page__inner">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p14-title">What <span class="accent">Happened</span></h1>
+            <p class="lede" data-block-id="p14-lede">
+              Victoria’s Secret closed its first and largest full-category flagship in mainland China, the 2017 Lipo
+              Plaza location that anchored the brand’s early China expansion.
+            </p>
+          </header>
+
+          <section class="split-panel">
+            <article class="chapter" data-block-id="p14-old-chapter">
+              <h2 class="chapter__title">The Old Chapter</h2>
+              <p>
+                Opened in 2017 on Huaihai Road, housing full-range lingerie, beauty, and experiential marketing under
+                one roof.
+              </p>
+            </article>
+            <article class="chapter chapter--accent" data-block-id="p14-new-chapter">
+              <h2 class="chapter__title">The New Chapter</h2>
+              <p>
+                Chinese media report that VS plans a new flagship at “Huaihai 755,” also on the same street, as early
+                as September 2026. This looks like relocation, not retreat.
+              </p>
+            </article>
+          </section>
+
+          <footer class="page__footer" data-block-id="p14-footer">
+            <span>kungfudata.com</span>
+            <span>14</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 15 numbers -->
+      <section class="page" data-page="15">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p15-title"><span class="accent">The Numbers</span> Behind the Move</h1>
+            <p class="lede" data-block-id="p15-lede">
+              Victoria’s Secret just posted its first annual growth in its core innerwear category in four years.
+            </p>
+          </header>
+
+          <section class="table-shell" data-block-id="p15-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Q4 2025 Sales</td>
+                  <td>$2.3B (+8%)</td>
+                </tr>
+                <tr>
+                  <td>Full Year 2025 Sales</td>
+                  <td>$6.55B (+5%)</td>
+                </tr>
+                <tr>
+                  <td>Same-Store Sales Growth</td>
+                  <td>+8% (beat 5.6% estimate)</td>
+                </tr>
+                <tr>
+                  <td>Core Innerwear</td>
+                  <td>First annual growth in 4 years</td>
+                </tr>
+                <tr>
+                  <td>PINK Brand Q4</td>
+                  <td>High single-digit growth</td>
+                </tr>
+                <tr>
+                  <td>Beauty Business</td>
+                  <td>Approaching $1B</td>
+                </tr>
+                <tr>
+                  <td>2026 Outlook</td>
+                  <td>$6.9B-$7.0B revenue</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <aside class="banner" data-block-id="p15-banner">
+            <p class="banner__copy">
+              The brand isn’t shrinking in China. It’s shedding expensive legacy real estate to go lighter, more
+              digital, and more local.
+            </p>
+          </aside>
+
+          <footer class="page__footer" data-block-id="p15-footer">
+            <span>kungfudata.com</span>
+            <span>15</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 16 Yang Mi -->
+      <section class="page" data-page="16">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p16-title">The <span class="accent">Yang Mi</span> Play</h1>
+          </header>
+
+          <section class="side-grid">
+            <article>
+              <p class="copy" data-block-id="p16-body-1">
+                Victoria’s Secret signed Yang Mi and Tian Xiwei as Chinese brand ambassadors. Yang Mi alone brings the
+                kind of cultural gravity that moves product overnight through content, not square footage.
+              </p>
+
+              <section class="mini-card-grid__left">
+                <article class="mini-card" data-block-id="p16-old-model">
+                  <h3>The Old Model</h3>
+                  <p>Giant flagship stores, angel-wing photo ops, expensive square footage, and passive brand presence.</p>
+                </article>
+                <article class="mini-card" data-block-id="p16-new-model">
+                  <h3>The New Model</h3>
+                  <p>Entertainment-driven content, social storytelling, and digital-first brand building on Xiaohongshu and Douyin.</p>
+                </article>
+              </section>
+            </article>
+
+            <!-- Editable: Page 16 illustration -->
+            <figure class="figure-shell figure-side" data-block-id="p16-figure">
+              <img class="art art--yang-mi" src="./kfd-china-pulse-009-assets/page-16-yang-mi.png" alt="Yang Mi editorial illustration" />
+              <figcaption>Ambassador reach now substitutes for physical spectacle.</figcaption>
+            </figure>
+          </section>
+
+          <p class="copy" data-block-id="p16-body-2">
+            This is not a billboard celebrity play. It is a distribution strategy built around platform-native
+            entertainment and the kind of attention architecture that reaches millions without renting a single extra
+            square meter.
+          </p>
+
+          <footer class="page__footer" data-block-id="p16-footer">
+            <span>kungfudata.com</span>
+            <span>16</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 17 market -->
+      <section class="page" data-page="17">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p17-title">Why This Matters: The 320 Billion RMB Market</h1>
+            <p class="lede" data-block-id="p17-lede">
+              China’s innerwear market is worth roughly <span class="accent">320 billion RMB ($44 billion)</span>, and
+              it is being rewired around comfort, digital distribution, and content-led attention.
+            </p>
+          </header>
+
+          <section class="force-grid">
+            <article data-block-id="p17-card-1">
+              <p class="force-grid__num">01</p>
+              <h3>Comfort over sexy</h3>
+              <p>
+                Wireless, seamless, and athleisure-style innerwear has replaced the old push-up default. VS adapted with
+                comfort-first products like the anti-gravity bra.
+              </p>
+            </article>
+            <article data-block-id="p17-card-2">
+              <p class="force-grid__num">02</p>
+              <h3>Digital-first distribution</h3>
+              <p>
+                The Virgini joint venture restructured China specifically for e-commerce and digital marketing, with a
+                49% stake acquired for $45 million.
+              </p>
+            </article>
+            <article data-block-id="p17-card-3">
+              <p class="force-grid__num">03</p>
+              <h3>Content, not stores, builds brands now</h3>
+              <p>
+                Brand heat comes from livestreams, outfit posts, and celebrity-driven content that can reach 100 million
+                eyeballs without paying rent.
+              </p>
+            </article>
+          </section>
+
+          <footer class="page__footer" data-block-id="p17-footer">
+            <span>kungfudata.com</span>
+            <span>17</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 18 power move -->
+      <section class="page" data-page="18">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p18-title">The Bigger Lesson: Closing a Store Can Be a <span class="accent">Power Move</span></h1>
+            <p class="lede" data-block-id="p18-lede">
+              Most Western brands that close stores in China are circling the drain. The distinction here is that
+              Victoria’s Secret is closing one expensive flagship while the underlying business is growing.
+            </p>
+          </header>
+
+          <section class="mini-card-grid">
+            <section class="mini-card-grid__left">
+              <article class="mini-card" data-block-id="p18-lost-1">
+                <h3>GUESS</h3>
+                <p>Closing all China stores this month.</p>
+              </article>
+              <article class="mini-card" data-block-id="p18-lost-2">
+                <h3>Etam</h3>
+                <p>Gone from China.</p>
+              </article>
+              <article class="mini-card" data-block-id="p18-lost-3">
+                <h3>Triumph</h3>
+                <p>Gone from China.</p>
+              </article>
+            </section>
+
+            <article class="chapter chapter--accent" data-block-id="p18-vs-diff">
+              <h2 class="chapter__title">Victoria’s Secret Is Different</h2>
+              <p>
+                Revenue is up. Innerwear is up for the first time in four years. PINK is growing. Beauty is approaching
+                a billion dollars. That makes the store closure look like portfolio discipline, not collapse.
+              </p>
+            </article>
+          </section>
+
+          <p class="copy" data-block-id="p18-body">
+            The deeper difference is operational. VS rebuilt from the ground up, brought in a local joint venture
+            partner that understands Chinese e-commerce, signed the right celebrities, and shifted product mix to match
+            what Chinese consumers actually want.
+          </p>
+
+          <footer class="page__footer" data-block-id="p18-footer">
+            <span>kungfudata.com</span>
+            <span>18</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 19 checklist -->
+      <section class="page" data-page="19">
+        <article class="page__inner page__inner--tight">
+          <header class="page__header">
+            <h1 class="headline" data-block-id="p19-title">Your Brand <span class="accent">Checklist</span></h1>
+          </header>
+
+          <ul class="arrow-list">
+            <li data-block-id="p19-item-1">
+              <span class="arrow-list__icon">→</span>
+              <p class="copy">
+                <strong>Don’t confuse closing a flagship with leaving a market.</strong>
+                Sometimes the most expensive store is the least productive one.
+              </p>
+            </li>
+            <li data-block-id="p19-item-2">
+              <span class="arrow-list__icon">→</span>
+              <p class="copy">
+                <strong>Celebrity partnerships in China aren’t optional.</strong>
+                The right ambassador is a distribution channel, not just a marketing expense.
+              </p>
+            </li>
+            <li data-block-id="p19-item-3">
+              <span class="arrow-list__icon">→</span>
+              <p class="copy">
+                <strong>Product localization beats marketing localization.</strong>
+                VS changed the actual products, not just the ad copy.
+              </p>
+            </li>
+            <li data-block-id="p19-item-4">
+              <span class="arrow-list__icon">→</span>
+              <p class="copy">
+                <strong>Joint ventures can save you.</strong>
+                Local operational expertise is not a nice-to-have when the channel mix is changing this quickly.
+              </p>
+            </li>
+            <li data-block-id="p19-item-5">
+              <span class="arrow-list__icon">→</span>
+              <p class="copy">
+                <strong>A 320 billion RMB market doesn’t care about your legacy.</strong>
+                History means nothing if your products don’t match the current consumer moment.
+              </p>
+            </li>
+          </ul>
+
+          <blockquote class="quote" data-block-id="p19-quote">
+            <p class="quote__body">
+              Victoria’s Secret lost its wings years ago. But in China, it might be finding something better: a
+              strategy that fits the market. Triumph brought tradition. It died. VS brought transformation. It’s
+              growing.
+            </p>
+          </blockquote>
+
+          <footer class="page__footer" data-block-id="p19-footer">
+            <span>kungfudata.com</span>
+            <span>19</span>
+          </footer>
+        </article>
+      </section>
+
+      <!-- Editable: Page 20 CTA -->
+      <section class="page cta-page" data-page="20">
+        <div class="page__inner">
+          <header class="page__header">
+            <div class="brand-mark">
+              <p class="brand-mark__name" data-block-id="p20-brand-name">KFD</p>
+              <p class="brand-mark__sub" data-block-id="p20-brand-subtitle">Kung Fu Data</p>
+            </div>
+          </header>
+
+          <section class="cta-layout">
+            <article>
+              <h1 class="headline headline--cover" data-block-id="p20-title">
+                Stay ahead of China’s digital shift.
+              </h1>
+              <p class="cta-copy" data-block-id="p20-copy">
+                See what consumers want and how brands are evolving, in real time.
+              </p>
+              <a class="cta-link" data-block-id="p20-link" href="https://kungfudata.aweb.page/emailsignup">
+                https://kungfudata.aweb.page/emailsignup
+              </a>
+            </article>
+
+            <!-- Editable: Page 20 QR -->
+            <figure class="cta-panel" data-block-id="p20-qr">
+              <img src="./kfd-china-pulse-009-assets/page-20-qr.png" alt="QR code for Kung Fu Data signup page" />
+            </figure>
+          </section>
+
+          <footer class="page__footer page__footer--light" data-block-id="p20-footer">
+            <span>kungfudata.com</span>
+            <span>20</span>
+          </footer>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -7,7 +7,12 @@ import {
   Star,
   ArrowRight,
 } from "lucide-react";
-import { STATUS_LABELS, type TaskStatus } from "@shared/types";
+import {
+  STATUS_LABELS,
+  TASK_CATEGORY_LABELS,
+  type TaskCategory,
+  type TaskStatus,
+} from "@shared/types";
 
 /* ── Notification payload types ── */
 
@@ -18,9 +23,10 @@ type TaskCreatedPayload = {
     title: string;
     description: string | null;
     status: string;
+    category: TaskCategory | null;
     urgent: boolean;
     important: boolean;
-    assignor: string;
+    assignor: string | null;
     assignee: string | null;
   };
 };
@@ -32,9 +38,10 @@ type TaskAssignedPayload = {
     title: string;
     description: string | null;
     status: string;
+    category: TaskCategory | null;
     urgent: boolean;
     important: boolean;
-    assignor: string;
+    assignor: string | null;
     assignee: string;
   };
 };
@@ -172,6 +179,12 @@ function TaskBody({
       )}
 
       <div className="flex items-center gap-3 flex-wrap">
+        {task.category && (
+          <span className="rounded-full bg-[var(--swarm-violet-dim)] px-2 py-0.5 text-[10px] text-[var(--swarm-violet)]">
+            {TASK_CATEGORY_LABELS[task.category]}
+          </span>
+        )}
+
         {/* Status */}
         <span className="text-[10px] font-mono text-muted-foreground/50">
           {statusLabel}
@@ -192,15 +205,17 @@ function TaskBody({
         )}
 
         {/* Assignor / Assignee */}
-        <span className="text-[10px] text-muted-foreground/40 font-mono ml-auto">
-          {task.assignor}
-          {task.assignee && (
-            <>
-              <ArrowRight className="size-2.5 inline mx-0.5" />
-              {task.assignee}
-            </>
-          )}
-        </span>
+        {(task.assignor || task.assignee) && (
+          <span className="text-[10px] text-muted-foreground/40 font-mono ml-auto">
+            {task.assignor ?? ""}
+            {task.assignor && task.assignee && (
+              <>
+                <ArrowRight className="size-2.5 inline mx-0.5" />
+              </>
+            )}
+            {task.assignee ?? ""}
+          </span>
+        )}
       </div>
     </>
   );

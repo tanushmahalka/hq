@@ -22,6 +22,11 @@ import {
   updateMarketingAsset,
 } from "./lib/marketing-asset.ts";
 import {
+  MarketingAssetPdfError,
+  buildMarketingAssetPdfFilename,
+  renderMarketingAssetPdf,
+} from "./lib/marketing-asset-pdf.ts";
+import {
   createMarketingEbook,
   getMarketingEbook,
   listMarketingEbooks,
@@ -169,6 +174,52 @@ export function createApp({ env, waitUntil }: AppOptions) {
       "cache-control": "no-store, no-cache, must-revalidate",
       "x-content-type-options": "nosniff",
     });
+  });
+
+  app.get("/api/marketing/assets/:id/pdf", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.user && !requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const assetId = Number.parseInt(c.req.param("id"), 10);
+    if (!Number.isInteger(assetId) || assetId <= 0) {
+      return c.json({ message: "Invalid asset id." }, 400);
+    }
+
+    const organizationId = requestContext.isAgent
+      ? c.req.query("organizationId") ?? undefined
+      : requestContext.organizationId ?? undefined;
+    const asset = await getMarketingAsset(
+      requestContext.db,
+      assetId,
+      organizationId,
+    );
+
+    if (!asset) {
+      return c.json({ message: "Asset not found." }, 404);
+    }
+
+    try {
+      const pdf = await renderMarketingAssetPdf(asset.currentHtml);
+      const filename = buildMarketingAssetPdfFilename(asset);
+
+      return new Response(Uint8Array.from(pdf), {
+        status: 200,
+        headers: {
+          "content-type": "application/pdf",
+          "content-disposition": `attachment; filename="${filename}"`,
+          "cache-control": "no-store, no-cache, must-revalidate",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    } catch (error) {
+      if (error instanceof MarketingAssetPdfError) {
+        return c.json({ message: error.message }, 500);
+      }
+
+      throw error;
+    }
   });
 
   app.get("/api/marketing/assets/:id/stream", async (c) => {

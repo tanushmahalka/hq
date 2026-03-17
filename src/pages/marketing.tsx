@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
+  Download,
   FileText,
-  Plus,
+  Info,
   Radio,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
-import { EbookCreateDialog } from "@/components/marketing/ebook-create-dialog";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,11 +17,61 @@ import { trpc } from "@/lib/trpc";
 
 type EbookTab = "ebooks";
 
+type SelectedEbookPreview = {
+  id: number;
+  title: string;
+  slug: string;
+  currentVersion: number;
+  updatedAt: string | Date;
+  lastUpdateSource: string;
+  storagePath: string | null;
+};
+
+type EbookRevisionPreview = {
+  id: number;
+  version: number;
+  source: string;
+  summary: string | null;
+  createdAt: string | Date;
+};
+
 function formatUpdatedAt(value: string | Date): string {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(typeof value === "string" ? new Date(value) : value);
+}
+
+function buildPdfFilename(asset: { id: number; slug: string | null | undefined }): string {
+  const slug = asset.slug?.trim();
+  return `${slug && slug.length > 0 ? slug : `ebook-${asset.id}`}.pdf`;
+}
+
+function parseContentDispositionFilename(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const utf8Match = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const asciiMatch = value.match(/filename="?([^"]+)"?/i);
+  return asciiMatch?.[1] ?? null;
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function EbookTabButton({
@@ -51,13 +102,137 @@ function EbookTabButton({
   );
 }
 
+function EbookPreviewArea({
+  selectedEbook,
+  previewUrl,
+  previewVersion,
+  revisionsQuery,
+}: {
+  selectedEbook: SelectedEbookPreview;
+  previewUrl: string | null;
+  previewVersion: number | null;
+  revisionsQuery: {
+    isLoading: boolean;
+    data?: EbookRevisionPreview[];
+  };
+}) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  return (
+    <div className="relative flex min-h-[1160px] flex-1 flex-col">
+      <div className="min-h-0 flex-1 bg-background/40 p-4">
+        <div className="flex h-full min-w-0 w-full flex-col overflow-hidden rounded-xl border border-border/40 bg-white">
+          <div className="flex items-center gap-2 border-b border-border/40 px-4 py-3">
+            <BookOpen className="size-4 text-muted-foreground" />
+            <p className="text-sm font-medium">Live HTML preview</p>
+            <div className="ml-auto flex items-center gap-1.5">
+              <Badge variant="secondary">
+                <FileText className="size-3" />
+                index.html
+              </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={() => setShowDetails(!showDetails)}
+                title={showDetails ? "Hide details" : "Show details"}
+              >
+                <Info className={cn("size-4", showDetails && "text-foreground")} />
+              </Button>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 bg-white">
+            {previewUrl ? (
+              <iframe
+                key={`${selectedEbook.id}:${previewVersion}`}
+                title={`${selectedEbook.title} preview`}
+                src={previewUrl}
+                sandbox="allow-same-origin"
+                className="h-full w-full bg-white"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-muted-foreground/40">
+                  Preparing preview…
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Collapsible details panel */}
+      {showDetails && (
+        <div className="border-t border-border/40 px-6 py-5 overflow-y-auto max-h-[280px]">
+          <div className="max-w-[680px] mx-auto space-y-6">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Details</p>
+              <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground/60">Slug</span>
+                  <span className="text-xs">/{selectedEbook.slug}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground/60">Version</span>
+                  <span>v{selectedEbook.currentVersion}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground/60">Updated</span>
+                  <span>{formatUpdatedAt(selectedEbook.updatedAt)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground/60">Source</span>
+                  <span className="capitalize">{selectedEbook.lastUpdateSource}</span>
+                </div>
+                {selectedEbook.storagePath && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground/60">Path</span>
+                    <span className="text-xs break-all">{selectedEbook.storagePath}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {revisionsQuery.data && revisionsQuery.data.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="size-3.5 text-[var(--swarm-violet)]" />
+                  <p className="text-sm font-medium text-muted-foreground">Recent revisions</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {revisionsQuery.data.map((revision) => (
+                    <div
+                      key={revision.id}
+                      className="rounded-lg border border-border/40 bg-background/60 px-3 py-2 text-xs"
+                    >
+                      <span className="font-medium">v{revision.version}</span>
+                      <span className="text-muted-foreground/60 mx-1.5">&middot;</span>
+                      <span className="capitalize text-muted-foreground">{revision.source}</span>
+                      {revision.summary && (
+                        <>
+                          <span className="text-muted-foreground/60 mx-1.5">&middot;</span>
+                          <span className="text-muted-foreground">{revision.summary}</span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Marketing() {
   const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState<EbookTab>("ebooks");
-  const [createOpen, setCreateOpen] = useState(false);
   const [selectedEbookId, setSelectedEbookId] = useState<number | null>(null);
   const [previewVersion, setPreviewVersion] = useState<number | null>(null);
   const [streamConnected, setStreamConnected] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const ebooksQuery = trpc.marketing.asset.list.useQuery(
     { assetType: "ebook" },
@@ -146,21 +321,58 @@ export default function Marketing() {
     return `/api/marketing/assets/${selectedEbook.id}/preview?v=${previewVersion}`;
   }, [previewVersion, selectedEbook]);
 
+  async function handleDownloadPdf() {
+    if (!selectedEbook) {
+      return;
+    }
+
+    setIsDownloadingPdf(true);
+
+    try {
+      const response = await fetch(`/api/marketing/assets/${selectedEbook.id}/pdf`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        let description = "Failed to generate PDF.";
+
+        try {
+          const data = await response.json() as { message?: string };
+          if (typeof data.message === "string" && data.message.trim().length > 0) {
+            description = data.message;
+          }
+        } catch {
+          // Ignore malformed error bodies and use the fallback message.
+        }
+
+        throw new Error(description);
+      }
+
+      const blob = await response.blob();
+      const filename =
+        parseContentDispositionFilename(response.headers.get("content-disposition")) ??
+        buildPdfFilename(selectedEbook);
+
+      triggerBlobDownload(blob, filename);
+    } catch (error) {
+      toast.error("Failed to download PDF", {
+        description:
+          error instanceof Error ? error.message : "Failed to generate PDF.",
+      });
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  }
+
   return (
     <div className="flex flex-col h-full p-12">
-      <div className="flex items-center justify-between pt-4 pb-6">
-        <div className="space-y-2">
-          <h1 className="font-display text-5xl font-normal text-foreground">
-            Marketing
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Live drafts for AI-managed marketing assets.
-          </p>
-        </div>
-        <Button size="sm" className="h-8 gap-1.5" onClick={() => setCreateOpen(true)}>
-          <Plus className="size-4" />
-          Ebook
-        </Button>
+      <div className="pt-4 pb-6">
+        <h1 className="font-display text-5xl font-normal text-foreground">
+          Marketing
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Live drafts for AI-managed marketing assets.
+        </p>
       </div>
 
       <div className="flex items-end justify-between border-b mb-6">
@@ -238,9 +450,6 @@ export default function Marketing() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 space-y-1">
                         <p className="truncate text-sm font-medium">{ebook.title}</p>
-                        <p className="truncate text-[13px] text-muted-foreground">
-                          /{ebook.slug}
-                        </p>
                       </div>
                       <Badge variant="secondary" className="capitalize">
                         {ebook.status}
@@ -259,7 +468,7 @@ export default function Marketing() {
             </div>
           </div>
 
-          <div className="flex flex-1 min-w-0 flex-col rounded-2xl border border-border/40 bg-card/70 overflow-hidden">
+          <div className="flex min-h-[1240px] flex-1 min-w-0 flex-col rounded-2xl border border-border/40 bg-card/70 overflow-hidden">
             <div className="flex items-start justify-between gap-4 border-b border-border/40 px-6 py-4">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -280,6 +489,16 @@ export default function Marketing() {
               </div>
               {selectedEbook ? (
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 gap-2"
+                    onClick={handleDownloadPdf}
+                    disabled={isDownloadingPdf}
+                  >
+                    <Download className={cn("size-4", isDownloadingPdf && "animate-pulse")} />
+                    {isDownloadingPdf ? "Downloading..." : "Download PDF"}
+                  </Button>
                   <Badge
                     variant="secondary"
                     className={cn(
@@ -316,122 +535,17 @@ export default function Marketing() {
                 </p>
               </div>
             ) : (
-              <div className="grid min-h-0 flex-1 grid-cols-[320px_minmax(0,1fr)]">
-                <div className="border-r border-border/40 px-6 py-5 overflow-y-auto">
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Details</p>
-                      <div className="space-y-3 text-sm">
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-muted-foreground">Slug</span>
-                          <span className="font-mono text-xs">/{selectedEbook.slug}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-muted-foreground">Version</span>
-                          <span>v{selectedEbook.currentVersion}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-muted-foreground">Updated</span>
-                          <span>{formatUpdatedAt(selectedEbook.updatedAt)}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-muted-foreground">Source</span>
-                          <span className="capitalize">{selectedEbook.lastUpdateSource}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Storage</p>
-                      <div className="rounded-xl border border-border/40 bg-background/60 p-3">
-                        <p className="text-[13px] text-muted-foreground">
-                          The latest HTML is materialized on the server at:
-                        </p>
-                        <p className="mt-2 break-all font-mono text-xs text-foreground">
-                          {selectedEbook.storagePath ?? "Pending write"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="size-4 text-[var(--swarm-violet)]" />
-                        <p className="text-sm font-medium">Recent revisions</p>
-                      </div>
-                      <div className="space-y-2">
-                        {revisionsQuery.isLoading ? (
-                          <>
-                            <Skeleton className="h-24 rounded-xl" />
-                            <Skeleton className="h-24 rounded-xl" />
-                          </>
-                        ) : (
-                          revisionsQuery.data?.map((revision) => (
-                            <div
-                              key={revision.id}
-                              className="rounded-xl border border-border/40 bg-background/60 p-3"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm font-medium">
-                                  v{revision.version}
-                                </p>
-                                <Badge variant="secondary" className="capitalize">
-                                  {revision.source}
-                                </Badge>
-                              </div>
-                              <p className="mt-1 text-[13px] text-muted-foreground">
-                                {revision.summary ?? "Full HTML snapshot updated."}
-                              </p>
-                              <p className="mt-3 text-xs text-muted-foreground/60">
-                                {formatUpdatedAt(revision.createdAt)}
-                              </p>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="min-h-0 bg-background/40 p-4">
-                  <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/40 bg-white">
-                    <div className="flex items-center gap-2 border-b border-border/40 px-4 py-3">
-                      <BookOpen className="size-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">Live HTML preview</p>
-                      <Badge variant="secondary" className="ml-auto">
-                        <FileText className="size-3" />
-                        index.html
-                      </Badge>
-                    </div>
-                    <div className="min-h-0 flex-1 bg-white">
-                      {previewUrl ? (
-                        <iframe
-                          key={`${selectedEbook.id}:${previewVersion}`}
-                          title={`${selectedEbook.title} preview`}
-                          src={previewUrl}
-                          sandbox="allow-same-origin"
-                          className="h-full w-full bg-white"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center">
-                          <p className="text-sm text-muted-foreground/40">
-                            Preparing preview…
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <EbookPreviewArea
+                selectedEbook={selectedEbook}
+                previewUrl={previewUrl}
+                previewVersion={previewVersion}
+                revisionsQuery={revisionsQuery}
+              />
             )}
           </div>
         </div>
       ) : null}
 
-      <EbookCreateDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={setSelectedEbookId}
-      />
     </div>
   );
 }

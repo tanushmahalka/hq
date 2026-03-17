@@ -616,7 +616,7 @@ function PromptWithAnswers({
 }: {
   prompt: { promptId: number; promptText: string; results: GeoProviderAnswer[] };
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <div className="rounded-xl border border-border/40 bg-card/60 overflow-hidden">

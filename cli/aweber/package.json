@@ -1,0 +1,13 @@
+{
+  "name": "@hq/aweber-cli",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "aweber": "./bin/aweber"
+  },
+  "scripts": {
+    "aweber": "./bin/aweber",
+    "test": "npx --yes tsx --test ./tests/*.test.ts"
+  }
+}

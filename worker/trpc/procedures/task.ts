@@ -7,7 +7,11 @@ import {
   tasks,
   taskWorkflows,
 } from "../../../drizzle/schema/core.ts";
-import { TASK_STATUSES } from "../../../shared/types.ts";
+import {
+  TASK_CATEGORIES,
+  type TaskCategory,
+  TASK_STATUSES,
+} from "../../../shared/types.ts";
 import { TASK_WORKFLOW_MODES } from "../../../shared/task-workflow.ts";
 import { generateTaskSlug } from "../../../shared/slug.ts";
 import {
@@ -31,6 +35,7 @@ const taskCreateInput = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   status: z.enum(TASK_STATUSES).optional(),
+  category: z.enum(TASK_CATEGORIES).nullable().optional(),
   workflowMode: z.enum(TASK_WORKFLOW_MODES).optional(),
   assignor: z.string().optional(),
   assignee: z.string().optional(),
@@ -46,6 +51,7 @@ const taskUpdateInput = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   status: z.enum(TASK_STATUSES).optional(),
+  category: z.enum(TASK_CATEGORIES).nullable().optional(),
   workflowMode: z.enum(TASK_WORKFLOW_MODES).optional(),
   assignor: z.string().nullable().optional(),
   assignee: z.string().nullable().optional(),
@@ -111,6 +117,7 @@ async function kickoffComplexTask(params: {
     description: string | null;
     assignee: string | null;
     assignor: string | null;
+    category?: TaskCategory | null;
     campaignId?: number | null;
   };
 }) {
@@ -173,6 +180,7 @@ function buildSimpleTaskPayload(task: {
   title: string;
   description?: string | null;
   status: string;
+  category?: TaskCategory | null;
   urgent: boolean;
   important: boolean;
   assignor?: string | null;
@@ -186,6 +194,7 @@ function buildSimpleTaskPayload(task: {
       title: task.title,
       description: task.description ?? null,
       status: task.status,
+      category: task.category ?? null,
       urgent: task.urgent,
       important: task.important,
       assignor: task.assignor ?? null,
@@ -265,6 +274,7 @@ export const taskRouter = router({
         title: input.title,
         description: input.description,
         status: initialStatus,
+        category: input.category ?? null,
         workflowMode,
         assignor,
         assignee: input.assignee,
@@ -285,6 +295,7 @@ export const taskRouter = router({
           description: task.description ?? null,
           assignee: task.assignee ?? null,
           assignor: task.assignor ?? null,
+          category: task.category ?? null,
           campaignId: task.campaignId ?? null,
         },
       });
@@ -305,6 +316,7 @@ export const taskRouter = router({
     const sessionKey = `agent:${notificationAgentId}:task:${id}`;
     const taskPayload: Record<string, unknown> = buildSimpleTaskPayload({
       ...task,
+      category: input.category ?? null,
       campaignId: input.campaignId ?? null,
     });
 
@@ -358,6 +370,9 @@ export const taskRouter = router({
     if (input.assignor !== undefined) {
       updateData.assignor = input.assignor;
     }
+    if (input.category !== undefined) {
+      updateData.category = input.category;
+    }
     if (input.assignee !== undefined) {
       updateData.assignee = input.assignee;
     }
@@ -395,6 +410,7 @@ export const taskRouter = router({
           description: task.description ?? null,
           assignee: task.assignee ?? null,
           assignor: task.assignor ?? null,
+          category: task.category ?? null,
           campaignId: task.campaignId ?? null,
         },
       });
@@ -422,6 +438,7 @@ export const taskRouter = router({
               title: task.title,
               description: task.description ?? null,
               status: task.status,
+              category: task.category ?? null,
               urgent: task.urgent,
               important: task.important,
               assignor: task.assignor,

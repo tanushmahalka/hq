@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useTaskActive } from "@/hooks/use-task-active";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { TaskStatusDropdown } from "./task-status-dropdown";
-import type { TaskStatus } from "@shared/types";
+import { TASK_CATEGORY_LABELS, type TaskCategory, type TaskStatus } from "@shared/types";
 import type { TaskWorkflowSummary } from "@shared/task-workflow";
 import type { BoardApprovalSummary } from "@/hooks/use-approvals";
 
@@ -47,6 +47,7 @@ interface TaskCardProps {
     title: string;
     description: string | null;
     status: TaskStatus;
+    category?: TaskCategory | null;
     workflowMode?: "simple" | "complex";
     workflowSummary?: TaskWorkflowSummary | null;
     assignee: string | null;
@@ -138,6 +139,17 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
           {task.description}
         </p>
       )}
+
+      {task.category ? (
+        <div className="mt-3">
+          <Badge
+            variant="secondary"
+            className="bg-[var(--swarm-violet-dim)] text-[10px] text-[var(--swarm-violet)]"
+          >
+            {TASK_CATEGORY_LABELS[task.category]}
+          </Badge>
+        </div>
+      ) : null}
 
       {approvalSummary ? (
         <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2">
