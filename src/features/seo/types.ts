@@ -272,6 +272,42 @@ export type GeoVisibilityData = {
 };
 
 /* ---------------------------------------------------------------------------
+ * GEO Prompt Results (detailed per-provider answers)
+ * --------------------------------------------------------------------------- */
+
+export type GeoProviderAnswer = {
+  runId: number;
+  platform: string;
+  modelName: string;
+  answerText: string;
+  citations: Array<{ url: string; title: string; isOwned: boolean; isCompetitor: boolean }>;
+  brandMentioned: boolean;
+  brandCited: boolean;
+  webSearch: boolean;
+  cost: number | null;
+  capturedAt: string;
+};
+
+export type GeoPromptWithResults = {
+  promptId: number;
+  promptText: string;
+  results: GeoProviderAnswer[];
+};
+
+export type GeoResultsClusterGroup = {
+  clusterId: number;
+  clusterName: string;
+  intent: string | null;
+  funnelStage: string | null;
+  prompts: GeoPromptWithResults[];
+};
+
+export type GeoPromptResultsData = {
+  hasResults: boolean;
+  clusters: GeoResultsClusterGroup[];
+};
+
+/* ---------------------------------------------------------------------------
  * Backlinks
  * --------------------------------------------------------------------------- */
 
@@ -474,6 +510,7 @@ export type KeywordRow = {
   ourImpressions: number | null;
   isOurs: boolean;
   bestCompetitorRank: number | null;
+  bestCompetitorLabel: string | null;
   competitorCount: number;
 };
 

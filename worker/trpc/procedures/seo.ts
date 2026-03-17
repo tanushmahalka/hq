@@ -9,7 +9,7 @@ import {
   getSeoOverview,
   updateOpportunityStatus,
 } from "../../lib/seo.ts";
-import { getGeoOverview, getGeoVisibility } from "../../lib/geo.ts";
+import { getGeoOverview, getGeoPromptResults, getGeoVisibility } from "../../lib/geo.ts";
 
 export const seoRouter = router({
   overview: orgProcedure.query(async ({ ctx }) => {
@@ -51,7 +51,7 @@ export const seoRouter = router({
         pageSize: z.number().int().min(1).max(100).default(50),
         search: z.string().optional(),
         sortBy: z
-          .enum(["keyword", "searchVolume", "keywordDifficulty", "ourPosition", "bestCompetitorRank"])
+          .enum(["keyword", "searchVolume", "keywordDifficulty", "ourPosition", "bestCompetitorRank", "competitorCount"])
           .default("searchVolume"),
         sortDirection: z.enum(["asc", "desc"]).default("desc"),
         intentFilter: z.string().optional(),
@@ -78,6 +78,15 @@ export const seoRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return getGeoVisibility(ctx.db, input.siteId);
+    }),
+  geoPromptResults: orgProcedure
+    .input(
+      z.object({
+        siteId: z.number(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return getGeoPromptResults(ctx.db, input.siteId);
     }),
   backlinksByDomain: orgProcedure
     .input(z.object({

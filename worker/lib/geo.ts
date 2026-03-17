@@ -770,6 +770,293 @@ export async function getGeoVisibility(db: Database, siteId: number): Promise<Ge
   };
 }
 
+/* ---------------------------------------------------------------------------
+ * GEO Prompt Results (per-prompt, per-provider answer detail)
+ * --------------------------------------------------------------------------- */
+
+export type GeoProviderAnswer = {
+  runId: number;
+  platform: string;
+  modelName: string;
+  answerText: string;
+  citations: Array<{ url: string; title: string; isOwned: boolean; isCompetitor: boolean }>;
+  brandMentioned: boolean;
+  brandCited: boolean;
+  webSearch: boolean;
+  cost: number | null;
+  capturedAt: string;
+};
+
+export type GeoPromptWithResults = {
+  promptId: number;
+  promptText: string;
+  results: GeoProviderAnswer[];
+};
+
+export type GeoResultsClusterGroup = {
+  clusterId: number;
+  clusterName: string;
+  intent: string | null;
+  funnelStage: string | null;
+  prompts: GeoPromptWithResults[];
+};
+
+export type GeoPromptResultsResponse = {
+  hasResults: boolean;
+  clusters: GeoResultsClusterGroup[];
+};
+
+function parseResponsePayload(json: unknown): {
+  answerText: string;
+  citations: Array<{ url: string; title: string }>;
+  modelName: string;
+  webSearch: boolean;
+  cost: number | null;
+} {
+  const defaults = { answerText: "", citations: [] as Array<{ url: string; title: string }>, modelName: "", webSearch: false, cost: null as number | null };
+  if (!json || typeof json !== "object") return defaults;
+
+  const payload = json as Record<string, unknown>;
+  const cost = typeof payload.cost === "number" ? payload.cost : null;
+
+  const resultArr = Array.isArray(payload.result) ? payload.result : [];
+  const firstResult = resultArr[0] as Record<string, unknown> | undefined;
+  if (!firstResult) return { ...defaults, cost };
+
+  const modelName = (firstResult.model_name as string) ?? "";
+  const webSearch = (firstResult.web_search as boolean) ?? false;
+
+  const items = Array.isArray(firstResult.items) ? firstResult.items : [];
+  const sections = items.flatMap((item: Record<string, unknown>) =>
+    Array.isArray(item.sections) ? item.sections : [],
+  );
+
+  const textParts: string[] = [];
+  const citations: Array<{ url: string; title: string }> = [];
+  const seenUrls = new Set<string>();
+
+  for (const section of sections as Array<Record<string, unknown>>) {
+    if (section.type === "text" && typeof section.text === "string") {
+      textParts.push(section.text);
+    }
+
+    if (Array.isArray(section.annotations)) {
+      for (const ann of section.annotations as Array<Record<string, unknown>>) {
+        const url = ann.url as string | undefined;
+        const title = ann.title as string | undefined;
+        if (!url || seenUrls.has(url)) continue;
+
+        // Filter out Google internal redirect/search URLs
+        try {
+          const parsed = new URL(url);
+          if (
+            parsed.hostname.includes("vertexaisearch.cloud.google.com") ||
+            (parsed.hostname === "www.google.com" && parsed.pathname.startsWith("/search"))
+          ) {
+            // For Gemini redirects, the title usually contains the actual domain — keep it
+            if (title && !title.startsWith("Current time")) {
+              const syntheticKey = `title:${title}`;
+              if (!seenUrls.has(syntheticKey)) {
+                seenUrls.add(syntheticKey);
+                citations.push({ url: "", title });
+              }
+            }
+            continue;
+          }
+        } catch {
+          // invalid URL, skip
+          continue;
+        }
+
+        seenUrls.add(url);
+        citations.push({ url, title: title ?? url });
+      }
+    }
+  }
+
+  return {
+    answerText: textParts.join(""),
+    citations,
+    modelName,
+    webSearch,
+    cost,
+  };
+}
+
+export async function getGeoPromptResults(db: Database, siteId: number): Promise<GeoPromptResultsResponse> {
+  const schemaReady = await hasGeoSchema(db);
+  if (!schemaReady) {
+    return { hasResults: false, clusters: [] };
+  }
+
+  // Get all results with run + prompt + cluster info
+  const rows = await db
+    .select({
+      resultId: geoPromptResults.id,
+      brandMentioned: geoPromptResults.brandMentioned,
+      brandCited: geoPromptResults.brandCited,
+      resultAnswerText: geoPromptResults.answerText,
+      resultCapturedAt: geoPromptResults.capturedAt,
+      runId: geoRuns.id,
+      platform: geoRuns.platform,
+      responsePayloadJson: geoRuns.responsePayloadJson,
+      promptId: geoPrompts.id,
+      promptText: geoPrompts.prompt,
+      clusterId: geoPrompts.queryClusterId,
+      clusterName: queryClusters.name,
+      intent: queryClusters.primaryIntent,
+      funnelStage: queryClusters.funnelStage,
+    })
+    .from(geoPromptResults)
+    .innerJoin(geoRuns, eq(geoPromptResults.runId, geoRuns.id))
+    .innerJoin(geoPrompts, eq(geoPromptResults.promptId, geoPrompts.id))
+    .innerJoin(queryClusters, eq(geoPrompts.queryClusterId, queryClusters.id))
+    .where(eq(geoPromptResults.siteId, siteId));
+
+  if (rows.length === 0) {
+    return { hasResults: false, clusters: [] };
+  }
+
+  // Get citations from geoCitations for ownership/competitor flags
+  const resultIds = rows.map((r) => r.resultId);
+  const citationRows = await db
+    .select({
+      resultId: geoCitations.resultId,
+      domain: geoCitations.domain,
+      url: geoCitations.url,
+      title: geoCitations.title,
+      isOwned: geoCitations.isOwned,
+      isCompetitor: geoCitations.isCompetitor,
+    })
+    .from(geoCitations)
+    .where(eq(geoCitations.siteId, siteId));
+
+  // Index citations by resultId
+  const citationsByResult = new Map<number, Array<typeof citationRows[0]>>();
+  for (const cit of citationRows) {
+    const arr = citationsByResult.get(cit.resultId) ?? [];
+    arr.push(cit);
+    citationsByResult.set(cit.resultId, arr);
+  }
+
+  // Build provider answers per prompt
+  type PromptKey = number;
+  const promptMap = new Map<
+    PromptKey,
+    {
+      promptId: number;
+      promptText: string;
+      clusterId: number;
+      clusterName: string;
+      intent: string | null;
+      funnelStage: string | null;
+      results: GeoProviderAnswer[];
+    }
+  >();
+
+  for (const row of rows) {
+    const parsed = parseResponsePayload(row.responsePayloadJson);
+
+    // Use parsed answer text, fall back to result's answerText column
+    const answerText = parsed.answerText || row.resultAnswerText || "";
+
+    // Merge citations: from response JSON + from geoCitations table
+    const dbCitations = citationsByResult.get(row.resultId) ?? [];
+    const citationMap = new Map<string, { url: string; title: string; isOwned: boolean; isCompetitor: boolean }>();
+
+    // Add from parsed response
+    for (const cit of parsed.citations) {
+      const key = cit.url || cit.title;
+      citationMap.set(key, { url: cit.url, title: cit.title, isOwned: false, isCompetitor: false });
+    }
+
+    // Overlay ownership/competitor flags from DB citations
+    for (const dbCit of dbCitations) {
+      const key = dbCit.url || dbCit.domain;
+      const existing = citationMap.get(key);
+      if (existing) {
+        existing.isOwned = dbCit.isOwned;
+        existing.isCompetitor = dbCit.isCompetitor;
+      } else {
+        citationMap.set(key, {
+          url: dbCit.url ?? "",
+          title: dbCit.title ?? dbCit.domain,
+          isOwned: dbCit.isOwned,
+          isCompetitor: dbCit.isCompetitor,
+        });
+      }
+    }
+
+    const answer: GeoProviderAnswer = {
+      runId: row.runId,
+      platform: row.platform,
+      modelName: parsed.modelName,
+      answerText,
+      citations: [...citationMap.values()],
+      brandMentioned: row.brandMentioned,
+      brandCited: row.brandCited,
+      webSearch: parsed.webSearch,
+      cost: parsed.cost,
+      capturedAt: row.resultCapturedAt,
+    };
+
+    const existing = promptMap.get(row.promptId);
+    if (existing) {
+      existing.results.push(answer);
+    } else {
+      promptMap.set(row.promptId, {
+        promptId: row.promptId,
+        promptText: row.promptText,
+        clusterId: row.clusterId,
+        clusterName: row.clusterName,
+        intent: row.intent,
+        funnelStage: row.funnelStage,
+        results: [answer],
+      });
+    }
+  }
+
+  // Sort results within each prompt by platform name
+  for (const prompt of promptMap.values()) {
+    prompt.results.sort((a, b) => a.platform.localeCompare(b.platform));
+  }
+
+  // Group prompts by cluster
+  const clusterMap = new Map<number, GeoResultsClusterGroup>();
+  for (const prompt of promptMap.values()) {
+    const existing = clusterMap.get(prompt.clusterId);
+    if (existing) {
+      existing.prompts.push({
+        promptId: prompt.promptId,
+        promptText: prompt.promptText,
+        results: prompt.results,
+      });
+    } else {
+      clusterMap.set(prompt.clusterId, {
+        clusterId: prompt.clusterId,
+        clusterName: prompt.clusterName,
+        intent: prompt.intent,
+        funnelStage: prompt.funnelStage,
+        prompts: [
+          {
+            promptId: prompt.promptId,
+            promptText: prompt.promptText,
+            results: prompt.results,
+          },
+        ],
+      });
+    }
+  }
+
+  // Sort clusters by name, prompts within clusters by promptId
+  const clusters = [...clusterMap.values()].sort((a, b) => a.clusterName.localeCompare(b.clusterName));
+  for (const cluster of clusters) {
+    cluster.prompts.sort((a, b) => a.promptId - b.promptId);
+  }
+
+  return { hasResults: true, clusters };
+}
+
 export async function getGeoOverview(db: Database, siteId: number): Promise<GeoOverview> {
   const site = await loadSiteContext(db, siteId);
   const schemaReady = await hasGeoSchema(db);

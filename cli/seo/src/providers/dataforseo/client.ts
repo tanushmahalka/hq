@@ -269,6 +269,10 @@ export class DataForSeoClient implements DataForSeoAuditClient, DataForSeoGeoCli
       throw new CliError(`DataForSEO returned no tasks for ${endpoint}`);
     }
 
+    if (task.status_code !== 20000) {
+      throw new CliError(`DataForSEO task error ${task.status_code}: ${task.status_message}`);
+    }
+
     return task;
   }
 }

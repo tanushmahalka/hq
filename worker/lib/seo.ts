@@ -1971,16 +1971,28 @@ export async function getKeywordsData(
     keywordDifficulty: "CAST(kw.keyword_difficulty AS numeric)",
     ourPosition: "COALESCE(scd.avg_position, 999999)",
     bestCompetitorRank: "kw.best_rank",
+    competitorCount: "COALESCE(kw.competitor_count, 0)",
   };
   const sortCol = sortColumn[sortBy] ?? "kw.search_volume";
   const sortDir = sortDirection === "asc" ? sql`ASC` : sql`DESC`;
 
   const mainQuery = sql`
-    WITH competitor_kws AS (
+    WITH competitor_best AS (
+      SELECT DISTINCT ON (crk.keyword)
+        crk.keyword,
+        crk.rank AS best_rank,
+        sc.label AS best_competitor_label
+      FROM competitor_ranked_keywords crk
+      INNER JOIN site_competitors sc ON sc.id = crk.site_competitor_id
+      WHERE sc.site_id = ${siteId}
+      ORDER BY crk.keyword, crk.rank ASC
+    ),
+    competitor_kws AS (
       SELECT
         crk.keyword,
         MAX(crk.search_volume) AS search_volume,
-        MIN(crk.rank) AS best_rank,
+        cb.best_rank,
+        cb.best_competitor_label,
         COUNT(DISTINCT crk.site_competitor_id) AS competitor_count,
         (array_agg(crk.search_intent ORDER BY crk.captured_at DESC)
           FILTER (WHERE crk.search_intent IS NOT NULL))[1] AS search_intent,
@@ -1988,8 +2000,9 @@ export async function getKeywordsData(
           FILTER (WHERE crk.keyword_difficulty IS NOT NULL))[1] AS keyword_difficulty
       FROM competitor_ranked_keywords crk
       INNER JOIN site_competitors sc ON sc.id = crk.site_competitor_id
+      INNER JOIN competitor_best cb ON cb.keyword = crk.keyword
       WHERE sc.site_id = ${siteId}
-      GROUP BY crk.keyword
+      GROUP BY crk.keyword, cb.best_rank, cb.best_competitor_label
     ),
     our_queries AS (
       SELECT q.id, q.query AS keyword
@@ -2002,6 +2015,7 @@ export async function getKeywordsData(
         COALESCE(kw.keyword, our_q.keyword) AS keyword,
         kw.search_volume,
         kw.best_rank,
+        kw.best_competitor_label,
         kw.competitor_count,
         kw.search_intent,
         kw.keyword_difficulty,
@@ -2016,6 +2030,7 @@ export async function getKeywordsData(
       kw.search_intent AS "searchIntent",
       kw.our_query_id IS NOT NULL AS "isOurs",
       kw.best_rank AS "bestCompetitorRank",
+      kw.best_competitor_label AS "bestCompetitorLabel",
       COALESCE(kw.competitor_count, 0)::int AS "competitorCount",
       scd.avg_position AS "ourPosition",
       scd.clicks AS "ourClicks",
@@ -2079,6 +2094,7 @@ export async function getKeywordsData(
     searchIntent: string | null;
     isOurs: boolean;
     bestCompetitorRank: number | null;
+    bestCompetitorLabel: string | null;
     competitorCount: number;
     ourPosition: string | null;
     ourClicks: number | null;
@@ -2112,6 +2128,7 @@ export async function getKeywordsData(
       ourImpressions: r.ourImpressions,
       isOurs: r.isOurs,
       bestCompetitorRank: r.bestCompetitorRank,
+      bestCompetitorLabel: r.bestCompetitorLabel,
       competitorCount: r.competitorCount,
     })),
     pageInfo: {

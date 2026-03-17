@@ -164,21 +164,35 @@ const columns: Array<ColumnDef<KeywordRow, unknown>> = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       />
     ),
-    cell: ({ row }) => (
-      <span className="tabular-nums text-sm">
-        {row.original.bestCompetitorRank ?? "--"}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const { bestCompetitorRank, bestCompetitorLabel } = row.original;
+      if (bestCompetitorRank == null) return <span className="text-muted-foreground/40">--</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-sm truncate max-w-[140px]" title={bestCompetitorLabel ?? undefined}>
+            {bestCompetitorLabel ?? "Unknown"}
+          </span>
+          <span className="shrink-0 inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+            {bestCompetitorRank}
+          </span>
+        </div>
+      );
+    },
   },
   {
     accessorKey: "competitorCount",
-    header: "Competitors",
+    header: ({ column }) => (
+      <SortHeader
+        label="Competitors"
+        isSorted={column.getIsSorted()}
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      />
+    ),
     cell: ({ row }) => (
       <span className="tabular-nums text-sm text-muted-foreground">
         {row.original.competitorCount}
       </span>
     ),
-    enableSorting: false,
   },
   {
     id: "source",
@@ -208,7 +222,7 @@ export function KeywordsTab({ siteId }: { siteId: number }) {
       page,
       pageSize: PAGE_SIZE,
       search: deferredSearch || undefined,
-      sortBy: activeSort.id as "keyword" | "searchVolume" | "keywordDifficulty" | "ourPosition" | "bestCompetitorRank",
+      sortBy: activeSort.id as "keyword" | "searchVolume" | "keywordDifficulty" | "ourPosition" | "bestCompetitorRank" | "competitorCount",
       sortDirection: activeSort.desc ? ("desc" as const) : ("asc" as const),
       intentFilter,
       sourceFilter,
