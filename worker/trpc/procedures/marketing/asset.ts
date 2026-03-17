@@ -1,25 +1,33 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { orgProcedure, router } from "../../init.ts";
-import { MarketingAssetServiceError } from "../../../lib/marketing-asset.ts";
 import {
-  createMarketingEbook,
-  getMarketingEbook,
-  listMarketingEbookRevisions,
-  listMarketingEbooks,
-  marketingEbookCreateInputSchema,
-  marketingEbookUpdateInputSchema,
-  resolveMarketingEbookStorageRoot,
-  updateMarketingEbook,
-} from "../../../lib/marketing-ebook.ts";
+  MarketingAssetServiceError,
+  createMarketingAsset,
+  getMarketingAsset,
+  listMarketingAssetRevisions,
+  listMarketingAssets,
+  marketingAssetCreateInputSchema,
+  marketingAssetUpdateInputSchema,
+  resolveMarketingAssetStorageRoot,
+  updateMarketingAsset,
+} from "../../../lib/marketing-asset.ts";
 
-const createInputSchema = marketingEbookCreateInputSchema.extend({
+const createInputSchema = marketingAssetCreateInputSchema.extend({
   organizationId: z.string().trim().min(1).optional(),
 });
 
-const updateInputSchema = marketingEbookUpdateInputSchema.extend({
+const updateInputSchema = marketingAssetUpdateInputSchema.extend({
   organizationId: z.string().trim().min(1).optional(),
 });
+
+const listInputSchema = z
+  .object({
+    assetType: z
+      .enum(["ebook", "email", "landing_page", "social"])
+      .optional(),
+  })
+  .optional();
 
 function resolveOrganizationId(
   ctx: { organizationId: string | null },
@@ -29,7 +37,7 @@ function resolveOrganizationId(
   if (!organizationId) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message: "An organization is required for ebook operations.",
+      message: "An organization is required for marketing asset operations.",
     });
   }
 
@@ -51,18 +59,18 @@ function throwAsTrpcError(error: unknown): never {
   }
 }
 
-export const marketingEbookRouter = router({
-  list: orgProcedure.query(async ({ ctx }) => {
+export const marketingAssetRouter = router({
+  list: orgProcedure.input(listInputSchema).query(async ({ ctx, input }) => {
     const organizationId = resolveOrganizationId(ctx);
-    return listMarketingEbooks(ctx.db, organizationId);
+    return listMarketingAssets(ctx.db, organizationId, input?.assetType);
   }),
 
   get: orgProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       const organizationId = resolveOrganizationId(ctx);
-      const ebook = await getMarketingEbook(ctx.db, input.id, organizationId);
-      return ebook ?? null;
+      const asset = await getMarketingAsset(ctx.db, input.id, organizationId);
+      return asset ?? null;
     }),
 
   revisions: orgProcedure
@@ -75,7 +83,7 @@ export const marketingEbookRouter = router({
     .query(async ({ ctx, input }) => {
       try {
         const organizationId = resolveOrganizationId(ctx);
-        return await listMarketingEbookRevisions(
+        return await listMarketingAssetRevisions(
           ctx.db,
           input.id,
           organizationId,
@@ -89,14 +97,14 @@ export const marketingEbookRouter = router({
   create: orgProcedure.input(createInputSchema).mutation(async ({ ctx, input }) => {
     try {
       const organizationId = resolveOrganizationId(ctx, input.organizationId);
-      return await createMarketingEbook(
+      return await createMarketingAsset(
         ctx.db,
         {
           ...input,
           organizationId,
           source: input.source ?? (ctx.isAgent ? "agent" : "user"),
         },
-        resolveMarketingEbookStorageRoot(ctx.ebookStorageRoot),
+        resolveMarketingAssetStorageRoot(ctx.ebookStorageRoot),
       );
     } catch (error) {
       return throwAsTrpcError(error);
@@ -105,14 +113,14 @@ export const marketingEbookRouter = router({
 
   update: orgProcedure.input(updateInputSchema).mutation(async ({ ctx, input }) => {
     try {
-      return await updateMarketingEbook(
+      return await updateMarketingAsset(
         ctx.db,
         {
           ...input,
           organizationId: resolveOrganizationId(ctx, input.organizationId),
           source: input.source ?? (ctx.isAgent ? "agent" : "user"),
         },
-        resolveMarketingEbookStorageRoot(ctx.ebookStorageRoot),
+        resolveMarketingAssetStorageRoot(ctx.ebookStorageRoot),
       );
     } catch (error) {
       return throwAsTrpcError(error);

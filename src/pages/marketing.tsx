@@ -59,14 +59,17 @@ export default function Marketing() {
   const [previewVersion, setPreviewVersion] = useState<number | null>(null);
   const [streamConnected, setStreamConnected] = useState(false);
 
-  const ebooksQuery = trpc.marketing.ebook.list.useQuery(undefined, {
-    refetchInterval: 5_000,
-  });
-  const ebookDetailQuery = trpc.marketing.ebook.get.useQuery(
+  const ebooksQuery = trpc.marketing.asset.list.useQuery(
+    { assetType: "ebook" },
+    {
+      refetchInterval: 5_000,
+    },
+  );
+  const ebookDetailQuery = trpc.marketing.asset.get.useQuery(
     { id: selectedEbookId ?? 0 },
     { enabled: selectedEbookId !== null },
   );
-  const revisionsQuery = trpc.marketing.ebook.revisions.useQuery(
+  const revisionsQuery = trpc.marketing.asset.revisions.useQuery(
     { id: selectedEbookId ?? 0, limit: 8 },
     { enabled: selectedEbookId !== null },
   );
@@ -98,7 +101,7 @@ export default function Marketing() {
     }
 
     const eventSource = new EventSource(
-      `/api/marketing/ebooks/${selectedEbookId}/stream`,
+      `/api/marketing/assets/${selectedEbookId}/stream`,
     );
 
     eventSource.onopen = () => {
@@ -108,18 +111,18 @@ export default function Marketing() {
     eventSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data) as {
-          ebookId: number;
+          assetId: number;
           version: number;
         };
 
-        if (payload.ebookId !== selectedEbookId) {
+        if (payload.assetId !== selectedEbookId) {
           return;
         }
 
         setPreviewVersion(payload.version);
-        utils.marketing.ebook.list.invalidate();
-        utils.marketing.ebook.get.invalidate({ id: selectedEbookId });
-        utils.marketing.ebook.revisions.invalidate({ id: selectedEbookId, limit: 8 });
+        utils.marketing.asset.list.invalidate({ assetType: "ebook" });
+        utils.marketing.asset.get.invalidate({ id: selectedEbookId });
+        utils.marketing.asset.revisions.invalidate({ id: selectedEbookId, limit: 8 });
       } catch {
         // Ignore malformed events and keep the current stream open.
       }
@@ -140,7 +143,7 @@ export default function Marketing() {
       return null;
     }
 
-    return `/api/marketing/ebooks/${selectedEbook.id}/preview?v=${previewVersion}`;
+    return `/api/marketing/assets/${selectedEbook.id}/preview?v=${previewVersion}`;
   }, [previewVersion, selectedEbook]);
 
   return (
@@ -295,8 +298,8 @@ export default function Marketing() {
                       if (!selectedEbookId) {
                         return;
                       }
-                      utils.marketing.ebook.get.invalidate({ id: selectedEbookId });
-                      utils.marketing.ebook.revisions.invalidate({ id: selectedEbookId, limit: 8 });
+                      utils.marketing.asset.get.invalidate({ id: selectedEbookId });
+                      utils.marketing.asset.revisions.invalidate({ id: selectedEbookId, limit: 8 });
                     }}
                     title="Refresh preview metadata"
                   >

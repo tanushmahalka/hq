@@ -12,15 +12,24 @@ import {
   user as userTable,
 } from "../shared/auth-schema.ts";
 import {
-  MarketingEbookServiceError,
+  MarketingAssetServiceError,
+  createMarketingAsset,
+  getMarketingAsset,
+  listMarketingAssets,
+  marketingAssetCreateInputSchema,
+  marketingAssetUpdateInputSchema,
+  resolveMarketingAssetStorageRoot,
+  updateMarketingAsset,
+} from "./lib/marketing-asset.ts";
+import {
   createMarketingEbook,
   getMarketingEbook,
   listMarketingEbooks,
   marketingEbookCreateInputSchema,
   marketingEbookUpdateInputSchema,
-  resolveMarketingEbookStorageRoot,
   updateMarketingEbook,
 } from "./lib/marketing-ebook.ts";
+import { subscribeToMarketingAsset } from "./lib/marketing-asset-events.ts";
 import { subscribeToMarketingEbook } from "./lib/marketing-ebook-events.ts";
 
 interface AppOptions {
@@ -30,7 +39,7 @@ interface AppOptions {
 
 export function createApp({ env, waitUntil }: AppOptions) {
   const app = new Hono();
-  const ebookStorageRoot = resolveMarketingEbookStorageRoot(
+  const marketingAssetStorageRoot = resolveMarketingAssetStorageRoot(
     env.HQ_EBOOK_STORAGE_DIR,
   );
 
@@ -50,7 +59,7 @@ export function createApp({ env, waitUntil }: AppOptions) {
       );
     }
 
-    if (error instanceof MarketingEbookServiceError) {
+    if (error instanceof MarketingAssetServiceError) {
       const status =
         error.code === "not_found"
           ? 404
@@ -129,6 +138,207 @@ export function createApp({ env, waitUntil }: AppOptions) {
     const db = createDb(env.DATABASE_URL);
     const auth = createAuthInstance(env, db);
     return auth.handler(c.req.raw);
+  });
+
+  app.get("/api/marketing/assets/:id/preview", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.user && !requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const assetId = Number.parseInt(c.req.param("id"), 10);
+    if (!Number.isInteger(assetId) || assetId <= 0) {
+      return c.json({ message: "Invalid asset id." }, 400);
+    }
+
+    const organizationId = requestContext.isAgent
+      ? c.req.query("organizationId") ?? undefined
+      : requestContext.organizationId ?? undefined;
+    const asset = await getMarketingAsset(
+      requestContext.db,
+      assetId,
+      organizationId,
+    );
+
+    if (!asset) {
+      return c.json({ message: "Asset not found." }, 404);
+    }
+
+    return c.body(asset.currentHtml, 200, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store, no-cache, must-revalidate",
+      "x-content-type-options": "nosniff",
+    });
+  });
+
+  app.get("/api/marketing/assets/:id/stream", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.user && !requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const assetId = Number.parseInt(c.req.param("id"), 10);
+    if (!Number.isInteger(assetId) || assetId <= 0) {
+      return c.json({ message: "Invalid asset id." }, 400);
+    }
+
+    const organizationId = requestContext.isAgent
+      ? c.req.query("organizationId") ?? undefined
+      : requestContext.organizationId ?? undefined;
+    const asset = await getMarketingAsset(
+      requestContext.db,
+      assetId,
+      organizationId,
+    );
+
+    if (!asset) {
+      return c.json({ message: "Asset not found." }, 404);
+    }
+
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const send = (payload: unknown) => {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(payload)}\n\n`),
+          );
+        };
+
+        send({
+          assetId: asset.id,
+          version: asset.currentVersion,
+          updatedAt: new Date(asset.updatedAt).toISOString(),
+        });
+
+        const unsubscribe = subscribeToMarketingAsset(asset.id, (event) => {
+          send(event);
+        });
+
+        const keepAlive = setInterval(() => {
+          controller.enqueue(encoder.encode(": keep-alive\n\n"));
+        }, 15_000);
+
+        const closeStream = () => {
+          clearInterval(keepAlive);
+          unsubscribe();
+          try {
+            controller.close();
+          } catch {
+            // Stream may already be closed.
+          }
+        };
+
+        c.req.raw.signal.addEventListener("abort", closeStream, { once: true });
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-store, no-cache, must-revalidate",
+        connection: "keep-alive",
+        "x-accel-buffering": "no",
+      },
+    });
+  });
+
+  app.get("/api/marketing/agent/assets", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const organizationId = c.req.query("organizationId");
+    if (!organizationId) {
+      return c.json({ message: "organizationId is required." }, 400);
+    }
+
+    const assetType = c.req.query("assetType");
+    const assets = await listMarketingAssets(
+      requestContext.db,
+      organizationId,
+      assetType === "ebook" ||
+        assetType === "email" ||
+        assetType === "landing_page" ||
+        assetType === "social"
+        ? assetType
+        : undefined,
+    );
+    return c.json({ items: assets });
+  });
+
+  app.get("/api/marketing/agent/assets/:id", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const assetId = Number.parseInt(c.req.param("id"), 10);
+    if (!Number.isInteger(assetId) || assetId <= 0) {
+      return c.json({ message: "Invalid asset id." }, 400);
+    }
+
+    const asset = await getMarketingAsset(requestContext.db, assetId);
+    if (!asset) {
+      return c.json({ message: "Asset not found." }, 404);
+    }
+
+    return c.json({ item: asset });
+  });
+
+  app.post("/api/marketing/agent/assets", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    try {
+      const rawBody = await c.req.json();
+      const body = rawBody && typeof rawBody === "object" ? rawBody : {};
+      const input = marketingAssetCreateInputSchema.parse({
+        ...body,
+        source: "source" in body ? body.source : "cli",
+      });
+      const asset = await createMarketingAsset(
+        requestContext.db,
+        input,
+        marketingAssetStorageRoot,
+      );
+      return c.json({ item: asset }, 201);
+    } catch (error) {
+      return handleMarketingError(c, error);
+    }
+  });
+
+  app.patch("/api/marketing/agent/assets/:id", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const assetId = Number.parseInt(c.req.param("id"), 10);
+    if (!Number.isInteger(assetId) || assetId <= 0) {
+      return c.json({ message: "Invalid asset id." }, 400);
+    }
+
+    try {
+      const rawBody = await c.req.json();
+      const body = rawBody && typeof rawBody === "object" ? rawBody : {};
+      const input = marketingAssetUpdateInputSchema.parse({
+        ...body,
+        id: assetId,
+        source: "source" in body ? body.source : "cli",
+      });
+      const asset = await updateMarketingAsset(
+        requestContext.db,
+        input,
+        marketingAssetStorageRoot,
+      );
+      return c.json({ item: asset });
+    } catch (error) {
+      return handleMarketingError(c, error);
+    }
   });
 
   app.get("/api/marketing/ebooks/:id/preview", async (c) => {
@@ -284,7 +494,7 @@ export function createApp({ env, waitUntil }: AppOptions) {
       const ebook = await createMarketingEbook(
         requestContext.db,
         input,
-        ebookStorageRoot,
+        marketingAssetStorageRoot,
       );
       return c.json({ item: ebook }, 201);
     } catch (error) {
@@ -314,7 +524,7 @@ export function createApp({ env, waitUntil }: AppOptions) {
       const ebook = await updateMarketingEbook(
         requestContext.db,
         input,
-        ebookStorageRoot,
+        marketingAssetStorageRoot,
       );
       return c.json({ item: ebook });
     } catch (error) {
