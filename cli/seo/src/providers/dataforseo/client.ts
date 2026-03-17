@@ -33,11 +33,85 @@ export interface AuditRequestOptions {
   device: "desktop" | "mobile" | "tablet";
 }
 
+export type DataForSeoMentionsPlatform = "google" | "chat_gpt";
+export type DataForSeoMentionsSearchScope = "sources" | "search_results";
+export type DataForSeoLlmResponseEngine = "chatgpt" | "claude" | "gemini" | "perplexity";
+
 export interface DataForSeoAuditClient {
   auditInstantPage(url: string, options: AuditRequestOptions): Promise<DataForSeoTask<DataForSeoInstantPageResult>>;
 }
 
-export class DataForSeoClient implements DataForSeoAuditClient {
+export interface DataForSeoAiKeywordDataResult {
+  [key: string]: unknown;
+}
+
+export interface DataForSeoLlmMentionResult {
+  [key: string]: unknown;
+}
+
+export interface DataForSeoLlmResponseResult {
+  [key: string]: unknown;
+}
+
+export interface AiKeywordSearchVolumeRequestOptions {
+  keywords: string[];
+  locationCode: number;
+  languageCode: string;
+}
+
+export interface LlmMentionsRequestOptions {
+  target: string;
+  locationCode: number;
+  languageCode: string;
+  platform: DataForSeoMentionsPlatform;
+  limit?: number;
+}
+
+export interface LlmMentionsTopRequestOptions extends LlmMentionsRequestOptions {
+  searchScope: DataForSeoMentionsSearchScope;
+}
+
+export interface LlmMentionsAggregatedMetricsRequestOptions extends LlmMentionsRequestOptions {
+  aggregationKey: string;
+}
+
+export interface LlmMentionsCrossAggregatedMetricsRequestOptions {
+  targets: string[];
+  locationCode: number;
+  languageCode: string;
+  platform: DataForSeoMentionsPlatform;
+  aggregationKey: string;
+  limit?: number;
+}
+
+export interface LlmResponseLiveRequestOptions {
+  userPrompt: string;
+  systemMessage?: string;
+  modelName?: string;
+  webSearch?: boolean;
+  maxOutputTokens?: number;
+}
+
+export interface DataForSeoGeoClient {
+  aiKeywordSearchVolume(
+    options: AiKeywordSearchVolumeRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoAiKeywordDataResult>>;
+  llmMentionsSearch(options: LlmMentionsRequestOptions): Promise<DataForSeoTask<DataForSeoLlmMentionResult>>;
+  llmMentionsAggregatedMetrics(
+    options: LlmMentionsAggregatedMetricsRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoLlmMentionResult>>;
+  llmMentionsCrossAggregatedMetrics(
+    options: LlmMentionsCrossAggregatedMetricsRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoLlmMentionResult>>;
+  llmMentionsTopDomains(options: LlmMentionsTopRequestOptions): Promise<DataForSeoTask<DataForSeoLlmMentionResult>>;
+  llmMentionsTopPages(options: LlmMentionsTopRequestOptions): Promise<DataForSeoTask<DataForSeoLlmMentionResult>>;
+  llmResponseLive(
+    engine: DataForSeoLlmResponseEngine,
+    options: LlmResponseLiveRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoLlmResponseResult>>;
+}
+
+export class DataForSeoClient implements DataForSeoAuditClient, DataForSeoGeoClient {
   constructor(
     private readonly config: ResolvedDataForSeoProviderConfig,
     private readonly fetchImpl: typeof fetch = fetch,
@@ -59,6 +133,110 @@ export class DataForSeoClient implements DataForSeoAuditClient {
     ]);
 
     return task;
+  }
+
+  async aiKeywordSearchVolume(
+    options: AiKeywordSearchVolumeRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoAiKeywordDataResult>> {
+    return this.post<DataForSeoAiKeywordDataResult>(
+      "/v3/ai_optimization/ai_keyword_data/keywords_search_volume/live",
+      [
+        {
+          keywords: options.keywords,
+          location_code: options.locationCode,
+          language_code: options.languageCode,
+        },
+      ],
+    );
+  }
+
+  async llmMentionsSearch(
+    options: LlmMentionsRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoLlmMentionResult>> {
+    return this.post<DataForSeoLlmMentionResult>("/v3/ai_optimization/llm_mentions/search/live", [
+      {
+        target: options.target,
+        location_code: options.locationCode,
+        language_code: options.languageCode,
+        platform: options.platform,
+        limit: options.limit,
+      },
+    ]);
+  }
+
+  async llmMentionsAggregatedMetrics(
+    options: LlmMentionsAggregatedMetricsRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoLlmMentionResult>> {
+    return this.post<DataForSeoLlmMentionResult>("/v3/ai_optimization/llm_mentions/aggregated_metrics/live", [
+      {
+        target: options.target,
+        location_code: options.locationCode,
+        language_code: options.languageCode,
+        platform: options.platform,
+        aggregation_key: options.aggregationKey,
+        limit: options.limit,
+      },
+    ]);
+  }
+
+  async llmMentionsCrossAggregatedMetrics(
+    options: LlmMentionsCrossAggregatedMetricsRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoLlmMentionResult>> {
+    return this.post<DataForSeoLlmMentionResult>("/v3/ai_optimization/llm_mentions/cross_aggregated_metrics/live", [
+      {
+        targets: options.targets,
+        location_code: options.locationCode,
+        language_code: options.languageCode,
+        platform: options.platform,
+        aggregation_key: options.aggregationKey,
+        limit: options.limit,
+      },
+    ]);
+  }
+
+  async llmMentionsTopDomains(
+    options: LlmMentionsTopRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoLlmMentionResult>> {
+    return this.post<DataForSeoLlmMentionResult>("/v3/ai_optimization/llm_mentions/top_domains/live", [
+      {
+        target: options.target,
+        location_code: options.locationCode,
+        language_code: options.languageCode,
+        platform: options.platform,
+        search_scope: options.searchScope,
+        limit: options.limit,
+      },
+    ]);
+  }
+
+  async llmMentionsTopPages(
+    options: LlmMentionsTopRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoLlmMentionResult>> {
+    return this.post<DataForSeoLlmMentionResult>("/v3/ai_optimization/llm_mentions/top_pages/live", [
+      {
+        target: options.target,
+        location_code: options.locationCode,
+        language_code: options.languageCode,
+        platform: options.platform,
+        search_scope: options.searchScope,
+        limit: options.limit,
+      },
+    ]);
+  }
+
+  async llmResponseLive(
+    engine: DataForSeoLlmResponseEngine,
+    options: LlmResponseLiveRequestOptions,
+  ): Promise<DataForSeoTask<DataForSeoLlmResponseResult>> {
+    return this.post<DataForSeoLlmResponseResult>(`/v3/ai_optimization/${mapLlmResponseEnginePath(engine)}/llm_responses/live`, [
+      {
+        user_prompt: options.userPrompt,
+        system_message: options.systemMessage,
+        model_name: options.modelName,
+        web_search: options.webSearch,
+        max_output_tokens: options.maxOutputTokens,
+      },
+    ]);
   }
 
   private async post<T>(endpoint: string, tasks: Array<Record<string, unknown>>): Promise<DataForSeoTask<T>> {
@@ -92,5 +270,18 @@ export class DataForSeoClient implements DataForSeoAuditClient {
     }
 
     return task;
+  }
+}
+
+function mapLlmResponseEnginePath(engine: DataForSeoLlmResponseEngine): string {
+  switch (engine) {
+    case "chatgpt":
+      return "chat_gpt";
+    case "claude":
+      return "claude";
+    case "gemini":
+      return "gemini";
+    case "perplexity":
+      return "perplexity";
   }
 }

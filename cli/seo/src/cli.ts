@@ -3,6 +3,7 @@ import { printLine } from "./core/output.ts";
 import { runProvidersCommand } from "./commands/providers.ts";
 import { runPageAuditCommand } from "./commands/page/audit/index.ts";
 import { runKeywordsListCommand } from "./commands/keywords/list.ts";
+import { runGeoCommand } from "./commands/geo/index.ts";
 
 async function main(argv: string[]): Promise<void> {
   const [group, action, ...rest] = argv;
@@ -27,6 +28,11 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
+  if (group === "geo") {
+    await runGeoCommand([action, ...rest].filter(Boolean) as string[]);
+    return;
+  }
+
   throw new CliError(`Unknown command: ${argv.join(" ")}`, 2);
 }
 
@@ -42,6 +48,12 @@ function printHelp(): void {
   printLine("  seo providers exchange-code google --callback-url <url> [--json]");
   printLine("  seo page audit --page <url> [--page <url> ...] [--json]");
   printLine("  seo keywords list --site <sc-property> --from <yyyy-mm-dd> --to <yyyy-mm-dd> [--json]");
+  printLine("  seo geo brand-visibility --domain <domain> [--json]");
+  printLine("  seo geo competitor-gap --domain <domain> --vs <domain> [--vs <domain> ...] [--json]");
+  printLine("  seo geo prompt-audit --prompt <text> --domain <domain> [--json]");
+  printLine("  seo geo source-gap --domain <domain> --keyword <keyword> [--keyword <keyword> ...] [--json]");
+  printLine("  seo geo topic-sizing --domain <domain> --keyword <keyword> [--keyword <keyword> ...] [--json]");
+  printLine("  seo geo citation-report --domain <domain> [--json]");
 }
 
 main(process.argv.slice(2)).catch((error: unknown) => {

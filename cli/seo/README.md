@@ -13,6 +13,12 @@ JSON-first SEO tooling for AI agents.
 ./bin/seo page audit --page "https://example.com" --json
 ./bin/seo page audit --page "https://example.com" --page "https://example.com/pricing"
 ./bin/seo keywords list --site "sc-domain:example.com" --from "2026-03-01" --to "2026-03-07" --json
+./bin/seo geo brand-visibility --domain "example.com" --json
+./bin/seo geo competitor-gap --domain "example.com" --vs "competitor-a.com" --vs "competitor-b.com"
+./bin/seo geo prompt-audit --prompt "Best CRM for seed-stage startups" --domain "example.com" --brand "Example CRM" --json
+./bin/seo geo source-gap --domain "example.com" --keyword "crm software" --keyword "sales ai"
+./bin/seo geo topic-sizing --domain "example.com" --keyword "crm software" --keyword "sales ai" --json
+./bin/seo geo citation-report --domain "example.com"
 ```
 
 ## Config
@@ -81,3 +87,21 @@ Notes:
 - Core audit: `on_page/instant_pages`
 
 Use `--json` to print the full machine-friendly payload.
+
+## GEO Workflows
+
+The `geo` group adds opinionated Generative Engine Optimization workflows on top of DataForSEO AI Optimization endpoints:
+
+- `seo geo brand-visibility`
+- `seo geo competitor-gap`
+- `seo geo prompt-audit`
+- `seo geo source-gap`
+- `seo geo topic-sizing`
+- `seo geo citation-report`
+
+Notes:
+
+- Mention-based workflows default to `--location-code 2840 --language-code en`.
+- If you do not pass `--platform`, the CLI defaults to `google` and `chat_gpt` for US English, otherwise `google` only.
+- DataForSEO `chat_gpt` mentions currently support only US English.
+- `prompt-audit` defaults to `chatgpt`, `claude`, `gemini`, and `perplexity`, and uses `--json` for the full normalized payload.

@@ -1300,41 +1300,6 @@ export const competitorBacklinkFootprints = pgTable(
   ],
 );
 
-export const geoPromptSets = pgTable(
-  "geo_prompt_sets",
-  {
-    name: text().notNull(),
-    source: text().notNull(),
-    status: text().notNull(),
-    notes: text(),
-    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "geo_prompt_sets_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
-    siteId: integer("site_id").notNull(),
-  },
-  (table) => [
-    index("idx_geo_prompt_sets_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
-    uniqueIndex("geo_prompt_sets_site_name_unique").using(
-      "btree",
-      table.siteId.asc().nullsLast().op("int4_ops"),
-      table.name.asc().nullsLast().op("text_ops"),
-    ),
-    foreignKey({
-      columns: [table.siteId],
-      foreignColumns: [sites.id],
-      name: "geo_prompt_sets_site_id_sites_id_fk",
-    }),
-  ],
-);
 export const geoPrompts = pgTable(
   "geo_prompts",
   {
@@ -1361,7 +1326,6 @@ export const geoPrompts = pgTable(
       }),
     siteId: integer("site_id").notNull(),
     queryClusterId: integer("query_cluster_id").notNull(),
-    promptSetId: integer("prompt_set_id"),
     mappedPageId: integer("mapped_page_id"),
   },
   (table) => [
@@ -1379,11 +1343,6 @@ export const geoPrompts = pgTable(
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "geo_prompts_site_id_sites_id_fk",
-    }),
-    foreignKey({
-      columns: [table.promptSetId],
-      foreignColumns: [geoPromptSets.id],
-      name: "geo_prompts_prompt_set_id_geo_prompt_sets_id_fk",
     }),
     foreignKey({
       columns: [table.queryClusterId],
