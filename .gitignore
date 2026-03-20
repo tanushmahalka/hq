@@ -27,4 +27,11 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.*
+!.env.example
 .dev.vars
+.hq-storage/
+*.pem
+*.key
+*.crt
+*.p12
