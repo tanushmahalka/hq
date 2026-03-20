@@ -21,7 +21,7 @@ This project provides that surface:
 
 This is the kind of product I like building most: systems that sit at the intersection of product design, developer tooling, workflow automation, and real operational leverage.
 
-## Why This Project Is Strong
+## What is different about HQ?
 
 HQ is not a demo dashboard. It spans the full stack:
 
@@ -305,9 +305,3 @@ At a high level:
 3. Run migrations / bootstrap the org
 4. Connect HQ to OpenClaw via hooks and gateway settings
 5. Serve the bundled Node app behind your preferred reverse proxy
-
-## Final Note
-
-The part of HQ I’m proudest of is that it treats AI work as operational work.
-
-Instead of assuming "agent output" is enough, it adds planning, routing, execution state, revision history, organization boundaries, and review surfaces around that output. That systems layer is where a lot of AI products either become useful or fall apart, and building that layer well is what this project is about.
