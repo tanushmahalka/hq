@@ -65,12 +65,55 @@ function createPlugin() {
   return { tools, hooks };
 }
 
+function createPluginWithPluginConfig() {
+  const tools = new Map<string, ToolDef>();
+  const hooks = new Map<string, HookHandler>();
+  const warn = vi.fn();
+
+  register({
+    config: {},
+    pluginConfig: {
+      hqApiUrl: "https://hq.example.com/api/trpc",
+      hqApiToken: "token",
+    },
+    logger: { warn },
+    registerTool: (def) => {
+      tools.set(def.name, def as ToolDef);
+    },
+    registerGatewayMethod: () => {},
+    on: (event, handler) => {
+      hooks.set(event, handler as HookHandler);
+    },
+  });
+
+  return { tools, hooks, warn };
+}
+
 beforeEach(() => {
   callMock.mockReset();
   fetchMissionChainMock.mockReset();
 });
 
 describe("hq-missions plugin", () => {
+  it("accepts plugin-scoped config from api.pluginConfig", async () => {
+    const { tools, warn } = createPluginWithPluginConfig();
+    callMock.mockResolvedValue({ id: "task-1" });
+
+    await tools.get("create_task")!.execute("1", {
+      title: "Write brief",
+      workflowMode: "simple",
+    });
+
+    expect(callMock).toHaveBeenCalledWith(
+      "task.create",
+      expect.objectContaining({
+        title: "Write brief",
+        workflowMode: "simple",
+      }),
+    );
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it("coerces campaign ids and forwards workflowMode and category for task create and update", async () => {
     const { tools } = createPlugin();
     callMock.mockResolvedValue({ id: "task-1" });

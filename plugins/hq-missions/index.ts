@@ -5,6 +5,10 @@ import { TASK_CATEGORY_LABELS, type TaskCategory } from "../../shared/types.ts";
 
 interface PluginAPI {
   config: unknown;
+  pluginConfig?: Record<string, unknown>;
+  logger?: {
+    warn: (message: string) => void;
+  };
   registerTool: (def: {
     name: string;
     description: string;
@@ -428,7 +432,7 @@ function resolvePluginConfig(config: unknown): HQMissionsConfig {
 }
 
 export default function register(api: PluginAPI) {
-  const resolved = resolvePluginConfig(api.config);
+  const resolved = resolvePluginConfig(api.pluginConfig ?? api.config);
   const env = (
     globalThis as { process?: { env?: Record<string, string | undefined> } }
   ).process?.env;
@@ -449,8 +453,8 @@ export default function register(api: PluginAPI) {
   };
 
   if (!config.hqApiUrl || !config.hqApiToken) {
-    console.warn(
-      "[hq-missions] Missing hqApiUrl or hqApiToken — plugin inactive. Set config via plugins.entries.<plugin-id>.config (e.g. hq-missions), or env HQ_API_URL/HQ_API_TOKEN."
+    api.logger?.warn?.(
+      "[hq-missions] Missing hqApiUrl or hqApiToken - plugin inactive. Set config via pluginConfig or plugins.entries.<plugin-id>.config (e.g. hq-missions), or env HQ_API_URL/HQ_API_TOKEN."
     );
     return;
   }

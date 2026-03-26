@@ -30,7 +30,7 @@ interface PluginAPI {
       }) => Promise<{ runId: string }>;
     };
   };
-  registerTool: (tool: unknown) => void;
+  registerTool: (tool: unknown, opts?: { name?: string }) => void;
   registerGatewayMethod: (
     method: string,
     handler: (opts: {
@@ -44,6 +44,7 @@ interface PluginAPI {
   registerHttpRoute: (params: {
     path: string;
     auth: "plugin" | "gateway";
+    match?: "exact" | "prefix";
     handler: (req: NodeJS.ReadableStream & {
       method?: string;
       headers: Record<string, string | string[] | undefined>;
@@ -171,64 +172,67 @@ const plugin = {
       logger: api.logger,
     });
 
-    api.registerTool((ctx) => ({
-      name: "approval_request",
-      label: "Approval Request",
-      description:
-        "Ask a human for approval before taking a risky or user-visible action. Write the body like a short email in Markdown.",
-      parameters: ApprovalRequestToolSchema,
-      execute: async (_id, args) => {
-        try {
-          const params = args as Record<string, unknown>;
-          const title = readNonEmptyString(params, "title");
-          const body = readNonEmptyString(params, "body", { trim: false });
-          if (!ctx.sessionKey) {
+    api.registerTool(
+      (ctx) => ({
+        name: "approval_request",
+        label: "Approval Request",
+        description:
+          "Ask a human for approval before taking a risky or user-visible action. Write the body like a short email in Markdown.",
+        parameters: ApprovalRequestToolSchema,
+        execute: async (_id, args) => {
+          try {
+            const params = args as Record<string, unknown>;
+            const title = readNonEmptyString(params, "title");
+            const body = readNonEmptyString(params, "body", { trim: false });
+            if (!ctx.sessionKey) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify({
+                      status: "error",
+                      error: "approval_request requires an active agent session",
+                    }),
+                  },
+                ],
+              };
+            }
+            const approval = await store.create({
+              title,
+              body,
+              sessionKey: ctx.sessionKey,
+              agentId: ctx.agentId ?? null,
+            });
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    status: "pending",
+                    approvalId: approval.id,
+                    message:
+                      "Approval requested. Wait for the human decision in this session before continuing.",
+                  }),
+                },
+              ],
+            };
+          } catch (error) {
             return {
               content: [
                 {
                   type: "text",
                   text: JSON.stringify({
                     status: "error",
-                    error: "approval_request requires an active agent session",
+                    error: error instanceof Error ? error.message : String(error),
                   }),
                 },
               ],
             };
           }
-          const approval = await store.create({
-            title,
-            body,
-            sessionKey: ctx.sessionKey,
-            agentId: ctx.agentId ?? null,
-          });
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  status: "pending",
-                  approvalId: approval.id,
-                  message:
-                    "Approval requested. Wait for the human decision in this session before continuing.",
-                }),
-              },
-            ],
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  status: "error",
-                  error: error instanceof Error ? error.message : String(error),
-                }),
-              },
-            ],
-          };
-        }
-      },
-    }));
+        },
+      }),
+      { name: "approval_request" },
+    );
 
     api.registerGatewayMethod("approval.request", async ({ params, respond, context }) => {
       try {
@@ -296,6 +300,7 @@ const plugin = {
     api.registerHttpRoute({
       path: "/plugins/hq-approvals/approval/resolve",
       auth: "plugin",
+      match: "exact",
       handler: async (req, res) => {
         if ((req.method ?? "GET").toUpperCase() !== "POST") {
           res.statusCode = 405;
