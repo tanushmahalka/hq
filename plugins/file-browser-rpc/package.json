@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "OpenClaw workspace plugin for browsing and downloading files from a configured root directory",
   "type": "module",
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "yazl": "^3.3.1"
   },

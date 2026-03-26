@@ -2,6 +2,15 @@
   "name": "@psx/hq-approvals",
   "version": "0.1.0",
   "description": "OpenClaw workspace plugin for generic human approvals used by HQ",
+  "type": "module",
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
   "openclaw": {
     "extensions": [
       "./index.ts"

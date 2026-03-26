@@ -3,8 +3,13 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
-import register from "./index";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("openclaw/plugin-sdk/plugin-entry", () => ({
+  definePluginEntry: (entry: unknown) => entry,
+}));
+
+import plugin from "./index";
 
 type GatewayHandler = (opts: {
   params: Record<string, unknown>;
@@ -22,7 +27,7 @@ async function withTempDir(run: (rootDir: string) => Promise<void>) {
 
 function createHandlers(pluginConfig: Record<string, unknown>) {
   const handlers = new Map<string, GatewayHandler>();
-  register({
+  plugin.register({
     pluginConfig,
     runtime: {
       config: {

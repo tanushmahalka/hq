@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "OpenClaw workspace plugin that exposes safe workspace file reads over gateway RPC",
   "type": "module",
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
   "openclaw": {
     "extensions": [
       "./index.ts"

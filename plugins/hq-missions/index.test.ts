@@ -26,7 +26,11 @@ vi.mock("./hq-client", () => ({
   })),
 }));
 
-import register from "./index";
+vi.mock("openclaw/plugin-sdk/plugin-entry", () => ({
+  definePluginEntry: (entry: unknown) => entry,
+}));
+
+import plugin from "./index";
 
 type ToolDef = {
   name: string;
@@ -48,7 +52,7 @@ function createPlugin() {
   const tools = new Map<string, ToolDef>();
   const hooks = new Map<string, HookHandler>();
 
-  register({
+  plugin.register({
     config: {
       hqApiUrl: "https://hq.example.com/api/trpc",
       hqApiToken: "token",
@@ -70,7 +74,7 @@ function createPluginWithPluginConfig() {
   const hooks = new Map<string, HookHandler>();
   const warn = vi.fn();
 
-  register({
+  plugin.register({
     config: {},
     pluginConfig: {
       hqApiUrl: "https://hq.example.com/api/trpc",

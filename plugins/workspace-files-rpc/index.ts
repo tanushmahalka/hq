@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 
 const DEFAULT_AGENT_ID = "main";
 const DEFAULT_MAX_BYTES = 256 * 1024;
@@ -398,60 +399,40 @@ function resolveAgentWorkspace(params: { api: PluginApi; rawAgentId: string }) {
   };
 }
 
-export default function register(api: PluginApi) {
-  api.registerGatewayMethod("workspace-files.read", async ({ params, respond }) => {
-    const pluginConfig = resolvePluginConfig(api);
+export default definePluginEntry({
+  id: "workspace-files-rpc",
+  name: "Workspace Files RPC",
+  description: "Adds a gateway RPC method for safely reading arbitrary workspace-relative files.",
+  register(api: PluginApi) {
+    api.registerGatewayMethod("workspace-files.read", async ({ params, respond }) => {
+      const pluginConfig = resolvePluginConfig(api);
 
-    let agentId = "";
-    let workspaceDir = "";
-    let relativePath = "";
-    let absolutePath = "";
-    let encoding: "utf8" | "base64" = "utf8";
+      let agentId = "";
+      let workspaceDir = "";
+      let relativePath = "";
+      let absolutePath = "";
+      let encoding: "utf8" | "base64" = "utf8";
 
-    try {
-      const rawAgentId = readRequiredString(params, "agentId");
-      relativePath = normalizeRelativePath(readRequiredString(params, "relativePath"));
-      encoding = resolveEncoding(params);
-      const maxBytes = resolveMaxBytes({
-        request: readOptionalPositiveInteger(params, "maxBytes"),
-        config: pluginConfig,
-      });
+      try {
+        const rawAgentId = readRequiredString(params, "agentId");
+        relativePath = normalizeRelativePath(readRequiredString(params, "relativePath"));
+        encoding = resolveEncoding(params);
+        const maxBytes = resolveMaxBytes({
+          request: readOptionalPositiveInteger(params, "maxBytes"),
+          config: pluginConfig,
+        });
 
-      const resolvedAgent = resolveAgentWorkspace({ api, rawAgentId });
-      agentId = resolvedAgent.agentId;
-      workspaceDir = resolvedAgent.workspaceDir;
+        const resolvedAgent = resolveAgentWorkspace({ api, rawAgentId });
+        agentId = resolvedAgent.agentId;
+        workspaceDir = resolvedAgent.workspaceDir;
 
-      const file = await readWorkspaceFile({
-        workspaceDir,
-        relativePath,
-        maxBytes,
-      });
-      absolutePath = file.absolutePath;
+        const file = await readWorkspaceFile({
+          workspaceDir,
+          relativePath,
+          maxBytes,
+        });
+        absolutePath = file.absolutePath;
 
-      respond(
-        true,
-        {
-          ok: true,
-          agentId,
-          workspace: workspaceDir,
-          file: {
-            path: absolutePath,
-            relativePath,
-            missing: false,
-            size: file.size,
-            updatedAtMs: file.updatedAtMs,
-            encoding,
-            content: encodeContent(file.buffer, encoding),
-          },
-        },
-        undefined,
-      );
-      return;
-    } catch (error) {
-      if (error instanceof WorkspaceReadError && error.code === "not-found") {
-        if (!absolutePath && workspaceDir && relativePath) {
-          absolutePath = path.resolve(workspaceDir, relativePath);
-        }
         respond(
           true,
           {
@@ -461,16 +442,41 @@ export default function register(api: PluginApi) {
             file: {
               path: absolutePath,
               relativePath,
-              missing: true,
+              missing: false,
+              size: file.size,
+              updatedAtMs: file.updatedAtMs,
+              encoding,
+              content: encodeContent(file.buffer, encoding),
             },
           },
           undefined,
         );
         return;
-      }
+      } catch (error) {
+        if (error instanceof WorkspaceReadError && error.code === "not-found") {
+          if (!absolutePath && workspaceDir && relativePath) {
+            absolutePath = path.resolve(workspaceDir, relativePath);
+          }
+          respond(
+            true,
+            {
+              ok: true,
+              agentId,
+              workspace: workspaceDir,
+              file: {
+                path: absolutePath,
+                relativePath,
+                missing: true,
+              },
+            },
+            undefined,
+          );
+          return;
+        }
 
-      const message = error instanceof Error ? error.message : "failed to read workspace file";
-      respond(false, undefined, toErrorShape(message));
-    }
-  });
-}
+        const message = error instanceof Error ? error.message : "failed to read workspace file";
+        respond(false, undefined, toErrorShape(message));
+      }
+    });
+  },
+});

@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox";
+import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { createHQClient, type HQClient } from "./hq-client";
 import { formatMissionContext } from "./format-context";
 import { TASK_CATEGORY_LABELS, type TaskCategory } from "../../shared/types.ts";
@@ -431,7 +432,12 @@ function resolvePluginConfig(config: unknown): HQMissionsConfig {
   return {};
 }
 
-export default function register(api: PluginAPI) {
+export default definePluginEntry({
+  id: "hq-missions",
+  name: "HQ Missions",
+  description:
+    "Gives agents structured access to the HQ Mission Framework (missions, objectives, campaigns) and enriches task context with mission hierarchy.",
+  register(api: PluginAPI) {
   const resolved = resolvePluginConfig(api.pluginConfig ?? api.config);
   const env = (
     globalThis as { process?: { env?: Record<string, string | undefined> } }
@@ -1202,4 +1208,5 @@ export default function register(api: PluginAPI) {
 
     return { prependSystemContext };
   });
-}
+  },
+});

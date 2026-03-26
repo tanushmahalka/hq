@@ -1,5 +1,6 @@
 import path from "node:path";
 import { timingSafeEqual } from "node:crypto";
+import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { ApprovalStore } from "./store";
 import type { ApprovalDecision, PendingApproval } from "./types";
 
@@ -162,7 +163,7 @@ function buildContinuationMessage(approval: PendingApproval): string {
     .join("\n");
 }
 
-const plugin = {
+const plugin = definePluginEntry({
   id: "hq-approvals",
   name: "HQ Approvals",
   description: "Generic human approval workflow backed by HQ.",
@@ -380,6 +381,6 @@ const plugin = {
       prependSystemContext: APPROVAL_GUIDANCE,
     }));
   },
-};
+});
 
 export default plugin;

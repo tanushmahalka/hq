@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { ZipFile } from "yazl";
 
 const DEFAULT_LABEL = "kfd-brands";
@@ -586,41 +587,46 @@ async function buildDownloadPayload(params: {
   };
 }
 
-export default function register(api: PluginApi) {
-  api.registerGatewayMethod("file-browser.list", async ({ params, respond }) => {
-    try {
-      const config = resolvePluginConfig(api);
-      const relativePath = normalizeRelativePath(params.relativePath, { allowEmpty: true });
-      const result = await listDirectory({ config, relativePath });
-      respond(true, result, undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "failed to list directory";
-      respond(false, undefined, toErrorShape(message));
-    }
-  });
+export default definePluginEntry({
+  id: "file-browser-rpc",
+  name: "File Browser RPC",
+  description: "Read-only browsing and download RPC methods for a configured server directory.",
+  register(api: PluginApi) {
+    api.registerGatewayMethod("file-browser.list", async ({ params, respond }) => {
+      try {
+        const config = resolvePluginConfig(api);
+        const relativePath = normalizeRelativePath(params.relativePath, { allowEmpty: true });
+        const result = await listDirectory({ config, relativePath });
+        respond(true, result, undefined);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "failed to list directory";
+        respond(false, undefined, toErrorShape(message));
+      }
+    });
 
-  api.registerGatewayMethod("file-browser.read", async ({ params, respond }) => {
-    try {
-      const config = resolvePluginConfig(api);
-      const relativePath = normalizeRelativePath(params.relativePath);
-      const encoding = readEncoding(params);
-      const result = await readFileForPreview({ config, relativePath, encoding });
-      respond(true, result, undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "failed to read file";
-      respond(false, undefined, toErrorShape(message));
-    }
-  });
+    api.registerGatewayMethod("file-browser.read", async ({ params, respond }) => {
+      try {
+        const config = resolvePluginConfig(api);
+        const relativePath = normalizeRelativePath(params.relativePath);
+        const encoding = readEncoding(params);
+        const result = await readFileForPreview({ config, relativePath, encoding });
+        respond(true, result, undefined);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "failed to read file";
+        respond(false, undefined, toErrorShape(message));
+      }
+    });
 
-  api.registerGatewayMethod("file-browser.download", async ({ params, respond }) => {
-    try {
-      const config = resolvePluginConfig(api);
-      const relativePath = normalizeRelativePath(params.relativePath, { allowEmpty: true });
-      const result = await buildDownloadPayload({ config, relativePath });
-      respond(true, result, undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "failed to prepare download";
-      respond(false, undefined, toErrorShape(message));
-    }
-  });
-}
+    api.registerGatewayMethod("file-browser.download", async ({ params, respond }) => {
+      try {
+        const config = resolvePluginConfig(api);
+        const relativePath = normalizeRelativePath(params.relativePath, { allowEmpty: true });
+        const result = await buildDownloadPayload({ config, relativePath });
+        respond(true, result, undefined);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "failed to prepare download";
+        respond(false, undefined, toErrorShape(message));
+      }
+    });
+  },
+});
