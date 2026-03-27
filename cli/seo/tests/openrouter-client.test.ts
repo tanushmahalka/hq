@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { OpenRouterClient } from "../src/providers/openrouter/client.ts";
 
-test("OpenRouterClient sends a chat completion request and parses boolean output", async () => {
+test("OpenRouterClient sends a chat completion request and parses JSON output", async () => {
   const client = new OpenRouterClient({
     config: {
       apiKey: "openrouter-key",
@@ -15,7 +15,8 @@ test("OpenRouterClient sends a chat completion request and parses boolean output
       assert.equal((init?.headers as Record<string, string>).Authorization, "Bearer openrouter-key");
 
       const body = JSON.parse(String(init?.body));
-      assert.equal(body.model, "openai/gpt-oss-120b");
+      assert.equal(body.model, "google/gemini-3.1-flash-lite-preview");
+      assert.equal(body.response_format.type, "json_object");
       assert.match(body.messages[1].content, /Here is about the brand:/);
 
       return new Response(
@@ -23,7 +24,10 @@ test("OpenRouterClient sends a chat completion request and parses boolean output
           choices: [
             {
               message: {
-                content: "true",
+                content: JSON.stringify({
+                  rationale: "The query maps closely to the product category and buyer intent.",
+                  isRelevant: true,
+                }),
               },
             },
           ],
@@ -39,11 +43,11 @@ test("OpenRouterClient sends a chat completion request and parses boolean output
   const result = await client.classifyKeyword({
     query: "enterprise seo platform",
     brandOverview: "Brand overview for an enterprise SEO software company.",
-    model: "openai/gpt-oss-120b",
   });
 
   assert.deepEqual(result, {
     query: "enterprise seo platform",
+    rationale: "The query maps closely to the product category and buyer intent.",
     relevant: true,
   });
 });

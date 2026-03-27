@@ -115,9 +115,9 @@ OPENROUTER_API_KEY=... ./bin/seo keywords classify-relevance \
 ```
 
 Current contract:
-- Plain output is exactly `true` or `false`
-- `--json` returns a JSON boolean
-- The model is prompted to return only `true` or `false`
+- Default model is `google/gemini-3.1-flash-lite-preview`
+- Single-query output is JSON with `rationale` and `isRelevant`
+- The model is prompted to return strict JSON with exactly those fields
 
 Batch JSONL:
 
@@ -136,13 +136,14 @@ Accepted JSONL inputs per line:
 Batch output contract:
 - One JSON object per line
 - Original fields are preserved
-- A top-level `relevant: boolean` field is added
+- A top-level `rationale: string` field is added
+- A top-level `isRelevant: boolean` field is added
 
 Example:
 
 ```json
-{"query":"enterprise seo software","relevant":true}
-{"query":"free meme generator","relevant":false}
+{"query":"enterprise seo software","rationale":"Strong commercial fit for the product.","isRelevant":true}
+{"query":"free meme generator","rationale":"The query is unrelated to the product and buyer.","isRelevant":false}
 ```
 
 Use `--concurrency <n>` for batch runs. Keep it modest unless the user explicitly wants aggressive throughput.

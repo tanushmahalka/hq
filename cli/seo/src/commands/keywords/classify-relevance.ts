@@ -6,7 +6,7 @@ import { CliError } from "../../core/errors.ts";
 import { printJson, printLine } from "../../core/output.ts";
 import { OpenRouterClient, type KeywordClassification } from "../../providers/openrouter/client.ts";
 
-const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const DEFAULT_MODEL = "google/gemini-3.1-flash-lite-preview";
 const DEFAULT_CONCURRENCY = 4;
 const MAX_CONCURRENCY = 16;
 const MAX_ATTEMPTS = 5;
@@ -83,11 +83,17 @@ export async function runKeywordsClassifyRelevanceCommand(
     );
 
     if (getBooleanFlag(parsed, "--json")) {
-      printJsonImpl(result.relevant);
+      printJsonImpl({
+        rationale: result.rationale,
+        isRelevant: result.relevant,
+      });
       return;
     }
 
-    printLineImpl(String(result.relevant));
+    printJsonImpl({
+      rationale: result.rationale,
+      isRelevant: result.relevant,
+    });
     return;
   }
 
@@ -111,7 +117,8 @@ export async function runKeywordsClassifyRelevanceCommand(
     return {
       ...record.source,
       query: record.query,
-      relevant: classification.relevant,
+      rationale: classification.rationale,
+      isRelevant: classification.relevant,
     };
   });
 
@@ -141,7 +148,7 @@ function printKeywordsClassifyRelevanceHelp(printLineImpl: typeof printLine): vo
   printLineImpl("  --brand <overview>     Paragraph describing the business, offer, and target customer");
   printLineImpl(`  --model <model>        OpenRouter model ID, defaults to \`${DEFAULT_MODEL}\``);
   printLineImpl(`  --concurrency <n>      Parallel JSONL workers, defaults to ${DEFAULT_CONCURRENCY}`);
-  printLineImpl("  --json                 Emit a JSON boolean for single query mode, or an aggregate JSON object for JSONL mode");
+  printLineImpl("  --json                 Emit JSON output for single query mode or an aggregate JSON object for JSONL mode");
   printLineImpl("");
   printLineImpl("JSONL input:");
   printLineImpl("  Each line may be a JSON string or an object with `query`, `keyword`, or `term`.");

@@ -1,12 +1,13 @@
 import { CliError } from "../../core/errors.ts";
 import type { ResolvedOpenRouterProviderConfig } from "../../types/config.ts";
 
-const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const DEFAULT_MODEL = "google/gemini-3.1-flash-lite-preview";
 const DEFAULT_REFERER = "https://hq.kungfudata.com";
 const DEFAULT_TITLE = "SEO CLI";
 
 export interface KeywordClassification {
   query: string;
+  rationale: string;
   relevant: boolean;
 }
 
@@ -62,6 +63,7 @@ export class OpenRouterClient {
         },
         body: JSON.stringify({
           model: options.model ?? DEFAULT_MODEL,
+          response_format: { type: "json_object" },
           messages: buildClassifierMessages(
             options.query,
             options.brandOverview
@@ -102,7 +104,7 @@ function buildClassifierMessages(
     {
       role: "system",
       content:
-        "You are a seo keyword classifier. Return exactly one token: true or false. Do not return JSON. Do not explain.",
+        "You are a seo keyword classifier. Return strict JSON with exactly two keys: rationale and isRelevant. rationale must be a short string. isRelevant must be a boolean. Do not return any other keys.",
     },
     {
       role: "user",
@@ -144,19 +146,41 @@ function parseClassification(
   raw: string,
   query: string
 ): KeywordClassification {
-  const normalized = raw.trim().toLowerCase();
+  let parsed: unknown;
 
-  if (normalized !== "true" && normalized !== "false") {
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
     throw new CliError(
-      `OpenRouter classification for query "${query}" must be exactly \`true\` or \`false\`, received: ${
-        raw.trim() || "(empty)"
-      }.`
+      `Failed to parse OpenRouter classification JSON for query "${query}": ${(error as Error).message}`
+    );
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CliError(
+      `OpenRouter classification for query "${query}" was not a JSON object.`
+    );
+  }
+
+  const rationale = (parsed as { rationale?: unknown }).rationale;
+  const isRelevant = (parsed as { isRelevant?: unknown }).isRelevant;
+
+  if (typeof rationale !== "string" || !rationale.trim()) {
+    throw new CliError(
+      `OpenRouter classification for query "${query}" did not include a non-empty \`rationale\` field.`
+    );
+  }
+
+  if (typeof isRelevant !== "boolean") {
+    throw new CliError(
+      `OpenRouter classification for query "${query}" did not include a boolean \`isRelevant\` field.`
     );
   }
 
   return {
     query,
-    relevant: normalized === "true",
+    rationale: rationale.trim(),
+    relevant: isRelevant,
   };
 }
 
