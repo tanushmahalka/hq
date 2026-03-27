@@ -602,6 +602,7 @@ export const competitorRankedKeywords = pgTable(
     searchVolume: integer("search_volume").notNull(),
     keywordDifficulty: numeric("keyword_difficulty", { precision: 5, scale: 2 }),
     searchIntent: text("search_intent"),
+    isRelevant: boolean("is_relevant"),
     rankingUrl: text("ranking_url").notNull(),
     serpItemType: text("serp_item_type"),
     estimatedTraffic: numeric("estimated_traffic", { precision: 12, scale: 2 }),

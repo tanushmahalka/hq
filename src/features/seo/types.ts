@@ -117,6 +117,7 @@ export type SeoCompetitorKeyword = {
   searchVolume: number;
   keywordDifficulty: string | null;
   searchIntent: string | null;
+  isRelevant: boolean | null;
   rankingUrl: string;
   serpItemType: string | null;
   estimatedTraffic: string | null;

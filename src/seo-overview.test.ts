@@ -39,6 +39,7 @@ describe("getSeoOverview", () => {
           isMoneyPage: true,
           isAuthorityAsset: false,
           lastCrawledAt: "2026-03-12T08:00:00.000Z",
+          lastAuditedOn: null,
         },
       ],
       [
@@ -112,6 +113,7 @@ describe("getSeoOverview", () => {
           searchVolume: 600,
           keywordDifficulty: "45.00",
           searchIntent: "commercial",
+          isRelevant: null,
           rankingUrl: "https://example.com/acme-alternative",
           serpItemType: "organic",
           estimatedTraffic: "18.50",

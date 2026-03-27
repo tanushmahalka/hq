@@ -105,6 +105,7 @@ export type SeoOverview = {
       searchVolume: number;
       keywordDifficulty: string | null;
       searchIntent: string | null;
+      isRelevant: boolean | null;
       rankingUrl: string;
       serpItemType: string | null;
       estimatedTraffic: string | null;
@@ -164,6 +165,7 @@ type CompetitorTopKeywordRow = {
   searchVolume: number;
   keywordDifficulty: string | null;
   searchIntent: string | null;
+  isRelevant: boolean | null;
   rankingUrl: string;
   serpItemType: string | null;
   estimatedTraffic: string | null;
@@ -311,6 +313,7 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
           crk.search_volume AS "searchVolume",
           crk.keyword_difficulty AS "keywordDifficulty",
           crk.search_intent AS "searchIntent",
+          crk.is_relevant AS "isRelevant",
           crk.ranking_url AS "rankingUrl",
           crk.serp_item_type AS "serpItemType",
           crk.estimated_traffic AS "estimatedTraffic",
@@ -333,6 +336,7 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
         "searchVolume",
         "keywordDifficulty",
         "searchIntent",
+        "isRelevant",
         "rankingUrl",
         "serpItemType",
         "estimatedTraffic",
