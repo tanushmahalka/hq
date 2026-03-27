@@ -8,10 +8,12 @@ import {
   readConfig,
   resolveGoogleOAuthConfig,
   resolveDataForSeoConfig,
+  resolveOpenRouterConfig,
   saveDataForSeoConfig,
   saveGoogleOAuthConfig,
   saveGoogleOAuthPendingAuth,
   saveGoogleOAuthTokens,
+  saveOpenRouterConfig,
 } from "../src/core/config.ts";
 import {
   buildGoogleOAuthLoginUrl,
@@ -63,6 +65,45 @@ test("environment variables override stored provider config", async () => {
   assert.equal(resolved.login, "env-login");
   assert.equal(resolved.password, "env-password");
   assert.equal(resolved.baseUrl, "https://custom.dataforseo.test");
+});
+
+test("saveOpenRouterConfig persists config and resolves it", async () => {
+  const tempDir = await mkdtemp(path.join(tmpdir(), "seo-cli-config-"));
+  process.env.SEO_CLI_CONFIG_PATH = path.join(tempDir, "config.json");
+  delete process.env.OPENROUTER_API_KEY;
+  delete process.env.OPENROUTER_BASE_URL;
+
+  await saveOpenRouterConfig({
+    apiKey: "openrouter-key",
+    baseUrl: "https://openrouter.ai/api/v1",
+  });
+
+  const saved = await readConfig();
+  const resolved = resolveOpenRouterConfig(saved);
+  const rawFile = await readFile(process.env.SEO_CLI_CONFIG_PATH, "utf8");
+
+  assert.equal(saved.providers?.openrouter?.apiKey, "openrouter-key");
+  assert.equal(resolved.apiKey, "openrouter-key");
+  assert.equal(resolved.baseUrl, "https://openrouter.ai/api/v1");
+  assert.match(rawFile, /openrouter-key/);
+});
+
+test("openrouter environment variables override stored config", async () => {
+  const tempDir = await mkdtemp(path.join(tmpdir(), "seo-cli-config-"));
+  process.env.SEO_CLI_CONFIG_PATH = path.join(tempDir, "config.json");
+
+  await saveOpenRouterConfig({
+    apiKey: "stored-openrouter-key",
+    baseUrl: "https://openrouter.ai/api/v1",
+  });
+
+  process.env.OPENROUTER_API_KEY = "env-openrouter-key";
+  process.env.OPENROUTER_BASE_URL = "https://openrouter.example.test/api/v1";
+
+  const resolved = resolveOpenRouterConfig(await readConfig());
+
+  assert.equal(resolved.apiKey, "env-openrouter-key");
+  assert.equal(resolved.baseUrl, "https://openrouter.example.test/api/v1");
 });
 
 test("saveGoogleOAuthConfig persists config and resolves it", async () => {

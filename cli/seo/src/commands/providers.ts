@@ -5,11 +5,13 @@ import {
   readConfig,
   redactDataForSeoConfig,
   redactGoogleOAuthConfig,
+  redactOpenRouterConfig,
   resolveGoogleOAuthConfig,
   saveDataForSeoConfig,
   saveGoogleOAuthConfig,
   saveGoogleOAuthPendingAuth,
   saveGoogleOAuthTokens,
+  saveOpenRouterConfig,
 } from "../core/config.ts";
 import { CliError } from "../core/errors.ts";
 import { printJson, printLine } from "../core/output.ts";
@@ -25,6 +27,7 @@ const PROVIDER_SCHEMA = {
   "--login": "string",
   "--password": "string",
   "--base-url": "string",
+  "--api-key": "string",
   "--client-id": "string",
   "--client-secret": "string",
   "--redirect-uri": "string",
@@ -78,6 +81,8 @@ function printProvidersHelp(): void {
   printLine("Usage:");
   printLine("  seo providers set dataforseo --login <login> --password <password> [--base-url <url>] [--json]");
   printLine("  seo providers show dataforseo [--json]");
+  printLine("  seo providers set openrouter --api-key <key> [--base-url <url>] [--json]");
+  printLine("  seo providers show openrouter [--json]");
   printLine("  seo providers set google --client-id <id> --client-secret <secret> --redirect-uri <uri> [--application-type <web|desktop>] [--scope <scope> ...] [--json]");
   printLine("  seo providers show google [--json]");
   printLine("  seo providers auth google [--scope <scope> ...] [--state <state>] [--access-type <online|offline>] [--prompt <value>] [--login-hint <email>] [--pkce] [--json]");
@@ -160,7 +165,35 @@ async function runSetProvider(provider: string | undefined, parsed: ReturnType<t
     return;
   }
 
-  throw new CliError("Supported providers: `dataforseo`, `google`.", 2);
+  if (provider === "openrouter") {
+    const apiKey = getStringFlag(parsed, "--api-key");
+    const baseUrl = getStringFlag(parsed, "--base-url");
+    const asJson = getBooleanFlag(parsed, "--json");
+
+    if (!apiKey) {
+      throw new CliError("`seo providers set openrouter` requires `--api-key`.", 2);
+    }
+
+    const { config, configPath } = await saveOpenRouterConfig({ apiKey, baseUrl });
+    const result = {
+      ok: true,
+      provider: "openrouter",
+      configPath,
+      config: redactOpenRouterConfig(config.providers?.openrouter),
+    };
+
+    if (asJson) {
+      printJson(result);
+      return;
+    }
+
+    printLine(`Stored OpenRouter config at ${configPath}`);
+    printLine(`API Key: ${result.config.apiKey}`);
+    printLine(`Base URL: ${result.config.baseUrl}`);
+    return;
+  }
+
+  throw new CliError("Supported providers: `dataforseo`, `openrouter`, `google`.", 2);
 }
 
 async function runShowProvider(provider: string | undefined, parsed: ReturnType<typeof parseArgs>): Promise<void> {
@@ -210,7 +243,25 @@ async function runShowProvider(provider: string | undefined, parsed: ReturnType<
     return;
   }
 
-  throw new CliError("Supported providers: `dataforseo`, `google`.", 2);
+  if (provider === "openrouter") {
+    const result = {
+      provider: "openrouter",
+      configPath: getConfigPath(),
+      config: redactOpenRouterConfig(config.providers?.openrouter),
+    };
+
+    if (getBooleanFlag(parsed, "--json")) {
+      printJson(result);
+      return;
+    }
+
+    printLine(`Config path: ${result.configPath}`);
+    printLine(`API Key: ${result.config.apiKey ?? "(not set)"}`);
+    printLine(`Base URL: ${result.config.baseUrl}`);
+    return;
+  }
+
+  throw new CliError("Supported providers: `dataforseo`, `openrouter`, `google`.", 2);
 }
 
 async function runProviderAuth(provider: string | undefined, parsed: ReturnType<typeof parseArgs>): Promise<void> {

@@ -3,6 +3,7 @@ import { printLine } from "./core/output.ts";
 import { runProvidersCommand } from "./commands/providers.ts";
 import { runPageAuditCommand } from "./commands/page/audit/index.ts";
 import { runKeywordsListCommand } from "./commands/keywords/list.ts";
+import { runKeywordsClassifyRelevanceCommand } from "./commands/keywords/classify-relevance.ts";
 import { runGeoCommand } from "./commands/geo/index.ts";
 import { runDomainRatingCommand } from "./commands/domain/rating.ts";
 import { runDomainSpamScoreCommand } from "./commands/domain/spam-score.ts";
@@ -30,6 +31,11 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
+  if (group === "keywords" && action === "classify-relevance") {
+    await runKeywordsClassifyRelevanceCommand(rest);
+    return;
+  }
+
   if (group === "domain" && action === "rating") {
     await runDomainRatingCommand(rest);
     return;
@@ -54,12 +60,15 @@ function printHelp(): void {
   printLine("Usage:");
   printLine("  seo providers set dataforseo --login <login> --password <password>");
   printLine("  seo providers show dataforseo [--json]");
+  printLine("  seo providers set openrouter --api-key <key>");
+  printLine("  seo providers show openrouter [--json]");
   printLine("  seo providers set google --client-id <id> --client-secret <secret> --redirect-uri <uri>");
   printLine("  seo providers show google [--json]");
   printLine("  seo providers auth google [--pkce] [--json]");
   printLine("  seo providers exchange-code google --callback-url <url> [--json]");
   printLine("  seo page audit --page <url> [--page <url> ...] [--json]");
   printLine("  seo keywords list --site <sc-property> --from <yyyy-mm-dd> --to <yyyy-mm-dd> [--json]");
+  printLine("  seo keywords classify-relevance (--query <keyword> | --jsonl <path|->) --brand <overview> [--json]");
   printLine("  seo domain rating (--domain <domain> | --file <path|->) [--scale <100|1000>] [--json]");
   printLine("  seo domain spam-score (--domain <domain> | --file <path|->) [--json]");
   printLine("  seo domain spam-score sync-db [--dry-run] [--json]");

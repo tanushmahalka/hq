@@ -9,12 +9,15 @@ import type {
   GoogleOAuthApplicationType,
   GoogleOAuthPendingAuth,
   GoogleOAuthTokenSet,
+  OpenRouterProviderConfig,
   ResolvedGoogleOAuthProviderConfig,
   ResolvedDataForSeoProviderConfig,
+  ResolvedOpenRouterProviderConfig,
   SeoCliConfig,
 } from "../types/config.ts";
 
 const DEFAULT_DATAFORSEO_BASE_URL = "https://api.dataforseo.com";
+const DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const DEFAULT_GOOGLE_APPLICATION_TYPE: GoogleOAuthApplicationType = "web";
 const DEFAULT_GOOGLE_REDIRECT_URI = "https://hq.kungfudata.com/oauth/google/callback";
 const DEFAULT_GOOGLE_SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"];
@@ -101,6 +104,26 @@ export async function saveGoogleOAuthConfig(
           current.providers?.google?.applicationType ??
           DEFAULT_GOOGLE_APPLICATION_TYPE,
         scopes: nextConfig.scopes ?? current.providers?.google?.scopes ?? DEFAULT_GOOGLE_SCOPES,
+      },
+    },
+  };
+
+  const configPath = await writeConfig(merged);
+  return { configPath, config: merged };
+}
+
+export async function saveOpenRouterConfig(
+  nextConfig: OpenRouterProviderConfig,
+): Promise<{ configPath: string; config: SeoCliConfig }> {
+  const current = await readConfig();
+  const merged: SeoCliConfig = {
+    ...current,
+    providers: {
+      ...current.providers,
+      openrouter: {
+        ...current.providers?.openrouter,
+        ...nextConfig,
+        baseUrl: nextConfig.baseUrl ?? current.providers?.openrouter?.baseUrl ?? DEFAULT_OPENROUTER_BASE_URL,
       },
     },
   };
@@ -212,11 +235,33 @@ export function resolveGoogleOAuthConfig(config: SeoCliConfig): ResolvedGoogleOA
   };
 }
 
+export function resolveOpenRouterConfig(config: SeoCliConfig): ResolvedOpenRouterProviderConfig {
+  const fromFile = config.providers?.openrouter ?? {};
+  const apiKey = process.env.OPENROUTER_API_KEY ?? fromFile.apiKey;
+  const baseUrl = process.env.OPENROUTER_BASE_URL ?? fromFile.baseUrl ?? DEFAULT_OPENROUTER_BASE_URL;
+
+  if (!apiKey) {
+    throw new CliError(
+      "Missing OpenRouter credentials. Run `seo providers set openrouter --api-key ...` or set OPENROUTER_API_KEY.",
+      2,
+    );
+  }
+
+  return { apiKey, baseUrl };
+}
+
 export function redactDataForSeoConfig(config: Partial<DataForSeoProviderConfig> | undefined): Record<string, string | null> {
   return {
     login: config?.login ?? null,
     password: config?.password ? "********" : null,
     baseUrl: config?.baseUrl ?? DEFAULT_DATAFORSEO_BASE_URL,
+  };
+}
+
+export function redactOpenRouterConfig(config: Partial<OpenRouterProviderConfig> | undefined): Record<string, string | null> {
+  return {
+    apiKey: config?.apiKey ? "********" : null,
+    baseUrl: config?.baseUrl ?? DEFAULT_OPENROUTER_BASE_URL,
   };
 }
 

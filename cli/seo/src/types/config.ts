@@ -4,6 +4,11 @@ export interface DataForSeoProviderConfig {
   baseUrl?: string;
 }
 
+export interface OpenRouterProviderConfig {
+  apiKey: string;
+  baseUrl?: string;
+}
+
 export type GoogleOAuthApplicationType = "web" | "desktop";
 
 export interface GoogleOAuthTokenSet {
@@ -38,6 +43,7 @@ export interface SeoCliConfig {
   providers?: {
     dataforseo?: Partial<DataForSeoProviderConfig>;
     google?: Partial<GoogleOAuthProviderConfig>;
+    openrouter?: Partial<OpenRouterProviderConfig>;
   };
 }
 
@@ -55,4 +61,9 @@ export interface ResolvedGoogleOAuthProviderConfig {
   scopes: string[];
   tokens?: GoogleOAuthTokenSet;
   pendingAuth?: GoogleOAuthPendingAuth;
+}
+
+export interface ResolvedOpenRouterProviderConfig {
+  apiKey: string;
+  baseUrl: string;
 }

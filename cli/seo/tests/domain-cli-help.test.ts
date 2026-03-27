@@ -42,3 +42,16 @@ test("bin/seo exposes domain spam-score sync-db help on the CLI", async () => {
   assert.match(stdout, /table: competitor_backlink_sources/);
   assert.match(stdout, /--dry-run/);
 });
+
+test("bin/seo exposes keyword relevance classification help on the CLI", async () => {
+  const projectDir = path.resolve(import.meta.dirname, "..");
+  const seoBin = path.join(projectDir, "bin", "seo");
+  const { stdout } = await execFileAsync(seoBin, ["keywords", "classify-relevance", "--help"], {
+    cwd: projectDir,
+    env: process.env,
+  });
+
+  assert.match(stdout, /seo keywords classify-relevance \(\-\-query <keyword> \| \-\-jsonl <path\|->\)/);
+  assert.match(stdout, /--brand <overview>/);
+  assert.match(stdout, /--concurrency <n>/);
+});
