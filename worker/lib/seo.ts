@@ -703,6 +703,10 @@ export type AnalyticsSummary = {
     sessions: number;
     users: number;
   }>;
+  organicDaily: Array<{
+    date: string;
+    sessions: number;
+  }>;
 };
 
 function n(val: string | number | null | undefined): number {
@@ -730,7 +734,7 @@ export async function getAnalyticsSummary(
   const currentRange = between(analyticsDaily.eventDate, startDate, endDate);
   const priorRange = between(analyticsDaily.eventDate, priorStartStr, priorEndStr);
 
-  const [currentTotals, priorTotals, channelRows, topPageRows, deviceRows, dailyRows] =
+  const [currentTotals, priorTotals, channelRows, topPageRows, deviceRows, dailyRows, organicDailyRows] =
     await Promise.all([
       // 1. Headline totals — current
       db
@@ -817,6 +821,24 @@ export async function getAnalyticsSummary(
         .where(and(siteFilter, currentRange))
         .groupBy(analyticsDaily.eventDate)
         .orderBy(analyticsDaily.eventDate),
+
+      // 7. Organic daily time series (current)
+      db
+        .select({
+          date: analyticsDaily.eventDate,
+          sessions: sum(analyticsDaily.sessions),
+        })
+        .from(analyticsDaily)
+        .where(and(
+          siteFilter,
+          currentRange,
+          or(
+            eq(analyticsDaily.channel, "organic search"),
+            eq(analyticsDaily.channel, "organic"),
+          ),
+        ))
+        .groupBy(analyticsDaily.eventDate)
+        .orderBy(analyticsDaily.eventDate),
     ]);
 
   const cur = currentTotals[0];
@@ -864,6 +886,10 @@ export async function getAnalyticsSummary(
       date: row.date,
       sessions: n(row.sessions),
       users: n(row.users),
+    })),
+    organicDaily: organicDailyRows.map((row) => ({
+      date: row.date,
+      sessions: n(row.sessions),
     })),
   };
 }
@@ -1944,9 +1970,10 @@ export async function getKeywordsData(
     sortDirection: "asc" | "desc";
     intentFilter?: string;
     sourceFilter: string;
+    relevanceFilter?: string;
   },
 ) {
-  const { siteId, page, pageSize, search, sortBy, sortDirection, intentFilter, sourceFilter } = input;
+  const { siteId, page, pageSize, search, sortBy, sortDirection, intentFilter, sourceFilter, relevanceFilter } = input;
   const offset = (page - 1) * pageSize;
 
   // Build the base query using raw SQL for the complex aggregation
@@ -1966,6 +1993,15 @@ export async function getKeywordsData(
         ? sql`AND kw.our_query_id IS NOT NULL AND kw.competitor_count > 0`
         : sourceFilter === "competitor_only"
           ? sql`AND kw.our_query_id IS NULL`
+          : sql``;
+
+  const relevanceCondition =
+    relevanceFilter === "relevant"
+      ? sql`AND kw.is_relevant = true`
+      : relevanceFilter === "not_relevant"
+        ? sql`AND kw.is_relevant = false`
+        : relevanceFilter === "unclassified"
+          ? sql`AND kw.is_relevant IS NULL`
           : sql``;
 
   // Sort mapping
@@ -2001,7 +2037,9 @@ export async function getKeywordsData(
         (array_agg(crk.search_intent ORDER BY crk.captured_at DESC)
           FILTER (WHERE crk.search_intent IS NOT NULL))[1] AS search_intent,
         (array_agg(crk.keyword_difficulty ORDER BY crk.captured_at DESC)
-          FILTER (WHERE crk.keyword_difficulty IS NOT NULL))[1] AS keyword_difficulty
+          FILTER (WHERE crk.keyword_difficulty IS NOT NULL))[1] AS keyword_difficulty,
+        (array_agg(crk.is_relevant ORDER BY crk.captured_at DESC)
+          FILTER (WHERE crk.is_relevant IS NOT NULL))[1] AS is_relevant
       FROM competitor_ranked_keywords crk
       INNER JOIN site_competitors sc ON sc.id = crk.site_competitor_id
       INNER JOIN competitor_best cb ON cb.keyword = crk.keyword
@@ -2023,6 +2061,7 @@ export async function getKeywordsData(
         kw.competitor_count,
         kw.search_intent,
         kw.keyword_difficulty,
+        kw.is_relevant,
         our_q.id AS our_query_id
       FROM competitor_kws kw
       FULL OUTER JOIN our_queries our_q ON LOWER(kw.keyword) = LOWER(our_q.keyword)
@@ -2036,6 +2075,7 @@ export async function getKeywordsData(
       kw.best_rank AS "bestCompetitorRank",
       kw.best_competitor_label AS "bestCompetitorLabel",
       COALESCE(kw.competitor_count, 0)::int AS "competitorCount",
+      kw.is_relevant AS "isRelevant",
       scd.avg_position AS "ourPosition",
       scd.clicks AS "ourClicks",
       scd.impressions AS "ourImpressions",
@@ -2052,6 +2092,7 @@ export async function getKeywordsData(
     ${searchCondition}
     ${intentCondition}
     ${sourceCondition}
+    ${relevanceCondition}
     ORDER BY ${sql.raw(sortCol)} ${sortDir} NULLS LAST, kw.keyword ASC
     LIMIT ${pageSize}
     OFFSET ${offset}
@@ -2103,6 +2144,7 @@ export async function getKeywordsData(
     ourPosition: string | null;
     ourClicks: number | null;
     ourImpressions: number | null;
+    isRelevant: boolean | null;
     totalCount: string;
   }>;
 
@@ -2134,6 +2176,7 @@ export async function getKeywordsData(
       bestCompetitorRank: r.bestCompetitorRank,
       bestCompetitorLabel: r.bestCompetitorLabel,
       competitorCount: r.competitorCount,
+      isRelevant: r.isRelevant,
     })),
     pageInfo: {
       page,

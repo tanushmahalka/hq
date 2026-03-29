@@ -49,6 +49,11 @@ export type SeoPage = {
   clusterNames: string[];
 };
 
+export type AiAuditItem = {
+  problem_title: string;
+  problem_description: string;
+};
+
 export type PageAuditItem = {
   url: string;
   meta: {
@@ -513,6 +518,7 @@ export type KeywordRow = {
   bestCompetitorRank: number | null;
   bestCompetitorLabel: string | null;
   competitorCount: number;
+  isRelevant: boolean | null;
 };
 
 export type KeywordsData = {

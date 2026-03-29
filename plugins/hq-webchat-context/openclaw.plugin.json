@@ -1,0 +1,5 @@
+{
+  "id": "hq-webchat-context",
+  "name": "HQ Webchat Context",
+  "description": "Injects the current HQ webchat user's name into prompt context."
+}

@@ -56,6 +56,7 @@ export const seoRouter = router({
         sortDirection: z.enum(["asc", "desc"]).default("desc"),
         intentFilter: z.string().optional(),
         sourceFilter: z.enum(["all", "ours", "shared", "competitor_only"]).default("all"),
+        relevanceFilter: z.enum(["all", "relevant", "not_relevant", "unclassified"]).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {

@@ -1,0 +1,19 @@
+{
+  "name": "@psx/hq-webchat-context",
+  "version": "0.1.0",
+  "description": "OpenClaw plugin — injects HQ webchat user identity into prompt context",
+  "type": "module",
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

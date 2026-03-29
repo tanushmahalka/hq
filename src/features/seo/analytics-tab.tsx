@@ -166,6 +166,11 @@ export function AnalyticsTab({ siteId }: { siteId: number }) {
           {/* Daily visitors chart */}
           <DailyChart daily={data.daily} />
 
+          {/* Organic views growth */}
+          {data.organicDaily.length > 0 && (
+            <OrganicGrowthChart daily={data.organicDaily} />
+          )}
+
           {/* Headline metrics */}
           <HeadlineMetrics
             current={data.headline.current}
@@ -461,6 +466,213 @@ function DailyChart({
           ))}
 
           {/* X-axis labels */}
+          {xLabelIndices.map((i) => (
+            <text
+              key={i}
+              x={xPos(i)}
+              y={H - 6}
+              textAnchor={
+                i === 0 ? "start" : i === daily.length - 1 ? "end" : "middle"
+              }
+              className="fill-muted-foreground/40 text-[9px]"
+            >
+              {formatShortDate(daily[i].date)}
+            </text>
+          ))}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * OrganicGrowthChart — organic views over time (emerald theme)
+ * --------------------------------------------------------------------------- */
+
+function OrganicGrowthChart({
+  daily,
+}: {
+  daily: Array<{ date: string; sessions: number }>;
+}) {
+  const lineRef = useRef<SVGPathElement>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [pathLength, setPathLength] = useState(0);
+
+  useEffect(() => {
+    if (lineRef.current) {
+      setPathLength(lineRef.current.getTotalLength());
+    }
+  }, [daily]);
+
+  if (!daily || daily.length === 0) return null;
+
+  const maxSessions = Math.max(...daily.map((d) => d.sessions), 1);
+  const W = 800;
+  const H = 200;
+  const padX = 0;
+  const padTop = 12;
+  const padBottom = 28;
+  const chartH = H - padTop - padBottom;
+  const chartW = W - padX * 2;
+
+  function xPos(i: number) {
+    return padX + (i / Math.max(daily.length - 1, 1)) * chartW;
+  }
+  function yPos(val: number) {
+    return padTop + chartH - (val / maxSessions) * chartH;
+  }
+
+  const points = daily.map((d, i) => ({ x: xPos(i), y: yPos(d.sessions) }));
+  const linePath = smoothPath(points);
+  const areaPath =
+    linePath +
+    `L${xPos(daily.length - 1)},${padTop + chartH}L${xPos(0)},${padTop + chartH}Z`;
+
+  const yTicks = [0, Math.round(maxSessions / 2), maxSessions];
+  const xLabelIndices =
+    daily.length <= 7
+      ? daily.map((_, i) => i)
+      : [0, Math.floor(daily.length / 4), Math.floor(daily.length / 2), Math.floor((3 * daily.length) / 4), daily.length - 1];
+
+  const formatShortDate = (dateStr: string) => {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
+
+  const hovered = hoveredIndex !== null ? daily[hoveredIndex] : null;
+
+  return (
+    <div className="rounded-xl border border-border/40 bg-card p-5 swarm-card">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-medium text-muted-foreground">
+          Organic views
+        </p>
+        {hovered ? (
+          <div className="flex items-center gap-3 analytics-fade-up" key={hoveredIndex}>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {formatShortDate(hovered.date)}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <div className="size-1.5 rounded-full bg-emerald-500" />
+              <p className="text-xs tabular-nums font-medium">
+                {formatNumber(hovered.sessions)} sessions
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground/40">
+            Hover to explore
+          </p>
+        )}
+      </div>
+      <div className="w-full">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full h-auto"
+          preserveAspectRatio="none"
+          onMouseLeave={() => setHoveredIndex(null)}
+        >
+          <defs>
+            <linearGradient id="organic-area-gradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-emerald-500, #10b981)" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="var(--color-emerald-500, #10b981)" stopOpacity="0.01" />
+            </linearGradient>
+            <filter id="organic-dot-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          {yTicks.map((tick) => (
+            <line
+              key={tick}
+              x1={padX}
+              x2={W - padX}
+              y1={yPos(tick)}
+              y2={yPos(tick)}
+              stroke="currentColor"
+              className="text-border/20"
+              strokeWidth={0.5}
+              strokeDasharray="4 4"
+            />
+          ))}
+
+          <path
+            d={areaPath}
+            fill="url(#organic-area-gradient)"
+            className="analytics-area-fade"
+          />
+
+          <path
+            ref={lineRef}
+            d={linePath}
+            fill="none"
+            stroke="var(--color-emerald-500, #10b981)"
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+            strokeDasharray={pathLength || undefined}
+            strokeDashoffset={0}
+            className={pathLength ? "analytics-line-draw" : undefined}
+            style={pathLength ? { "--path-length": pathLength } as React.CSSProperties : undefined}
+          />
+
+          {daily.map((d, i) => {
+            const cx = xPos(i);
+            const cy = yPos(d.sessions);
+            const segmentWidth = chartW / Math.max(daily.length - 1, 1);
+            const isHovered = hoveredIndex === i;
+            return (
+              <g key={d.date}>
+                <rect
+                  x={cx - segmentWidth / 2}
+                  y={padTop}
+                  width={segmentWidth}
+                  height={chartH}
+                  fill="transparent"
+                  onMouseEnter={() => setHoveredIndex(i)}
+                />
+                {isHovered && (
+                  <line
+                    x1={cx}
+                    x2={cx}
+                    y1={padTop}
+                    y2={padTop + chartH}
+                    stroke="var(--color-emerald-500, #10b981)"
+                    strokeWidth={0.5}
+                    strokeOpacity={0.3}
+                  />
+                )}
+                {isHovered && (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={4}
+                    fill="var(--color-emerald-500, #10b981)"
+                    filter="url(#organic-dot-glow)"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                )}
+              </g>
+            );
+          })}
+
+          {yTicks.map((tick) => (
+            <text
+              key={tick}
+              x={padX + 4}
+              y={yPos(tick) - 5}
+              className="fill-muted-foreground/40 text-[9px]"
+              dominantBaseline="auto"
+            >
+              {tick >= 1000 ? `${(tick / 1000).toFixed(1)}k` : tick}
+            </text>
+          ))}
+
           {xLabelIndices.map((i) => (
             <text
               key={i}

@@ -30,6 +30,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/lib/auth-client";
+import { buildHqWebchatSessionKey } from "@shared/hq-webchat-session";
 
 function generateAttachmentId(): string {
   return `attachment-${crypto.randomUUID()}`;
@@ -67,15 +69,19 @@ async function readFileAsAttachment(
 export function ChatPanel() {
   const { agents, connected } = useGateway();
   const { selectedAgentId, selectAgent, closeChat } = useMessengerPanel();
+  const { data: session, isPending: sessionPending } = useSession();
 
-  if (!selectedAgentId) return null;
+  if (!selectedAgentId || sessionPending || !session?.user.name) return null;
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
   const selectedRaw =
     selectedAgent?.identity?.name ?? selectedAgent?.name ?? selectedAgentId;
   const { name: selectedName, role: selectedRole } = parseAgentName(selectedRaw);
   const otherAgents = agents.filter((a) => a.id !== selectedAgentId);
-  const sessionKey = `agent:${selectedAgentId}:webchat`;
+  const sessionKey = buildHqWebchatSessionKey({
+    agentId: selectedAgentId,
+    userName: session.user.name,
+  });
 
   return (
     <div className="h-full w-[420px] flex flex-col border-l border-border/50 bg-card relative">

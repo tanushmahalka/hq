@@ -86,6 +86,18 @@ function SourceBadge({ row }: { row: KeywordRow }) {
   return <span className="text-[11px] text-muted-foreground">Competitor</span>;
 }
 
+function RelevanceBadge({ value }: { value: boolean | null }) {
+  if (value === true) {
+    return <span className="text-[11px] text-emerald-600 dark:text-emerald-400">Yes</span>;
+  }
+  if (value === false) {
+    return <span className="text-[11px] text-red-500 dark:text-red-400">No</span>;
+  }
+  return <span className="text-muted-foreground/40">--</span>;
+}
+
+type RelevanceFilter = "all" | "relevant" | "not_relevant" | "unclassified";
+
 /* ---------------------------------------------------------------------------
  * Columns
  * --------------------------------------------------------------------------- */
@@ -200,6 +212,12 @@ const columns: Array<ColumnDef<KeywordRow, unknown>> = [
     cell: ({ row }) => <SourceBadge row={row.original} />,
     enableSorting: false,
   },
+  {
+    accessorKey: "isRelevant",
+    header: "Relevant",
+    cell: ({ row }) => <RelevanceBadge value={row.original.isRelevant} />,
+    enableSorting: false,
+  },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -212,6 +230,7 @@ export function KeywordsTab({ siteId }: { siteId: number }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "searchVolume", desc: true }]);
   const [intentFilter, setIntentFilter] = useState<string | undefined>();
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [relevanceFilter, setRelevanceFilter] = useState<RelevanceFilter>("all");
 
   const deferredSearch = useDeferredValue(search);
   const activeSort = sorting[0] ?? { id: "searchVolume", desc: true };
@@ -226,8 +245,9 @@ export function KeywordsTab({ siteId }: { siteId: number }) {
       sortDirection: activeSort.desc ? ("desc" as const) : ("asc" as const),
       intentFilter,
       sourceFilter,
+      relevanceFilter: relevanceFilter !== "all" ? relevanceFilter : undefined,
     }),
-    [siteId, page, deferredSearch, activeSort.id, activeSort.desc, intentFilter, sourceFilter],
+    [siteId, page, deferredSearch, activeSort.id, activeSort.desc, intentFilter, sourceFilter, relevanceFilter],
   );
 
   const query = trpc.seo.keywords.useQuery(queryInput, {
@@ -239,8 +259,8 @@ export function KeywordsTab({ siteId }: { siteId: number }) {
   const data = query.data as KeywordsData | undefined;
 
   // Reset page on filter changes
-  useEffect(() => { setPage(1); }, [deferredSearch, intentFilter, sourceFilter]);
-  useEffect(() => { setPage(1); setSearch(""); setIntentFilter(undefined); setSourceFilter("all"); }, [siteId]);
+  useEffect(() => { setPage(1); }, [deferredSearch, intentFilter, sourceFilter, relevanceFilter]);
+  useEffect(() => { setPage(1); setSearch(""); setIntentFilter(undefined); setSourceFilter("all"); setRelevanceFilter("all"); }, [siteId]);
 
   const handleSortingChange = (next: SortingState) => {
     setSorting(next);
@@ -305,6 +325,25 @@ export function KeywordsTab({ siteId }: { siteId: number }) {
               active={sourceFilter === sf.key}
               label={sf.label}
               onClick={() => setSourceFilter(sf.key)}
+            />
+          ))}
+        </div>
+
+        {/* Relevance filter chips */}
+        <div className="flex items-center gap-1.5 ml-2 border-l border-border/50 pl-3">
+          {(
+            [
+              { key: "all", label: "All" },
+              { key: "relevant", label: "Relevant" },
+              { key: "not_relevant", label: "Not relevant" },
+              { key: "unclassified", label: "Unclassified" },
+            ] as const
+          ).map((rf) => (
+            <FilterChip
+              key={rf.key}
+              active={relevanceFilter === rf.key}
+              label={rf.label}
+              onClick={() => setRelevanceFilter(rf.key)}
             />
           ))}
         </div>

@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useChat, type PendingImageAttachment } from "./use-chat";
+import { buildHqWebchatSessionKey } from "@shared/hq-webchat-session";
 
 type GatewaySubscriber = (event: {
   type: "event";
@@ -42,8 +43,8 @@ async function emitChat(payload: {
   });
 }
 
-function getSessionKey(agentId = "agent-1") {
-  return `agent:${agentId}:webchat`;
+function getSessionKey(agentId = "agent-1", userName = "Tanush Mahalka") {
+  return buildHqWebchatSessionKey({ agentId, userName });
 }
 
 function getChatSendCalls() {

@@ -214,6 +214,7 @@ If the user already exists, only `SUPER_ADMIN_EMAIL` is required and the script 
 ```bash
 cd /opt/hq/openclaw
 pnpm openclaw plugins install -l /opt/hq/plugins/hq-missions
+pnpm openclaw plugins install -l /opt/hq/plugins/hq-webchat-context
 pnpm openclaw config set hooks.enabled true
 pnpm openclaw config set hooks.token "<OPENCLAW_HOOKS_TOKEN>"
 pnpm openclaw config set hooks.defaultSessionKey "hook:hq"
@@ -227,6 +228,8 @@ pnpm openclaw gateway restart || sudo systemctl restart openclaw-gateway
 ```
 
 `hooks.allowRequestSessionKey=true` is required because HQ starts task work in explicit task-scoped sessions like `agent:<agentId>:task:<taskId>`. `hooks.allowedSessionKeyPrefixes` keeps that power constrained to the expected `hook:` and `agent:` namespaces.
+
+`hq-webchat-context` needs no extra config. It derives the human-facing name directly from HQ's `agent:<agentId>:hq:webchat:user:<name-slug>` session keys and injects a short identity line into prompt context.
 
 `agents.defaults.subagents.maxSpawnDepth=2` allows a depth-1 worker to spawn exactly one validator leaf while still preventing unbounded nested orchestration.
 

@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { MessengerChatProvider, useMessengerChat } from "./use-messenger-chat";
+import { buildHqWebchatSessionKey } from "@shared/hq-webchat-session";
 
 type GatewaySubscriber = (event: {
   type: "event";
@@ -33,8 +34,8 @@ function Wrapper({ children }: { children: ReactNode }) {
   return <MessengerChatProvider>{children}</MessengerChatProvider>;
 }
 
-function getSessionKey(agentId = "agent-1") {
-  return `agent:${agentId}:webchat`;
+function getSessionKey(agentId = "agent-1", userName = "Tanush Mahalka") {
+  return buildHqWebchatSessionKey({ agentId, userName });
 }
 
 async function emitChat(payload: {
@@ -127,6 +128,37 @@ describe("useMessengerChat", () => {
         return method === "chat.send" && params?.sessionKey === getSessionKey("agent-b");
       }),
     ).toHaveLength(1);
+  });
+
+  it("keeps state isolated for different user slugs on the same agent", async () => {
+    const tanushSessionKey = getSessionKey("agent-a", "Tanush Mahalka");
+    const avaSessionKey = getSessionKey("agent-a", "Ava Stone");
+
+    const { result, rerender } = renderHook(
+      ({ sessionKey }) => useMessengerChat(sessionKey),
+      {
+        initialProps: { sessionKey: tanushSessionKey },
+        wrapper: Wrapper,
+      },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.setDraft("Hello Tanush");
+    });
+
+    rerender({ sessionKey: avaSessionKey });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.draft).toBe("");
+
+    act(() => {
+      result.current.setDraft("Hello Ava");
+    });
+
+    rerender({ sessionKey: tanushSessionKey });
+    expect(result.current.draft).toBe("Hello Tanush");
   });
 
   it("loads initial history once the gateway connection becomes ready", async () => {
