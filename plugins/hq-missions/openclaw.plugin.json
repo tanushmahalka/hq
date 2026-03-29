@@ -1,7 +1,7 @@
 {
   "id": "hq-missions",
   "name": "HQ Missions",
-  "description": "Gives agents structured access to the HQ Mission Framework (missions, objectives, campaigns) and enriches task context with mission hierarchy.",
+  "description": "Gives agents structured access to the HQ Mission Framework (missions, objectives, campaigns) and simple HQ task management.",
   "skills": ["./skills"],
   "configSchema": {
     "type": "object",
@@ -14,11 +14,6 @@
       "hqApiToken": {
         "type": "string",
         "description": "Bearer token for HQ API"
-      },
-      "autoEnrich": {
-        "type": "boolean",
-        "default": true,
-        "description": "Auto-inject mission context into task sessions"
       }
     },
     "required": []

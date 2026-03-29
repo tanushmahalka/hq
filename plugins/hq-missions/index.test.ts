@@ -3,7 +3,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const callMock = vi.fn();
-const fetchMissionChainMock = vi.fn();
 
 vi.mock("@sinclair/typebox", () => ({
   Type: {
@@ -22,7 +21,7 @@ vi.mock("@sinclair/typebox", () => ({
 vi.mock("./hq-client", () => ({
   createHQClient: vi.fn(() => ({
     call: callMock,
-    fetchMissionChain: fetchMissionChainMock,
+    fetchMissionChain: vi.fn(),
   })),
 }));
 
@@ -36,16 +35,13 @@ type ToolDef = {
   name: string;
   execute: (
     id: string,
-    params: Record<string, unknown>
+    params: Record<string, unknown>,
   ) => Promise<{ content: { type: string; text: string }[] }>;
 };
 
 type HookHandler = (
   event: Record<string, unknown>,
-  meta: {
-    agentId?: string;
-    sessionKey?: string;
-  }
+  meta: { agentId?: string; sessionKey?: string },
 ) => Promise<Record<string, unknown> | void> | Record<string, unknown> | void;
 
 function createPlugin() {
@@ -95,7 +91,6 @@ function createPluginWithPluginConfig() {
 
 beforeEach(() => {
   callMock.mockReset();
-  fetchMissionChainMock.mockReset();
 });
 
 describe("hq-missions plugin", () => {
@@ -105,20 +100,18 @@ describe("hq-missions plugin", () => {
 
     await tools.get("create_task")!.execute("1", {
       title: "Write brief",
-      workflowMode: "simple",
     });
 
     expect(callMock).toHaveBeenCalledWith(
       "task.create",
       expect.objectContaining({
         title: "Write brief",
-        workflowMode: "simple",
       }),
     );
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it("coerces campaign ids and forwards workflowMode and category for task create and update", async () => {
+  it("coerces campaign ids and forwards category for task create and update", async () => {
     const { tools } = createPlugin();
     callMock.mockResolvedValue({ id: "task-1" });
 
@@ -126,7 +119,6 @@ describe("hq-missions plugin", () => {
       title: "Write brief",
       campaignId: "42",
       category: "seo",
-      workflowMode: "complex",
     });
     expect(callMock).toHaveBeenNthCalledWith(
       1,
@@ -135,21 +127,18 @@ describe("hq-missions plugin", () => {
         title: "Write brief",
         campaignId: 42,
         category: "seo",
-        workflowMode: "complex",
-      })
+      }),
     );
 
     await tools.get("update_task")!.execute("1", {
       taskId: "task-1",
       campaignId: "99",
       category: null,
-      workflowMode: "simple",
     });
     expect(callMock).toHaveBeenNthCalledWith(2, "task.update", {
       id: "task-1",
       campaignId: 99,
       category: null,
-      workflowMode: "simple",
     });
   });
 
@@ -161,40 +150,19 @@ describe("hq-missions plugin", () => {
         toolName: "create_task",
         params: {
           title: "Write brief",
-          workflowMode: "simple",
         },
       },
       {
         agentId: "mira-seo",
-      }
+      },
     );
 
     expect(result).toEqual({
       params: {
         title: "Write brief",
-        workflowMode: "simple",
         assignee: "mira-seo",
       },
     });
-  });
-
-  it("does not overwrite an explicit create_task assignee", async () => {
-    const { hooks } = createPlugin();
-
-    const result = await hooks.get("before_tool_call")!(
-      {
-        toolName: "create_task",
-        params: {
-          title: "Write brief",
-          assignee: "leo-team-lead",
-        },
-      },
-      {
-        agentId: "mira-seo",
-      }
-    );
-
-    expect(result).toBeUndefined();
   });
 
   it("coerces numeric comment ids before deleting task comments", async () => {
@@ -208,325 +176,14 @@ describe("hq-missions plugin", () => {
     expect(callMock).toHaveBeenCalledWith("task.comment.delete", { id: 17 });
   });
 
-  it("coerces workflow tool payloads", async () => {
+  it("does not register removed workflow tools", () => {
     const { tools } = createPlugin();
-    callMock.mockResolvedValue({ ok: true });
 
-    await tools.get("update_task_subtask")!.execute("1", {
-      taskId: "task-1",
-      subtaskId: "7",
-      status: "done",
-    });
-    expect(callMock).toHaveBeenNthCalledWith(1, "task.workflow.updateSubtask", {
-      taskId: "task-1",
-      subtaskId: 7,
-      status: "done",
-      latestWorkerSummary: undefined,
-      latestValidatorSummary: undefined,
-      latestFeedback: undefined,
-    });
-
-    await tools.get("link_task_session")!.execute("2", {
-      taskId: "task-1",
-      sessionKey: "agent:worker:subagent:abc",
-      role: "worker",
-      subtaskId: "7",
-      startedAtIso: "2026-03-13T09:00:00.000Z",
-    });
-    expect(callMock).toHaveBeenNthCalledWith(2, "task.workflow.linkSession", {
-      taskId: "task-1",
-      sessionKey: "agent:worker:subagent:abc",
-      role: "worker",
-      subtaskId: 7,
-      agentId: undefined,
-      parentSessionKey: undefined,
-      startedAt: new Date("2026-03-13T09:00:00.000Z"),
-      completedAt: undefined,
-      endedAt: undefined,
-    });
-  });
-
-  it("injects complex workflow context during before_prompt_build", async () => {
-    const { hooks } = createPlugin();
-    callMock.mockResolvedValue({
-      task: {
-        id: "task-1",
-        title: "Complex task",
-        description: "Ship the workflow",
-        status: "doing",
-        category: "seo",
-        workflowMode: "complex",
-        assignor: "lead",
-        assignee: "agent-1",
-        campaignId: 3,
-      },
-      workflow: {
-        status: "planning",
-        planPath: ".openclaw/tasks/task-1/plan.md",
-        planSummary: "Plan summary",
-      },
-      subtasks: [
-        {
-          id: 11,
-          position: 1,
-          title: "Implement data model",
-          instructions: "Add tables and enums",
-          acceptanceCriteria: "Schema and API compile",
-          status: "running",
-          latestWorkerSummary: null,
-          latestValidatorSummary: null,
-          latestFeedback: null,
-        },
-      ],
-      sessions: [
-        {
-          id: 1,
-          sessionKey: "agent:agent-1:task:task-1",
-          role: "root",
-          subtaskId: null,
-          agentId: "agent-1",
-          parentSessionKey: null,
-          startedAt: null,
-          completedAt: null,
-          endedAt: null,
-        },
-      ],
-      summary: {
-        mode: "complex",
-        status: "planning",
-        planPath: ".openclaw/tasks/task-1/plan.md",
-        planSummary: "Plan summary",
-        totalSubtasks: 1,
-        completedSubtasks: 0,
-        activeSubtaskId: 11,
-        blockedSubtaskId: null,
-        rootAgentId: "agent-1",
-        sessionKeys: ["agent:agent-1:task:task-1"],
-      },
-    });
-    fetchMissionChainMock.mockResolvedValue({
-      mission: {
-        id: 1,
-        agentId: "agent-1",
-        title: "Mission",
-        description: null,
-        status: "active",
-      },
-      objective: {
-        id: 2,
-        title: "Objective",
-        description: null,
-        targetMetric: "traffic",
-        targetValue: "100",
-        currentValue: "50",
-        status: "active",
-        dueDate: new Date("2026-03-20T00:00:00.000Z"),
-      },
-      campaign: {
-        id: 3,
-        title: "Campaign",
-        description: null,
-        hypothesis: "A test hypothesis",
-        learnings: null,
-        status: "active",
-      },
-    });
-
-    const result = await hooks.get("before_prompt_build")!(
-      {
-        prompt: "hello",
-        messages: [],
-      },
-      {
-        sessionKey: "agent:agent-1:task:task-1",
-      }
-    );
-
-    expect(callMock).toHaveBeenCalledWith(
-      "task.workflow.get",
-      { sessionKey: "agent:agent-1:task:task-1" },
-      { type: "query" }
-    );
-    expect(fetchMissionChainMock).toHaveBeenCalledWith(3);
-    expect(result).toEqual(
-      expect.objectContaining({
-        prependSystemContext: expect.stringContaining(
-          "HQ COMPLEX TASK WORKFLOW"
-        ),
-      })
-    );
-    expect(result?.prependSystemContext).toContain(
-      "Role: Root assignee orchestrator."
-    );
-    expect(result?.prependSystemContext).toContain(
-      "The planner must call record_task_plan and set_task_subtasks before handing control back to you."
-    );
-    expect(result?.prependSystemContext).toContain(
-      "Push the planner toward failure-isolating subtasks: independent targets should usually become separate subtasks or very small deterministic batches."
-    );
-    expect(result?.prependSystemContext).toContain("Category: SEO");
-    expect(result?.prependSystemContext).not.toContain("validator subagent");
-    expect(result?.prependSystemContext).toContain("MISSION CONTEXT");
-  });
-
-  it("injects planner guidance that records the plan and subtasks", async () => {
-    const { hooks } = createPlugin();
-    callMock.mockResolvedValue({
-      task: {
-        id: "task-1",
-        title: "Complex task",
-        description: "Ship the workflow",
-        status: "doing",
-        workflowMode: "complex",
-        assignor: "lead",
-        assignee: "agent-1",
-        campaignId: null,
-      },
-      workflow: {
-        status: "planning",
-        planPath: ".openclaw/tasks/task-1/plan.md",
-        planSummary: "Plan summary",
-      },
-      subtasks: [],
-      sessions: [
-        {
-          id: 2,
-          sessionKey: "agent:planner:subagent:abc",
-          role: "planner",
-          subtaskId: null,
-          agentId: "planner",
-          parentSessionKey: "agent:agent-1:task:task-1",
-          startedAt: null,
-          completedAt: null,
-          endedAt: null,
-        },
-      ],
-      summary: {
-        mode: "complex",
-        status: "planning",
-        planPath: ".openclaw/tasks/task-1/plan.md",
-        planSummary: "Plan summary",
-        totalSubtasks: 0,
-        completedSubtasks: 0,
-        activeSubtaskId: null,
-        blockedSubtaskId: null,
-        rootAgentId: "agent-1",
-        sessionKeys: ["agent:planner:subagent:abc"],
-      },
-    });
-
-    const result = await hooks.get("before_prompt_build")!(
-      {
-        prompt: "hello",
-        messages: [],
-      },
-      {
-        sessionKey: "agent:planner:subagent:abc",
-      }
-    );
-
-    expect(result?.prependSystemContext).toContain("Role: Planner subagent.");
-    expect(result?.prependSystemContext).toContain(
-      "When the task repeats across many independent targets, prefer one target per subtask or a very small deterministic batch with an explicit reason."
-    );
-    expect(result?.prependSystemContext).toContain(
-      "Example: if 18 competitors each need a backlink import, shared setup can be one subtask, but the competitor imports should usually be separate subtasks so retries and status tracking stay isolated."
-    );
-    expect(result?.prependSystemContext).toContain(
-      "After the plan is ready, call record_task_plan and then set_task_subtasks with the ordered execution list."
-    );
-  });
-
-  it("injects worker guidance without a validator handoff", async () => {
-    const { hooks } = createPlugin();
-    callMock.mockResolvedValue({
-      task: {
-        id: "task-1",
-        title: "Complex task",
-        description: "Ship the workflow",
-        status: "doing",
-        workflowMode: "complex",
-        assignor: "lead",
-        assignee: "agent-1",
-        campaignId: null,
-      },
-      workflow: {
-        status: "executing",
-        planPath: ".openclaw/tasks/task-1/plan.md",
-        planSummary: "Plan summary",
-      },
-      subtasks: [
-        {
-          id: 11,
-          position: 1,
-          title: "Implement data model",
-          instructions: "Add tables and enums",
-          acceptanceCriteria: "Schema and API compile",
-          status: "running",
-          latestWorkerSummary: null,
-          latestValidatorSummary: null,
-          latestFeedback: null,
-        },
-      ],
-      sessions: [
-        {
-          id: 3,
-          sessionKey: "agent:worker:subagent:def",
-          role: "worker",
-          subtaskId: 11,
-          agentId: "worker",
-          parentSessionKey: "agent:agent-1:task:task-1",
-          startedAt: null,
-          completedAt: null,
-          endedAt: null,
-        },
-      ],
-      summary: {
-        mode: "complex",
-        status: "executing",
-        planPath: ".openclaw/tasks/task-1/plan.md",
-        planSummary: "Plan summary",
-        totalSubtasks: 1,
-        completedSubtasks: 0,
-        activeSubtaskId: 11,
-        blockedSubtaskId: null,
-        rootAgentId: "agent-1",
-        sessionKeys: ["agent:worker:subagent:def"],
-      },
-    });
-
-    const result = await hooks.get("before_prompt_build")!(
-      {
-        prompt: "hello",
-        messages: [],
-      },
-      {
-        sessionKey: "agent:worker:subagent:def",
-      }
-    );
-
-    expect(result?.prependSystemContext).toContain("Role: Worker subagent.");
-    expect(result?.prependSystemContext).toContain(
-      "Do the work, verify it against the acceptance criteria, then record a concise implementation summary and mark the subtask done with update_task_subtask."
-    );
-    expect(result?.prependSystemContext).not.toContain("validator subagent");
-  });
-
-  it("skips prompt enrichment when the session is not linked to a workflow", async () => {
-    const { hooks } = createPlugin();
-    callMock.mockRejectedValue(new Error("not found"));
-
-    const result = await hooks.get("before_prompt_build")!(
-      {
-        prompt: "hello",
-        messages: [],
-      },
-      {
-        sessionKey: "agent:agent-1:task:task-1",
-      }
-    );
-
-    expect(result).toBeUndefined();
-    expect(fetchMissionChainMock).not.toHaveBeenCalled();
+    expect(tools.has("get_task_workflow")).toBe(false);
+    expect(tools.has("record_task_plan")).toBe(false);
+    expect(tools.has("set_task_subtasks")).toBe(false);
+    expect(tools.has("update_task_subtask")).toBe(false);
+    expect(tools.has("link_task_session")).toBe(false);
+    expect(tools.has("complete_task_workflow")).toBe(false);
   });
 });

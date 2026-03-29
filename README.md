@@ -11,7 +11,7 @@ HQ is built around a simple idea: if AI agents are going to do meaningful work, 
 This project provides that surface:
 
 - A multi-tenant operator dashboard for teams managing AI agents
-- A task system that supports both simple execution and structured multi-step workflows
+- A task system for simple execution with rich metadata, comments, and agent notifications
 - Mission, objective, and campaign tracking for longer-running strategic work
 - Live OpenClaw gateway connectivity for approvals, logs, events, and agent state
 - A built-in marketing asset pipeline with version history, live HTML preview, and PDF export
@@ -27,7 +27,7 @@ HQ is not a demo dashboard. It spans the full stack:
 
 - Product and UX: a real operator console with distinct workflows for tasks, missions, files, SEO, usage, and content
 - Application architecture: a typed React frontend, Hono server, tRPC API layer, and Drizzle/Postgres data model
-- Agent systems design: hook-based task triggering, workflow state machines, agent session linking, and human-in-the-loop approvals
+- Agent systems design: hook-based task triggering, live agent session linking, and human-in-the-loop approvals
 - Business use cases: content generation, campaign tracking, operational task routing, and SEO/GEO analysis
 - Platform thinking: auth, org boundaries, invite-only onboarding, deployment scripts, CLI tooling, and runtime integration with an external gateway
 
@@ -46,12 +46,8 @@ If someone wants to understand the kind of product and systems work I can own en
 
 - Kanban-based task management
 - Rich task metadata including assignee, urgency, due dates, and comments
-- Simple and complex workflow modes
-- Complex workflows support:
-  - recorded plans
-  - ordered subtasks
-  - linked planner / worker / validator sessions
-  - status synchronization between subtasks and parent tasks
+- A single simple-task model across the app, API, and agent tools
+- Direct agent notifications for assigned tasks
 
 ### 3. Missions, Objectives, and Campaigns
 
@@ -123,7 +119,7 @@ flowchart LR
 The schema is split into a few clear domains:
 
 - `auth`: users, sessions, organizations, members, invitations, API keys
-- `core`: tasks, comments, workflows, subtasks, task sessions, agent database bindings
+- `core`: tasks, comments, and agent database bindings
 - `custom`: missions and objectives
 - `marketing`: assets, revisions, campaigns
 - `seo`: sites, crawls, pages, clusters, queries, analytics, competitors, backlinks, and GEO/SEO support tables
@@ -286,7 +282,7 @@ src/                 frontend application
 worker/              Hono app, tRPC routers, domain services
 server/              Node entrypoint for local/prod serving
 drizzle/schema/      typed Postgres schema
-shared/              shared task/workflow/domain types
+shared/              shared task/domain types
 plugins/             OpenClaw-facing plugins
 cli/                 supporting automation and provider CLIs
 scripts/             bootstrap, migration, and admin utilities

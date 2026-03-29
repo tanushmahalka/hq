@@ -1,7 +1,6 @@
 import { router, mergeRouters } from "./init.ts";
 import { approvalRouter } from "./procedures/approval.ts";
 import { taskRouter } from "./procedures/task.ts";
-import { workflowRouter } from "./procedures/task-workflow.ts";
 import { commentRouter } from "./procedures/comment.ts";
 import { dbRouter } from "./procedures/db.ts";
 import { seoRouter } from "./procedures/seo.ts";
@@ -18,7 +17,6 @@ export const appRouter = router({
     taskRouter,
     router({
       comment: commentRouter,
-      workflow: workflowRouter,
     })
   ),
   db: dbRouter,

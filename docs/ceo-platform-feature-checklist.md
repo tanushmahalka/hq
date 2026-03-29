@@ -50,16 +50,11 @@ CEO-friendly view of what the platform already does based on the current codebas
 - `[x]` Tasks support comments and discussion
 - `[x]` `@mentions` in comments can notify agents
 - `[x]` Tasks can be linked to campaigns
-- `[x]` Simple tasks can notify the assigned agent automatically
-- `[x]` Complex tasks can run as managed multi-step workflows
-- `[x]` Complex workflows support planning before execution
-- `[x]` Complex workflows support ordered subtasks
-- `[x]` Complex workflows track worker and validator sessions
-- `[x]` Complex workflows track active, blocked, and completed subtask states
-- `[x]` Complex workflows sync status back to the main task automatically
-- `[x]` Complex task detail view includes comments, live session, and workflow tabs
-- `[x]` Completion tracking is built into both tasks and workflow summaries
-- `[x]` Exception handling is built in through blocked subtasks, approvals, and stuck status handling
+- `[x]` Assigned tasks can notify the target agent automatically
+- `[x]` Tasks use one simple model across the UI, API, and agent tools
+- `[x]` Task detail view includes comments and a live session tab
+- `[x]` Task status can be updated directly by operators
+- `[x]` Approval-blocked work is surfaced clearly in the task board
 
 ## 4. Automations and Scheduled Execution
 

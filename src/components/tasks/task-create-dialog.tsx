@@ -2,9 +2,9 @@ import { useState, useEffect, type FormEvent } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, CircleAlert, Star } from "lucide-react";
+import { CircleAlert, Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
 import {
   TASK_CATEGORIES,
@@ -26,13 +26,8 @@ import {
   type TaskCategory,
   type TaskStatus,
 } from "@shared/types";
-import {
-  TASK_WORKFLOW_MODES,
-  type TaskWorkflowMode,
-} from "@shared/task-workflow";
 import { trpc } from "@/lib/trpc";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
-import { useGateway } from "@/hooks/use-gateway";
 
 const STATUS_DOT_COLORS: Record<TaskStatus, string> = {
   todo: "bg-gray-400",
@@ -60,8 +55,6 @@ export function TaskCreateDialog({
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>(initialStatus);
   const [category, setCategory] = useState<TaskCategory | null>(initialCategory);
-  const [workflowMode, setWorkflowMode] = useState<TaskWorkflowMode>("simple");
-
   const [assignor, setAssignor] = useState("");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -70,12 +63,11 @@ export function TaskCreateDialog({
 
   const utils = trpc.useUtils();
   const notifyTask = useTaskNotify();
-  const { agents } = useGateway();
 
   const createTask = trpc.task.create.useMutation({
     onSuccess: (task) => {
       utils.task.list.invalidate();
-      if (task?.workflowMode !== "complex" && task?.assignee) {
+      if (task?.assignee) {
         notifyTask(task.assignee, task.id, formatTaskNotification("created", task));
       }
       resetForm();
@@ -92,7 +84,6 @@ export function TaskCreateDialog({
     setDescription("");
     setStatus("todo");
     setCategory(null);
-    setWorkflowMode("simple");
     setAssignor("");
     setAssignee("");
     setDueDate("");
@@ -107,7 +98,6 @@ export function TaskCreateDialog({
     setDescription("");
     setStatus(initialStatus);
     setCategory(initialCategory);
-    setWorkflowMode("simple");
     setAssignor("");
     setAssignee("");
     setDueDate("");
@@ -122,9 +112,8 @@ export function TaskCreateDialog({
     createTask.mutate({
       title: title.trim(),
       description: description.trim() || undefined,
-      status: workflowMode === "simple" ? status : undefined,
+      status,
       category,
-      workflowMode,
       assignor: assignor.trim() || undefined,
       assignee: assignee.trim() || undefined,
       dueDate: dueDate ? new Date(dueDate) : undefined,
@@ -138,7 +127,9 @@ export function TaskCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl font-normal">Create Task</DialogTitle>
+          <DialogTitle className="font-display text-2xl font-normal">
+            Create Task
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -162,24 +153,6 @@ export function TaskCreateDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm">Workflow</label>
-              <Select
-                value={workflowMode}
-                onValueChange={(value) => setWorkflowMode(value as TaskWorkflowMode)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TASK_WORKFLOW_MODES.map((mode) => (
-                    <SelectItem key={mode} value={mode}>
-                      {mode === "complex" ? "Complex workflow" : "Simple task"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <label className="text-sm">Category</label>
               <Select
                 value={category ?? "__uncategorized__"}
@@ -202,38 +175,32 @@ export function TaskCreateDialog({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <label className="text-sm">Status</label>
+              <Select
+                value={status}
+                onValueChange={(value) => setStatus(value as TaskStatus)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_STATUSES.map((taskStatus) => (
+                    <SelectItem key={taskStatus} value={taskStatus}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={`size-2 rounded-full ${STATUS_DOT_COLORS[taskStatus]}`}
+                        />
+                        {STATUS_LABELS[taskStatus]}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm">
-                {workflowMode === "complex" ? "Initial Lane" : "Status"}
-              </label>
-              {workflowMode === "simple" ? (
-                <Select
-                  value={status}
-                  onValueChange={(v) => setStatus(v as TaskStatus)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TASK_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        <span className="flex items-center gap-2">
-                          <span className={`size-2 rounded-full ${STATUS_DOT_COLORS[s]}`} />
-                          {STATUS_LABELS[s]}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                  Starts in <span className="font-medium text-foreground">Doing</span> when assigned, otherwise <span className="font-medium text-foreground">To Do</span>.
-                </div>
-              )}
-            </div>
             <div className="space-y-2">
               <label className="text-sm">Due Date</label>
               <Input
@@ -242,9 +209,6 @@ export function TaskCreateDialog({
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm">Assignor</label>
               <Input
@@ -253,42 +217,22 @@ export function TaskCreateDialog({
                 placeholder="Who assigned this"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm">Assignee</label>
-              {workflowMode === "complex" ? (
-                <Select
-                  value={assignee || "__unassigned__"}
-                  onValueChange={(value) =>
-                    setAssignee(value === "__unassigned__" ? "" : value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an agent" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__unassigned__">Unassigned</SelectItem>
-                    {agents.map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        {agent.identity?.name ?? agent.name ?? agent.id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  value={assignee}
-                  onChange={(e) => setAssignee(e.target.value)}
-                  placeholder="Who's doing this"
-                />
-              )}
-            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm">Assignee</label>
+            <Input
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+              placeholder="Who's doing this"
+            />
           </div>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setUrgent(!urgent)}
-              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs cursor-pointer transition-colors ${
+              className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-2.5 py-1 text-xs transition-colors ${
                 urgent
                   ? "border-red-300/40 bg-red-50 text-red-600 dark:border-red-400/30 dark:bg-red-950/40 dark:text-red-300"
                   : "border-border/50 text-muted-foreground/50 hover:text-muted-foreground"
@@ -300,7 +244,7 @@ export function TaskCreateDialog({
             <button
               type="button"
               onClick={() => setImportant(!important)}
-              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs cursor-pointer transition-colors ${
+              className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-2.5 py-1 text-xs transition-colors ${
                 important
                   ? "border-amber-300/40 bg-amber-50 text-amber-600 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300"
                   : "border-border/50 text-muted-foreground/50 hover:text-muted-foreground"
@@ -312,18 +256,18 @@ export function TaskCreateDialog({
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!title.trim() || createTask.isPending}>
-              {createTask.isPending && (
-                <Loader2 className="size-4 animate-spin" />
+            <Button type="submit" disabled={createTask.isPending}>
+              {createTask.isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create task"
               )}
-              {createTask.isPending ? "Creating..." : "Create Task"}
             </Button>
           </DialogFooter>
         </form>

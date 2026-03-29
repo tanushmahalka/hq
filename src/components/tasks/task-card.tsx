@@ -1,11 +1,21 @@
-import { Calendar, CircleAlert, Link2, ShieldAlert, Star, User } from "lucide-react";
+import {
+  Calendar,
+  CircleAlert,
+  Link2,
+  ShieldAlert,
+  Star,
+  User,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useTaskActive } from "@/hooks/use-task-active";
 import { useTaskNotify, formatTaskNotification } from "@/hooks/use-task-notify";
 import { TaskStatusDropdown } from "./task-status-dropdown";
-import { TASK_CATEGORY_LABELS, type TaskCategory, type TaskStatus } from "@shared/types";
-import type { TaskWorkflowSummary } from "@shared/task-workflow";
+import {
+  TASK_CATEGORY_LABELS,
+  type TaskCategory,
+  type TaskStatus,
+} from "@shared/types";
 import type { BoardApprovalSummary } from "@/hooks/use-approvals";
 
 function formatApprovalTimestamp(timestamp: number): string {
@@ -18,29 +28,6 @@ function formatApprovalTimestamp(timestamp: number): string {
   });
 }
 
-function formatWorkflowBadge(summary?: TaskWorkflowSummary | null): string | null {
-  if (!summary || summary.mode !== "complex") {
-    return null;
-  }
-
-  switch (summary.status) {
-    case "pending_assignment":
-      return "Awaiting assignee";
-    case "planning":
-      return "Planning";
-    case "executing":
-      return summary.totalSubtasks > 0
-        ? `${summary.completedSubtasks}/${summary.totalSubtasks} done`
-        : "Preparing subtasks";
-    case "blocked":
-      return "Blocked";
-    case "completed":
-      return "Workflow complete";
-    default:
-      return "Complex";
-  }
-}
-
 interface TaskCardProps {
   task: {
     id: string;
@@ -48,8 +35,6 @@ interface TaskCardProps {
     description: string | null;
     status: TaskStatus;
     category?: TaskCategory | null;
-    workflowMode?: "simple" | "complex";
-    workflowSummary?: TaskWorkflowSummary | null;
     assignee: string | null;
     dueDate: Date | string | null;
     urgent: boolean;
@@ -62,15 +47,18 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
   const utils = trpc.useUtils();
-  const active = useTaskActive(task.id, task.workflowSummary?.sessionKeys);
+  const active = useTaskActive(task.id);
   const notifyTask = useTaskNotify();
-  const workflowBadge = formatWorkflowBadge(task.workflowSummary);
 
   const updateTask = trpc.task.update.useMutation({
     onSuccess: (updated) => {
       utils.task.list.invalidate();
-      if (updated?.workflowMode !== "complex" && updated?.assignee) {
-        notifyTask(updated.assignee, updated.id, formatTaskNotification("updated", updated));
+      if (updated?.assignee) {
+        notifyTask(
+          updated.assignee,
+          updated.id,
+          formatTaskNotification("updated", updated),
+        );
       }
     },
   });
@@ -89,18 +77,18 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
         isWaitingOnApproval
           ? "border-amber-500/25 bg-amber-500/10 hover:border-amber-500/35"
           : isDoing
-          ? "border-[var(--swarm-violet)]/30 bg-[var(--swarm-violet-dim)]"
-          : "border-border hover:border-border dark:border-border/60 dark:hover:border-border"
+            ? "border-[var(--swarm-violet)]/30 bg-[var(--swarm-violet-dim)]"
+            : "border-border hover:border-border dark:border-border/60 dark:hover:border-border"
       }`}
       onClick={onClick}
     >
-      {/* Shimmer — violet for active, subtle for doing */}
       {(active || isDoing) && (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px overflow-hidden">
           <div
             className="h-full w-full"
             style={{
-              background: "linear-gradient(90deg, transparent 0%, var(--swarm-violet) 50%, transparent 100%)",
+              background:
+                "linear-gradient(90deg, transparent 0%, var(--swarm-violet) 50%, transparent 100%)",
               opacity: active ? 0.6 : 0.25,
               animation: active
                 ? "swarm-shimmer 2s ease-in-out infinite"
@@ -110,32 +98,34 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
         </div>
       )}
 
-      {/* Title + priority */}
       <div className="flex items-start gap-2">
         {isDoing && (
           <div className="mt-1.5 shrink-0">
             <div className="relative flex size-2">
-              <div className="animate-pulse-soft absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: "var(--swarm-violet)" }} />
-              <div className="relative inline-flex size-2 rounded-full" style={{ backgroundColor: "var(--swarm-violet)" }} />
+              <div
+                className="animate-pulse-soft absolute inline-flex h-full w-full rounded-full opacity-75"
+                style={{ backgroundColor: "var(--swarm-violet)" }}
+              />
+              <div
+                className="relative inline-flex size-2 rounded-full"
+                style={{ backgroundColor: "var(--swarm-violet)" }}
+              />
             </div>
           </div>
         )}
         <h3 className="flex-1 text-sm font-medium leading-snug">{task.title}</h3>
         {hasPriority && (
-          <div className="flex items-center gap-1 shrink-0 pt-0.5">
-            {task.urgent && (
-              <CircleAlert className="size-3.5 text-red-400" />
-            )}
+          <div className="flex shrink-0 items-center gap-1 pt-0.5">
+            {task.urgent && <CircleAlert className="size-3.5 text-red-400" />}
             {task.important && (
-              <Star className="size-3.5 text-amber-400 fill-amber-400" />
+              <Star className="size-3.5 fill-amber-400 text-amber-400" />
             )}
           </div>
         )}
       </div>
 
-      {/* Description */}
       {task.description && (
-        <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground line-clamp-2">
+        <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">
           {task.description}
         </p>
       )}
@@ -158,7 +148,10 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
               <ShieldAlert className="size-3.5" />
               Waiting for approval
             </span>
-            <Badge variant="secondary" className="bg-amber-500/15 text-[10px] text-amber-800 dark:text-amber-200">
+            <Badge
+              variant="secondary"
+              className="bg-amber-500/15 text-[10px] text-amber-800 dark:text-amber-200"
+            >
               {approvalSummary.count} pending
             </Badge>
           </div>
@@ -171,29 +164,6 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
         </div>
       ) : null}
 
-      {workflowBadge ? (
-        <div className="mt-3 flex items-center gap-2">
-          <Badge
-            variant="secondary"
-            className={`text-[10px] ${
-              task.workflowSummary?.status === "blocked"
-                ? "bg-red-500/10 text-red-700 dark:text-red-300"
-                : task.workflowSummary?.status === "planning"
-                  ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
-                  : "bg-[var(--swarm-violet-dim)] text-[var(--swarm-violet)]"
-            }`}
-          >
-            {workflowBadge}
-          </Badge>
-          {task.workflowSummary?.rootAgentId ? (
-            <span className="text-[11px] text-muted-foreground/60">
-              root {task.workflowSummary.rootAgentId}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* Campaign link */}
       {task.campaignId && (
         <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground/50">
           <Link2 className="size-3 shrink-0" />
@@ -201,9 +171,8 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
         </div>
       )}
 
-      {/* Footer */}
       <div className="mt-3.5 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground/60 min-w-0">
+        <div className="flex min-w-0 items-center gap-3 text-xs text-muted-foreground/60">
           {task.assignee && (
             <span className="flex items-center gap-1.5 truncate">
               <User className="size-3 shrink-0" />
@@ -211,7 +180,7 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
             </span>
           )}
           {task.dueDate && (
-            <span className="flex items-center gap-1.5 shrink-0">
+            <span className="flex shrink-0 items-center gap-1.5">
               <Calendar className="size-3" />
               {new Date(task.dueDate).toLocaleDateString("en-US", {
                 month: "short",
@@ -220,11 +189,7 @@ export function TaskCard({ task, onClick, approvalSummary }: TaskCardProps) {
             </span>
           )}
         </div>
-        <TaskStatusDropdown
-          value={task.status}
-          onValueChange={handleStatusChange}
-          disabled={task.workflowMode === "complex"}
-        />
+        <TaskStatusDropdown value={task.status} onValueChange={handleStatusChange} />
       </div>
     </div>
   );
