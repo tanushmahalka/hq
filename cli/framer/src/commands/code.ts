@@ -23,6 +23,16 @@ export async function runCodeCommand(
   const printJsonImpl = dependencies.printJsonImpl ?? printJson;
   const printLineImpl = dependencies.printLineImpl ?? printLine;
 
+  if (action === "help" || getBooleanFlag(parsed, "--help")) {
+    printHelp(printLineImpl);
+    return;
+  }
+
+  if (action !== "files" && action !== "get" && action !== "set") {
+    printHelp(printLineImpl);
+    return;
+  }
+
   await withFramer(
     parsed,
     async (framer) => {

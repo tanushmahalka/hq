@@ -2,3 +2,7 @@
 	path = openclaw
 	url = https://github.com/tanushmahalka/openclaw.git
 	branch = main
+[submodule "hermes-agent"]
+	path = hermes-agent
+	url = https://github.com/nousresearch/hermes-agent.git
+	branch = main

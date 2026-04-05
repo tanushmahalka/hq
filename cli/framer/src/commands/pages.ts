@@ -19,14 +19,19 @@ export async function runPagesCommand(
   const printJsonImpl = dependencies.printJsonImpl ?? printJson;
   const printLineImpl = dependencies.printLineImpl ?? printLine;
 
+  if (action === "help" || getBooleanFlag(parsed, "--help")) {
+    printHelp(printLineImpl);
+    return;
+  }
+
+  if (action !== "list") {
+    printHelp(printLineImpl);
+    return;
+  }
+
   await withFramer(
     parsed,
     async (framer) => {
-      if (action !== "list") {
-        printHelp(printLineImpl);
-        return;
-      }
-
       const pages = await listPages(framer);
       const payload = pages.map(serializeNode);
 

@@ -25,6 +25,16 @@ export async function runNodesCommand(
   const printJsonImpl = dependencies.printJsonImpl ?? printJson;
   const printLineImpl = dependencies.printLineImpl ?? printLine;
 
+  if (action === "help" || getBooleanFlag(parsed, "--help")) {
+    printHelp(printLineImpl);
+    return;
+  }
+
+  if (action !== "list" && action !== "get") {
+    printHelp(printLineImpl);
+    return;
+  }
+
   await withFramer(
     parsed,
     async (framer) => {

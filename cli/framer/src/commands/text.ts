@@ -25,6 +25,15 @@ export async function runTextCommand(
   const printJsonImpl = dependencies.printJsonImpl ?? printJson;
   const printLineImpl = dependencies.printLineImpl ?? printLine;
 
+  if (action === "help" || getBooleanFlag(parsed, "--help")) {
+    printHelp(printLineImpl);
+    return;
+  }
+
+  if (action !== "get" && action !== "set") {
+    throw new CliError(`Unknown text command: ${action ?? "(missing)"}`, 2);
+  }
+
   await withFramer(
     parsed,
     async (framer) => {
@@ -80,8 +89,6 @@ export async function runTextCommand(
         }
         return;
       }
-
-      throw new CliError(`Unknown text command: ${action ?? "(missing)"}`, 2);
     },
     dependencies,
   );

@@ -17,8 +17,14 @@ import {
 
 type PageSort = "default" | "issues-desc" | "issues-asc";
 
-export function getPageAuditSummary(page: SeoPage): { issueCount: number } {
-  return { issueCount: extractAiAudit(page.auditJson).length };
+export function getPageAuditSummary(page: SeoPage): {
+  issueCount: number;
+  isIndexed: boolean | null;
+} {
+  return {
+    issueCount: extractAiAudit(page.auditJson).length,
+    isIndexed: extractIsIndexed(page.auditJson),
+  };
 }
 
 export function OverviewTab({
@@ -186,8 +192,20 @@ export function OverviewTab({
                       {/* Inline audit indicators */}
                       {audit.issueCount > 0 && (
                         <span className="text-[11px] tabular-nums text-red-500/70 shrink-0">
-                          {audit.issueCount} issue
+                          {audit.issueCount} AI issue
                           {audit.issueCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {audit.isIndexed != null && (
+                        <span
+                          className={cn(
+                            "text-[11px] shrink-0",
+                            audit.isIndexed
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-amber-600 dark:text-amber-400"
+                          )}
+                        >
+                          {audit.isIndexed ? "Indexed" : "Not indexed"}
                         </span>
                       )}
 
@@ -295,6 +313,12 @@ function extractAiAudit(auditJson: unknown): AiAuditItem[] {
     : [];
 }
 
+function extractIsIndexed(auditJson: unknown): boolean | null {
+  if (!auditJson || typeof auditJson !== "object") return null;
+  const json = auditJson as Record<string, unknown>;
+  return typeof json.isIndexed === "boolean" ? json.isIndexed : null;
+}
+
 function CheckItem({
   title,
   description,
@@ -346,6 +370,7 @@ export function PageDetailCard({ page }: { page: SeoPage }) {
     page.isAuthorityAsset
   );
   const aiAudit = extractAiAudit(page.auditJson);
+  const isIndexed = extractIsIndexed(page.auditJson);
 
   return (
     <div className="space-y-4">
@@ -372,6 +397,16 @@ export function PageDetailCard({ page }: { page: SeoPage }) {
         <InfoTile
           label="HTTP status"
           value={`${page.statusCode ?? "Unknown"}`}
+        />
+        <InfoTile
+          label="Indexing"
+          value={
+            isIndexed == null
+              ? "Unknown"
+              : isIndexed
+              ? "Indexed"
+              : "Not indexed"
+          }
         />
         <InfoTile
           label="Keyword coverage"

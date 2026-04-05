@@ -18,6 +18,11 @@ export async function runProjectCommand(
   const printJsonImpl = dependencies.printJsonImpl ?? printJson;
   const printLineImpl = dependencies.printLineImpl ?? printLine;
 
+  if (!action || action === "help" || getBooleanFlag(parsed, "--help")) {
+    printHelp(printLineImpl);
+    return;
+  }
+
   await withFramer(
     parsed,
     async (framer) => {

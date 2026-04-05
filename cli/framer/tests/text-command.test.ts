@@ -45,3 +45,15 @@ test("runTextCommand updates a text node resolved by page and name", async () =>
 
   assert.deepEqual(updates, ["After"]);
 });
+
+test("runTextCommand prints help without requiring Framer credentials", async () => {
+  const lines: string[] = [];
+
+  await runTextCommand(["help"], {
+    printLineImpl: (value = "") => {
+      lines.push(value);
+    },
+  });
+
+  assert.match(lines.join("\n"), /framer text get --node <id>/);
+});

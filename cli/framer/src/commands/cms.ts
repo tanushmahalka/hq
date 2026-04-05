@@ -23,6 +23,7 @@ const CMS_SCHEMA = {
   "--field": "string",
   "--item": "string",
   "--limit": "string",
+  "--published": "boolean",
   "--value": "string",
   "--value-file": "string",
 } as const;
@@ -38,6 +39,16 @@ export async function runCmsCommand(
   const parsed = parseArgs(rest, CMS_SCHEMA);
   const printJsonImpl = dependencies.printJsonImpl ?? printJson;
   const printLineImpl = dependencies.printLineImpl ?? printLine;
+
+  if (action === "help" || getBooleanFlag(parsed, "--help")) {
+    printHelp(printLineImpl);
+    return;
+  }
+
+  if (action !== "collections" && action !== "items" && action !== "update") {
+    printHelp(printLineImpl);
+    return;
+  }
 
   await withFramer(
     parsed,
@@ -69,7 +80,7 @@ export async function runCmsCommand(
       if (action === "items") {
         const limit = getOptionalIntegerFlag(parsed, "--limit");
         const items = await collection.getItems();
-        const visibleItems = limit ? items.slice(0, limit) : items;
+        const visibleItems = limit === undefined ? items : items.slice(0, limit);
         const payload = {
           collection: serializeCollection(collection),
           fields: (await collection.getFields()).map(serializeField),
@@ -99,6 +110,12 @@ export async function runCmsCommand(
 
         const item = await resolveCollectionItem(collection, itemRef);
         const field = await resolveField(collection, fieldRef);
+        const draftFlag = getBooleanFlag(parsed, "--draft");
+        const publishedFlag = getBooleanFlag(parsed, "--published");
+        if (draftFlag && publishedFlag) {
+          throw new CliError(`Pass either --draft or --published, not both.`, 2);
+        }
+
         const rawValue = await readInlineOrFileValue({
           value: getStringFlag(parsed, "--value"),
           valueFile: getStringFlag(parsed, "--value-file"),
@@ -108,10 +125,17 @@ export async function runCmsCommand(
           [field.id]: coerceFieldData(field, rawValue, getStringFlag(parsed, "--content-type")),
         };
 
-        const updated = await item.setAttributes({
-          draft: getBooleanFlag(parsed, "--draft"),
+        const attributes: Record<string, unknown> = {
           fieldData,
-        });
+        };
+
+        if (draftFlag) {
+          attributes.draft = true;
+        } else if (publishedFlag) {
+          attributes.draft = false;
+        }
+
+        const updated = await item.setAttributes(attributes);
 
         const payload = {
           collection: serializeCollection(collection),
@@ -199,5 +223,5 @@ export function printHelp(printLineImpl: typeof printLine = printLine): void {
   printLineImpl("Usage:");
   printLineImpl("  framer cms collections [--json]");
   printLineImpl("  framer cms items --collection <name-or-id> [--limit <n>] [--json]");
-  printLineImpl("  framer cms update --collection <name-or-id> --item <slug-or-id> --field <name-or-id> --value <value> [--draft] [--json]");
+  printLineImpl("  framer cms update --collection <name-or-id> --item <slug-or-id> --field <name-or-id> --value <value> [--draft|--published] [--json]");
 }

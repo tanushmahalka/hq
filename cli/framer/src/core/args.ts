@@ -71,9 +71,13 @@ export function getOptionalIntegerFlag(parsed: ParsedArgs, flag: string): number
   const value = getStringFlag(parsed, flag);
   if (value === undefined) return undefined;
 
+  if (!/^-?\d+$/.test(value)) {
+    throw new CliError(`Option ${flag} expects a non-negative integer`, 2);
+  }
+
   const parsedNumber = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsedNumber)) {
-    throw new CliError(`Option ${flag} expects an integer`, 2);
+  if (!Number.isFinite(parsedNumber) || parsedNumber < 0) {
+    throw new CliError(`Option ${flag} expects a non-negative integer`, 2);
   }
 
   return parsedNumber;
