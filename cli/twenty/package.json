@@ -1,0 +1,14 @@
+{
+  "name": "@hq/twenty-cli",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "twenty": "./bin/twenty"
+  },
+  "scripts": {
+    "twenty": "./bin/twenty",
+    "generate": "node ./scripts/generate-openapi-sdk.mjs",
+    "test": "npx --yes tsx --test ./tests/*.test.ts"
+  }
+}

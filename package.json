@@ -15,6 +15,7 @@
     "start": "node ./dist-server/server/index.js",
     "hq": "./cli/hq/bin/hq",
     "aweber": "./cli/aweber/bin/aweber",
+    "twenty": "./cli/twenty/bin/twenty",
     "ebook": "./cli/ebook/bin/ebook",
     "framer": "./cli/framer/bin/framer",
     "bootstrap:hq": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/bootstrap-hq.ts",
@@ -96,6 +97,7 @@
     "vitest": "^3.2.4"
   },
   "bin": {
-    "hq": "./cli/hq/bin/hq"
+    "hq": "./cli/hq/bin/hq",
+    "twenty": "./cli/twenty/bin/twenty"
   }
 }
