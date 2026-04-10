@@ -19,11 +19,8 @@ import { CustomPageErrorBoundary } from "@/components/custom-page-error-boundary
 import { Toaster } from "@/components/ui/sonner";
 import "./index.css";
 import Layout from "./layout";
-import Dashboard from "./pages/dashboard";
 import Tasks from "./pages/tasks";
-import Agents from "./pages/agents";
 import Missions from "./pages/missions";
-import Marketing from "./pages/marketing";
 import Files from "./pages/files";
 import Db from "./pages/db";
 import Seo from "./pages/seo";
@@ -41,9 +38,6 @@ const customRoutes = customPages.map((page) => ({
   ...page,
   Component: lazy(page.component),
 }));
-
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL ?? "ws://localhost:18789";
-const GATEWAY_TOKEN = import.meta.env.VITE_GATEWAY_TOKEN ?? "";
 
 function LegacyInviteRedirect() {
   const { invitationId = "" } = useParams();
@@ -102,18 +96,18 @@ createRoot(document.getElementById("root")!).render(
             <Route
               element={
                 <ProtectedRoute requireOrg>
-                  <Navigate to="/app" replace />
+                  <Navigate to="/app/tasks" replace />
                 </ProtectedRoute>
               }
             >
-              <Route path="/" element={<Navigate to="/app" replace />} />
+              <Route path="/" element={<Navigate to="/app/tasks" replace />} />
             </Route>
 
             <Route
               path="app"
               element={
                 <ProtectedRoute requireOrg>
-                  <GatewayProvider url={GATEWAY_URL} token={GATEWAY_TOKEN}>
+                  <GatewayProvider>
                     <ApprovalProvider>
                       <Layout />
                     </ApprovalProvider>
@@ -121,10 +115,9 @@ createRoot(document.getElementById("root")!).render(
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Dashboard />} />
+              <Route index element={<Navigate to="tasks" replace />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="missions" element={<Missions />} />
-              <Route path="marketing" element={<Marketing />} />
               <Route path="seo" element={<Seo />} />
               <Route path="files" element={<Files />} />
               <Route path="settings" element={<SettingsLayout />}>
@@ -136,14 +129,6 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <ProtectedRoute requireAdmin>
                     <Usage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="agents"
-                element={
-                  <ProtectedRoute requireAdmin>
-                    <Agents />
                   </ProtectedRoute>
                 }
               />

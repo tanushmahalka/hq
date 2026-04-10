@@ -19,7 +19,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import type { RawMessage, ContentBlock } from "@/hooks/use-chat";
-import { useChat } from "@/hooks/use-chat";
+import { useSessionChat } from "@/hooks/use-chat";
 import { useApprovals } from "@/hooks/use-approvals";
 import { ApprovalCard } from "@/components/approvals/approval-card";
 import { LoaderFive } from "@/components/ui/loader";
@@ -1095,7 +1095,8 @@ function SubSessionDialog({
 /** Loads and renders messages for a sub-session (read-only, no input) */
 function SubSessionContent({ sessionKey }: { sessionKey: string }) {
   console.log("[SubSessionContent] sessionKey:", sessionKey);
-  const { rawMessages, stream, isBusy, loading, error } = useChat(sessionKey);
+  const { rawMessages, stream, isBusy, loading, error } =
+    useSessionChat(sessionKey);
   console.log(
     "[SubSessionContent] loading:",
     loading,
@@ -1134,14 +1135,9 @@ function SubSessionContent({ sessionKey }: { sessionKey: string }) {
       <UXMessageList messages={rawMessages} />
 
       {isBusy && (
-        <div className="px-4 py-1.5">
-          <div className="max-w-[90%] space-y-1.5">
+        <div className="px-4 py-2">
+          <div className="max-w-[90%]">
             <LoaderFive text="Thinking..." />
-            {stream ? (
-              <div className="text-sm text-foreground/90 leading-relaxed">
-                <MessageContent text={stream} />
-              </div>
-            ) : null}
           </div>
         </div>
       )}

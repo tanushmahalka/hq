@@ -6,32 +6,27 @@ import {
   type ClipboardEvent,
   type FormEvent,
 } from "react";
-import { X, ArrowUp, ChevronDown, Paperclip, Square } from "lucide-react";
+import { X, ArrowUp, Paperclip, Square } from "lucide-react";
 import { useApprovals, type PendingApproval } from "@/hooks/use-approvals";
 import {
   type PendingImageAttachment,
   type RawMessage,
 } from "@/hooks/use-chat";
-import { useGateway } from "@/hooks/use-gateway";
 import { useMessengerChat } from "@/hooks/use-messenger-chat";
 import { useMessengerPanel } from "@/hooks/use-messenger-panel";
 import { ChatSendProvider } from "@/hooks/use-chat-send";
 import { UXMessageList } from "@/components/chat/session-blocks";
-import { MessageContent } from "./message-content";
 import { LoaderFive } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
+import { MessageContent } from "@/components/messenger/message-content";
 import { uploadChatImage } from "@/lib/chat-image-upload";
-import { parseAgentName } from "@/lib/mentions";
 import { useAgentActivity } from "@/hooks/use-agent-activity";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import { buildHqWebchatSessionKey } from "@shared/hq-webchat-session";
+
+const CHAT_AGENT_ID = "kaira";
+const CHAT_AGENT_NAME = "Kaira";
 
 function generateAttachmentId(): string {
   return `attachment-${crypto.randomUUID()}`;
@@ -67,75 +62,27 @@ async function readFileAsAttachment(
 /* ── Chat Panel (slides in/out, 420px) ── */
 
 export function ChatPanel() {
-  const { agents, connected } = useGateway();
-  const { selectedAgentId, selectAgent, closeChat } = useMessengerPanel();
+  const { chatOpen, closeChat } = useMessengerPanel();
   const { data: session, isPending: sessionPending } = useSession();
 
-  if (!selectedAgentId || sessionPending || !session?.user.name) return null;
+  if (!chatOpen || sessionPending || !session?.user.name) return null;
 
-  const selectedAgent = agents.find((a) => a.id === selectedAgentId);
-  const selectedRaw =
-    selectedAgent?.identity?.name ?? selectedAgent?.name ?? selectedAgentId;
-  const { name: selectedName, role: selectedRole } = parseAgentName(selectedRaw);
-  const otherAgents = agents.filter((a) => a.id !== selectedAgentId);
   const sessionKey = buildHqWebchatSessionKey({
-    agentId: selectedAgentId,
+    agentId: CHAT_AGENT_ID,
     userName: session.user.name,
   });
 
   return (
     <div className="h-full w-[420px] flex flex-col border-l border-border/50 bg-card relative">
       {/* Active shimmer — top edge */}
-      <ActiveShimmer agentId={selectedAgentId} />
+      <ActiveShimmer agentId={CHAT_AGENT_ID} />
 
-      {/* Header — selected agent + agent switcher dropdown + close */}
+      {/* Header — fixed single agent + close */}
       <div className="h-11 px-4 flex items-center gap-2 border-b border-border/50 shrink-0">
-        {/* Selected agent name + role badge */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-sm font-medium truncate">{selectedName}</span>
-          {selectedRole && (
-            <span className="inline-flex items-center rounded-full bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground/60 shrink-0">
-              {selectedRole}
-            </span>
-          )}
-          <span
-            className={cn(
-              "size-1.5 rounded-full shrink-0",
-              connected ? "bg-[var(--swarm-mint)]" : "bg-red-400"
-            )}
-          />
+          <span className="text-sm font-medium truncate">{CHAT_AGENT_NAME}</span>
+          <span className="size-1.5 rounded-full shrink-0 bg-[var(--swarm-mint)]" />
         </div>
-
-        {/* Other agents dropdown */}
-        {otherAgents.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors">
-                <ChevronDown className="size-3" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[180px]">
-              {otherAgents.map((agent) => {
-                const r = agent.identity?.name ?? agent.name ?? agent.id;
-                const { name: n, role: rl } = parseAgentName(r);
-                return (
-                  <DropdownMenuItem
-                    key={agent.id}
-                    onClick={() => selectAgent(agent.id)}
-                    className="flex items-center gap-2"
-                  >
-                    <span className="text-sm">{n}</span>
-                    {rl && (
-                      <span className="text-[10px] text-muted-foreground/50">
-                        {rl}
-                      </span>
-                    )}
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
 
         <button
           onClick={closeChat}
@@ -177,7 +124,6 @@ export function Session({
 }: {
   sessionKey: string;
 }) {
-  const { connected } = useGateway();
   const { approvals } = useApprovals();
   const {
     rawMessages,
@@ -214,7 +160,7 @@ export function Session({
 
       <div className="relative border-t border-border/50 shrink-0">
         <SessionInput
-          connected={connected}
+          ready
           isBusy={isBusy}
           draft={draft}
           onDraftChange={setDraft}
@@ -247,10 +193,35 @@ export function SessionMessages({
   error: string | null;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const showStreamPreview = (() => {
+    if (!stream) {
+      return false;
+    }
+
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+
+      if (message.role === "user") {
+        return true;
+      }
+
+      if (message.role !== "assistant") {
+        continue;
+      }
+
+      const hasAssistantText = message.blocks.some(
+        (block) => block.type === "text" && block.text.trim().length > 0,
+      );
+
+      return !hasAssistantText;
+    }
+
+    return true;
+  })();
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
-  }, [messages, stream]);
+  }, [messages, isBusy]);
 
   return (
     <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
@@ -276,15 +247,20 @@ export function SessionMessages({
 
       <UXMessageList messages={messages} />
 
-      {isBusy && (
+      {showStreamPreview && stream && (
         <div className="px-4 py-1.5">
-          <div className="max-w-[90%] space-y-1.5">
+          <div className="max-w-[90%]">
+            <div className="text-sm text-foreground/90 leading-relaxed">
+              <MessageContent text={stream} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isBusy && (
+        <div className="px-4 py-2">
+          <div className="max-w-[90%]">
             <LoaderFive text="Thinking..." />
-            {stream ? (
-              <div className="text-sm text-foreground/90 leading-relaxed">
-                <MessageContent text={stream} />
-              </div>
-            ) : null}
           </div>
         </div>
       )}
@@ -299,6 +275,7 @@ export function SessionMessages({
 }
 
 export function SessionInput({
+  ready,
   connected,
   isBusy,
   draft,
@@ -311,7 +288,8 @@ export function SessionInput({
   onSend,
   onAbort,
 }: {
-  connected: boolean;
+  ready?: boolean;
+  connected?: boolean;
   isBusy: boolean;
   draft: string;
   onDraftChange: (draft: string) => void;
@@ -333,7 +311,8 @@ export function SessionInput({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const placeholder = connected ? "Message..." : "Connecting...";
+  const chatReady = ready ?? connected ?? false;
+  const placeholder = chatReady ? "Message Kaira..." : "Chat unavailable";
 
   const uploadAttachment = async (file: File, attachmentId: string) => {
     try {
@@ -413,7 +392,7 @@ export function SessionInput({
     (attachment) => attachment.status === "failed"
   );
   const sendDisabled =
-    !connected || !hasDraft || hasUploadingAttachments || hasFailedAttachments;
+    !chatReady || !hasDraft || hasUploadingAttachments || hasFailedAttachments;
 
   return (
     <>
@@ -519,7 +498,7 @@ export function SessionInput({
             }
           }}
           placeholder={placeholder}
-          disabled={!connected}
+          disabled={!chatReady}
           rows={1}
           className="flex-1 bg-transparent px-4 py-3 pr-12 text-sm resize-none outline-none placeholder:text-muted-foreground/50 disabled:opacity-30 max-h-32 leading-relaxed"
           style={{ minHeight: "44px" }}
@@ -534,7 +513,7 @@ export function SessionInput({
             type="button"
             variant="ghost"
             size="icon-xs"
-            disabled={!connected}
+            disabled={!chatReady}
             onClick={() => fileInputRef.current?.click()}
             aria-label="Attach images"
           >
@@ -545,7 +524,7 @@ export function SessionInput({
               type="button"
               variant="ghost"
               size="icon-xs"
-              disabled={!connected}
+              disabled={!chatReady}
               onClick={onAbort}
               aria-label="Stop run"
             >

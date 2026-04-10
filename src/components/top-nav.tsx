@@ -1,10 +1,8 @@
 import {
   Activity,
-  BookOpen,
   Bot,
   Database,
   Folder,
-  FolderOpen,
   ListTodo,
   Search,
   Target,
@@ -39,14 +37,12 @@ import customPages from "@/pages/custom/registry";
 const baseNavLinks = [
   { to: "/app/tasks", label: "Tasks", icon: ListTodo },
   { to: "/app/missions", label: "Missions", icon: Target },
-  { to: "/app/marketing", label: "Marketing", icon: BookOpen },
   { to: "/app/seo", label: "SEO", icon: Search },
   { to: "/app/files", label: "Files", icon: Folder },
 ] as const;
 
 const adminNavLinks = [
   { to: "/app/usage", label: "Usage", icon: Activity },
-  { to: "/app/agents", label: "Agents", icon: FolderOpen },
   { to: "/app/db", label: "Db", icon: Database },
 ] as const;
 

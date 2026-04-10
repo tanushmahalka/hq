@@ -114,21 +114,7 @@ CEO-friendly view of what the platform already does based on the current codebas
 - `[~]` GEO is already positioned as an operating layer for content, PR, entity cleanup, and local SEO work
 - `[~]` AI-search benchmarking foundations are present through the SEO CLI and GEO roadmap
 
-## 8. Content, Marketing, and Publishing
-
-- `[x]` Marketing section in HQ for AI-managed content assets
-- `[x]` Ebook library in HQ
-- `[x]` Live HTML preview for marketing assets
-- `[x]` Auto-refreshing preview when a new agent revision is published
-- `[x]` Revision history for marketing assets
-- `[x]` PDF download/export for ebook assets
-- `[x]` Versioned storage of marketing asset revisions
-- `[x]` Agent, user, and CLI edits are tracked as update sources
-- `[x]` HQ can create and update marketing assets through authenticated APIs
-- `[~]` The marketing asset model already supports `ebook`, `email`, `landing page`, and `social` assets
-- `[~]` The current HQ UI is ebook-first, while the broader asset types are already supported in the backend
-
-## 9. Website and CMS Control
+## 8. Website and CMS Control
 
 - `[~]` Framer project inspection is available through the integrated Framer agent CLI
 - `[~]` Framer page listing and page-node inspection are available
@@ -137,7 +123,7 @@ CEO-friendly view of what the platform already does based on the current codebas
 - `[~]` Framer code files can be listed, read, and updated
 - `[~]` Framer publish information can be inspected
 
-## 10. Email and Audience Operations
+## 9. Email and Audience Operations
 
 - `[~]` AWeber authentication and account setup are available for agents
 - `[~]` AWeber list discovery and account discovery are available

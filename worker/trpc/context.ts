@@ -4,10 +4,12 @@ import { agentDatabases as agentDatabasesTable } from "../../drizzle/schema/core
 
 export interface Env {
   DATABASE_URL: string;
+  HERMES_API_URL?: string;
+  HERMES_API_KEY?: string;
+  HERMES_MODEL?: string;
   OPENCLAW_HOOKS_URL?: string;
   OPENCLAW_HOOKS_TOKEN?: string;
   LOCAL_PG_ADMIN_URL?: string;
-  HQ_EBOOK_STORAGE_DIR?: string;
   S3_BUCKET?: string;
   S3_REGION?: string;
   S3_ENDPOINT_URL?: string;
@@ -30,7 +32,6 @@ export interface Context {
   waitUntil: (promise: Promise<unknown>) => void;
   agentDatabases: Map<string, string>;
   localPgAdminUrl?: string;
-  ebookStorageRoot?: string;
   leadAgentId: string;
   user: {
     id: string;
@@ -120,7 +121,6 @@ export async function createContext(
     waitUntil: executionCtx.waitUntil.bind(executionCtx),
     agentDatabases,
     localPgAdminUrl: env.LOCAL_PG_ADMIN_URL,
-    ebookStorageRoot: env.HQ_EBOOK_STORAGE_DIR,
     leadAgentId: env.LEAD_AGENT_ID ?? "Unknown",
     user,
     session,

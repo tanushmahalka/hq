@@ -17,7 +17,8 @@ import {
 
 type Segment =
   | { type: "text"; content: string }
-  | { type: "json"; content: string };
+  | { type: "json"; content: string }
+  | { type: "progress"; content: string };
 
 /* ── JSON extraction ── */
 
@@ -51,6 +52,34 @@ function tryParseJson(text: string): string | null {
   } catch {
     return null;
   }
+}
+
+function extractProgressSegments(text: string): Segment[] {
+  const lines = text.split("\n");
+  const segments: Segment[] = [];
+  let textBuffer = "";
+
+  function flushTextBuffer() {
+    if (!textBuffer) return;
+    segments.push({ type: "text", content: textBuffer });
+    textBuffer = "";
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const match = /^`([^`\n]+)`$/.exec(trimmed);
+
+    if (match) {
+      flushTextBuffer();
+      segments.push({ type: "progress", content: match[1] });
+      continue;
+    }
+
+    textBuffer += textBuffer ? `\n${line}` : line;
+  }
+
+  flushTextBuffer();
+  return segments;
 }
 
 /** Parse text into text and JSON segments. */
@@ -87,7 +116,7 @@ function parseSegments(text: string): Segment[] {
   // Second pass: preserve remaining text so markdown can render plain links.
   function pushText(str: string) {
     if (!str) return;
-    segments.push({ type: "text", content: str });
+    segments.push(...extractProgressSegments(str));
   }
 
   if (jsonRanges.length === 0) {
@@ -125,6 +154,9 @@ export function MessageContent({ text }: { text: string }) {
           }
           return <JsonButton key={i} content={seg.content} />;
         }
+        if (seg.type === "progress") {
+          return <ProgressChip key={i} content={seg.content} />;
+        }
         return (
           <div
             key={i}
@@ -148,6 +180,16 @@ export function MessageContent({ text }: { text: string }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function ProgressChip({ content }: { content: string }) {
+  return (
+    <div className="my-2">
+      <div className="inline-flex max-w-full items-center rounded-md border border-border/50 bg-muted/35 px-2.5 py-1 text-[11px] text-muted-foreground">
+        <span className="truncate">{content}</span>
+      </div>
     </div>
   );
 }

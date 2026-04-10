@@ -2,7 +2,6 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 import { appRouter } from "./trpc/router.ts";
 import { createContext, createAuthInstance, type Env } from "./trpc/context.ts";
 import { createDb } from "./db/client.ts";
@@ -12,34 +11,14 @@ import {
   user as userTable,
 } from "../drizzle/schema/auth.ts";
 import {
-  MarketingAssetServiceError,
-  createMarketingAsset,
-  getMarketingAsset,
-  listMarketingAssets,
-  marketingAssetCreateInputSchema,
-  marketingAssetUpdateInputSchema,
-  resolveMarketingAssetStorageRoot,
-  updateMarketingAsset,
-} from "./lib/marketing-asset.ts";
-import {
-  MarketingAssetPdfError,
-  buildMarketingAssetPdfFilename,
-  renderMarketingAssetPdf,
-} from "./lib/marketing-asset-pdf.ts";
-import {
   ChatImageUploadError,
   uploadChatImageToS3,
 } from "./lib/chat-image-upload.ts";
 import {
-  createMarketingEbook,
-  getMarketingEbook,
-  listMarketingEbooks,
-  marketingEbookCreateInputSchema,
-  marketingEbookUpdateInputSchema,
-  updateMarketingEbook,
-} from "./lib/marketing-ebook.ts";
-import { subscribeToMarketingAsset } from "./lib/marketing-asset-events.ts";
-import { subscribeToMarketingEbook } from "./lib/marketing-ebook-events.ts";
+  createHermesUiMessageStreamResponse,
+  getHermesChatConfig,
+  uiMessagesToHermesMessages,
+} from "./lib/hermes-chat.ts";
 
 interface AppOptions {
   env: Env;
@@ -48,9 +27,6 @@ interface AppOptions {
 
 export function createApp({ env, waitUntil }: AppOptions) {
   const app = new Hono();
-  const marketingAssetStorageRoot = resolveMarketingAssetStorageRoot(
-    env.HQ_EBOOK_STORAGE_DIR,
-  );
 
   async function getRequestContext(request: Request) {
     return createContext(env, { waitUntil }, request);
@@ -58,27 +34,6 @@ export function createApp({ env, waitUntil }: AppOptions) {
 
   function unauthorizedResponse(c: Context) {
     return c.json({ message: "Unauthorized." }, 401);
-  }
-
-  function handleMarketingError(c: Context, error: unknown) {
-    if (error instanceof z.ZodError) {
-      return c.json(
-        { message: "Invalid request.", issues: error.flatten() },
-        400,
-      );
-    }
-
-    if (error instanceof MarketingAssetServiceError) {
-      const status =
-        error.code === "not_found"
-          ? 404
-          : error.code === "conflict"
-            ? 409
-            : 400;
-      return c.json({ message: error.message }, status);
-    }
-
-    throw error;
   }
 
   app.use("/api/*", async (c, next) => {
@@ -186,442 +141,69 @@ export function createApp({ env, waitUntil }: AppOptions) {
     }
   });
 
-  app.get("/api/marketing/assets/:id/preview", async (c) => {
+  app.post("/api/chat", async (c) => {
     const requestContext = await getRequestContext(c.req.raw);
     if (!requestContext.user && !requestContext.isAgent) {
       return unauthorizedResponse(c);
     }
 
-    const assetId = Number.parseInt(c.req.param("id"), 10);
-    if (!Number.isInteger(assetId) || assetId <= 0) {
-      return c.json({ message: "Invalid asset id." }, 400);
+    const hermes = getHermesChatConfig(env);
+    if (!hermes) {
+      return c.json(
+        { message: "Hermes chat is not configured on the HQ server." },
+        503,
+      );
     }
 
-    const organizationId = requestContext.isAgent
-      ? c.req.query("organizationId") ?? undefined
-      : requestContext.organizationId ?? undefined;
-    const asset = await getMarketingAsset(
-      requestContext.db,
-      assetId,
-      organizationId,
-    );
+    const body = (await c.req.json().catch(() => null)) as
+      | {
+          messages?: unknown;
+          sessionKey?: unknown;
+        }
+      | null;
 
-    if (!asset) {
-      return c.json({ message: "Asset not found." }, 404);
+    const messages = uiMessagesToHermesMessages(body?.messages);
+    const sessionKey =
+      typeof body?.sessionKey === "string" ? body.sessionKey.trim() : "";
+    if (messages.length === 0) {
+      return c.json({ message: "Chat request did not include any messages." }, 400);
     }
 
-    return c.body(asset.currentHtml, 200, {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "no-store, no-cache, must-revalidate",
-      "x-content-type-options": "nosniff",
+    const upstream = await fetch(`${hermes.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(hermes.apiKey
+          ? { authorization: `Bearer ${hermes.apiKey}` }
+          : {}),
+        ...(sessionKey
+          ? { "X-Hermes-Session-Id": sessionKey }
+          : {}),
+      },
+      body: JSON.stringify({
+        model: hermes.model,
+        stream: true,
+        messages,
+      }),
+      signal: c.req.raw.signal,
     });
-  });
 
-  app.get("/api/marketing/assets/:id/pdf", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.user && !requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    const assetId = Number.parseInt(c.req.param("id"), 10);
-    if (!Number.isInteger(assetId) || assetId <= 0) {
-      return c.json({ message: "Invalid asset id." }, 400);
-    }
-
-    const organizationId = requestContext.isAgent
-      ? c.req.query("organizationId") ?? undefined
-      : requestContext.organizationId ?? undefined;
-    const asset = await getMarketingAsset(
-      requestContext.db,
-      assetId,
-      organizationId,
-    );
-
-    if (!asset) {
-      return c.json({ message: "Asset not found." }, 404);
-    }
-
-    try {
-      const pdf = await renderMarketingAssetPdf(asset.currentHtml);
-      const filename = buildMarketingAssetPdfFilename(asset);
-
-      return new Response(Uint8Array.from(pdf), {
-        status: 200,
-        headers: {
-          "content-type": "application/pdf",
-          "content-disposition": `attachment; filename="${filename}"`,
-          "cache-control": "no-store, no-cache, must-revalidate",
-          "x-content-type-options": "nosniff",
+    if (!upstream.ok) {
+      const detail = await upstream.text().catch(() => "");
+      return new Response(
+        JSON.stringify({
+          message: detail || `Hermes request failed with status ${upstream.status}.`,
+        }),
+        {
+          status: upstream.status,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+          },
         },
-      });
-    } catch (error) {
-      if (error instanceof MarketingAssetPdfError) {
-        return c.json({ message: error.message }, 500);
-      }
-
-      throw error;
-    }
-  });
-
-  app.get("/api/marketing/assets/:id/stream", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.user && !requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    const assetId = Number.parseInt(c.req.param("id"), 10);
-    if (!Number.isInteger(assetId) || assetId <= 0) {
-      return c.json({ message: "Invalid asset id." }, 400);
-    }
-
-    const organizationId = requestContext.isAgent
-      ? c.req.query("organizationId") ?? undefined
-      : requestContext.organizationId ?? undefined;
-    const asset = await getMarketingAsset(
-      requestContext.db,
-      assetId,
-      organizationId,
-    );
-
-    if (!asset) {
-      return c.json({ message: "Asset not found." }, 404);
-    }
-
-    const encoder = new TextEncoder();
-
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        const send = (payload: unknown) => {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(payload)}\n\n`),
-          );
-        };
-
-        send({
-          assetId: asset.id,
-          version: asset.currentVersion,
-          updatedAt: new Date(asset.updatedAt).toISOString(),
-        });
-
-        const unsubscribe = subscribeToMarketingAsset(asset.id, (event) => {
-          send(event);
-        });
-
-        const keepAlive = setInterval(() => {
-          controller.enqueue(encoder.encode(": keep-alive\n\n"));
-        }, 15_000);
-
-        const closeStream = () => {
-          clearInterval(keepAlive);
-          unsubscribe();
-          try {
-            controller.close();
-          } catch {
-            // Stream may already be closed.
-          }
-        };
-
-        c.req.raw.signal.addEventListener("abort", closeStream, { once: true });
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "content-type": "text/event-stream; charset=utf-8",
-        "cache-control": "no-store, no-cache, must-revalidate",
-        connection: "keep-alive",
-        "x-accel-buffering": "no",
-      },
-    });
-  });
-
-  app.get("/api/marketing/agent/assets", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    const organizationId = c.req.query("organizationId");
-    if (!organizationId) {
-      return c.json({ message: "organizationId is required." }, 400);
-    }
-
-    const assetType = c.req.query("assetType");
-    const assets = await listMarketingAssets(
-      requestContext.db,
-      organizationId,
-      assetType === "ebook" ||
-        assetType === "email" ||
-        assetType === "landing_page" ||
-        assetType === "social"
-        ? assetType
-        : undefined,
-    );
-    return c.json({ items: assets });
-  });
-
-  app.get("/api/marketing/agent/assets/:id", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    const assetId = Number.parseInt(c.req.param("id"), 10);
-    if (!Number.isInteger(assetId) || assetId <= 0) {
-      return c.json({ message: "Invalid asset id." }, 400);
-    }
-
-    const asset = await getMarketingAsset(requestContext.db, assetId);
-    if (!asset) {
-      return c.json({ message: "Asset not found." }, 404);
-    }
-
-    return c.json({ item: asset });
-  });
-
-  app.post("/api/marketing/agent/assets", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    try {
-      const rawBody = await c.req.json();
-      const body = rawBody && typeof rawBody === "object" ? rawBody : {};
-      const input = marketingAssetCreateInputSchema.parse({
-        ...body,
-        source: "source" in body ? body.source : "cli",
-      });
-      const asset = await createMarketingAsset(
-        requestContext.db,
-        input,
-        marketingAssetStorageRoot,
       );
-      return c.json({ item: asset }, 201);
-    } catch (error) {
-      return handleMarketingError(c, error);
-    }
-  });
-
-  app.patch("/api/marketing/agent/assets/:id", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.isAgent) {
-      return unauthorizedResponse(c);
     }
 
-    const assetId = Number.parseInt(c.req.param("id"), 10);
-    if (!Number.isInteger(assetId) || assetId <= 0) {
-      return c.json({ message: "Invalid asset id." }, 400);
-    }
-
-    try {
-      const rawBody = await c.req.json();
-      const body = rawBody && typeof rawBody === "object" ? rawBody : {};
-      const input = marketingAssetUpdateInputSchema.parse({
-        ...body,
-        id: assetId,
-        source: "source" in body ? body.source : "cli",
-      });
-      const asset = await updateMarketingAsset(
-        requestContext.db,
-        input,
-        marketingAssetStorageRoot,
-      );
-      return c.json({ item: asset });
-    } catch (error) {
-      return handleMarketingError(c, error);
-    }
-  });
-
-  app.get("/api/marketing/ebooks/:id/preview", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.user && !requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    const ebookId = Number.parseInt(c.req.param("id"), 10);
-    if (!Number.isInteger(ebookId) || ebookId <= 0) {
-      return c.json({ message: "Invalid ebook id." }, 400);
-    }
-
-    const organizationId = requestContext.isAgent
-      ? c.req.query("organizationId") ?? undefined
-      : requestContext.organizationId ?? undefined;
-    const ebook = await getMarketingEbook(
-      requestContext.db,
-      ebookId,
-      organizationId,
-    );
-
-    if (!ebook) {
-      return c.json({ message: "Ebook not found." }, 404);
-    }
-
-    return c.body(ebook.currentHtml, 200, {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "no-store, no-cache, must-revalidate",
-      "x-content-type-options": "nosniff",
-    });
-  });
-
-  app.get("/api/marketing/ebooks/:id/stream", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.user && !requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    const ebookId = Number.parseInt(c.req.param("id"), 10);
-    if (!Number.isInteger(ebookId) || ebookId <= 0) {
-      return c.json({ message: "Invalid ebook id." }, 400);
-    }
-
-    const organizationId = requestContext.isAgent
-      ? c.req.query("organizationId") ?? undefined
-      : requestContext.organizationId ?? undefined;
-    const ebook = await getMarketingEbook(
-      requestContext.db,
-      ebookId,
-      organizationId,
-    );
-
-    if (!ebook) {
-      return c.json({ message: "Ebook not found." }, 404);
-    }
-
-    const encoder = new TextEncoder();
-
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        const send = (payload: unknown) => {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(payload)}\n\n`),
-          );
-        };
-
-        send({
-          ebookId: ebook.id,
-          version: ebook.currentVersion,
-          updatedAt: new Date(ebook.updatedAt).toISOString(),
-        });
-
-        const unsubscribe = subscribeToMarketingEbook(ebook.id, (event) => {
-          send(event);
-        });
-
-        const keepAlive = setInterval(() => {
-          controller.enqueue(encoder.encode(": keep-alive\n\n"));
-        }, 15_000);
-
-        const closeStream = () => {
-          clearInterval(keepAlive);
-          unsubscribe();
-          try {
-            controller.close();
-          } catch {
-            // Stream may already be closed.
-          }
-        };
-
-        c.req.raw.signal.addEventListener("abort", closeStream, { once: true });
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "content-type": "text/event-stream; charset=utf-8",
-        "cache-control": "no-store, no-cache, must-revalidate",
-        connection: "keep-alive",
-        "x-accel-buffering": "no",
-      },
-    });
-  });
-
-  app.get("/api/marketing/agent/ebooks", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    const organizationId = c.req.query("organizationId");
-    if (!organizationId) {
-      return c.json({ message: "organizationId is required." }, 400);
-    }
-
-    const ebooks = await listMarketingEbooks(requestContext.db, organizationId);
-    return c.json({ items: ebooks });
-  });
-
-  app.get("/api/marketing/agent/ebooks/:id", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    const ebookId = Number.parseInt(c.req.param("id"), 10);
-    if (!Number.isInteger(ebookId) || ebookId <= 0) {
-      return c.json({ message: "Invalid ebook id." }, 400);
-    }
-
-    const ebook = await getMarketingEbook(requestContext.db, ebookId);
-    if (!ebook) {
-      return c.json({ message: "Ebook not found." }, 404);
-    }
-
-    return c.json({ item: ebook });
-  });
-
-  app.post("/api/marketing/agent/ebooks", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    try {
-      const rawBody = await c.req.json();
-      const body = rawBody && typeof rawBody === "object" ? rawBody : {};
-      const input = marketingEbookCreateInputSchema.parse({
-        ...body,
-        source: "source" in body ? body.source : "cli",
-      });
-      const ebook = await createMarketingEbook(
-        requestContext.db,
-        input,
-        marketingAssetStorageRoot,
-      );
-      return c.json({ item: ebook }, 201);
-    } catch (error) {
-      return handleMarketingError(c, error);
-    }
-  });
-
-  app.patch("/api/marketing/agent/ebooks/:id", async (c) => {
-    const requestContext = await getRequestContext(c.req.raw);
-    if (!requestContext.isAgent) {
-      return unauthorizedResponse(c);
-    }
-
-    const ebookId = Number.parseInt(c.req.param("id"), 10);
-    if (!Number.isInteger(ebookId) || ebookId <= 0) {
-      return c.json({ message: "Invalid ebook id." }, 400);
-    }
-
-    try {
-      const rawBody = await c.req.json();
-      const body = rawBody && typeof rawBody === "object" ? rawBody : {};
-      const input = marketingEbookUpdateInputSchema.parse({
-        ...body,
-        id: ebookId,
-        source: "source" in body ? body.source : "cli",
-      });
-      const ebook = await updateMarketingEbook(
-        requestContext.db,
-        input,
-        marketingAssetStorageRoot,
-      );
-      return c.json({ item: ebook });
-    } catch (error) {
-      return handleMarketingError(c, error);
-    }
+    return createHermesUiMessageStreamResponse(upstream);
   });
 
   app.all("/api/trpc/*", async (c) => {

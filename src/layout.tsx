@@ -1,10 +1,7 @@
-import { useState } from "react";
 import { Outlet } from "react-router";
 import { ApprovalsPanel } from "@/components/approvals/approvals-panel";
 import { TopNav } from "@/components/top-nav";
 import { StatusBar } from "@/components/status-bar";
-import { LogsPanel } from "@/components/logs-panel";
-import { EventsPanel } from "@/components/events-panel";
 import { ChatPanel } from "@/components/messenger/messenger-panel";
 import { useApprovals } from "@/hooks/use-approvals";
 import { MessengerChatProvider } from "@/hooks/use-messenger-chat";
@@ -26,8 +23,6 @@ export default function Layout() {
 function LayoutInner() {
   const { chatOpen } = useMessengerPanel();
   const { approvalsOpen, setApprovalsOpen } = useApprovals();
-  const [logsOpen, setLogsOpen] = useState(false);
-  const [eventsOpen, setEventsOpen] = useState(false);
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -45,14 +40,7 @@ function LayoutInner() {
         </div>
       </div>
       {approvalsOpen && <ApprovalsPanel onClose={() => setApprovalsOpen(false)} />}
-      {logsOpen && <LogsPanel onClose={() => setLogsOpen(false)} />}
-      {eventsOpen && <EventsPanel onClose={() => setEventsOpen(false)} />}
-      <StatusBar
-        logsOpen={logsOpen}
-        onToggleLogs={() => setLogsOpen((v) => !v)}
-        eventsOpen={eventsOpen}
-        onToggleEvents={() => setEventsOpen((v) => !v)}
-      />
+      <StatusBar />
     </div>
   );
 }

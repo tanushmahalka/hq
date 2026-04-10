@@ -1,850 +1,431 @@
 /* eslint-disable react-refresh/only-export-components */
 
+import { useChat as useVercelChat } from "@ai-sdk/react";
 import {
-  createContext,
+  DefaultChatTransport,
+  type FileUIPart,
+  type UIMessage,
+} from "ai";
+import {
   useCallback,
-  useContext,
-  useEffect,
+  useMemo,
+  useRef,
   useState,
-  useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { useGateway } from "@/hooks/use-gateway";
-import type { EventFrame, GatewayClient } from "@/lib/gateway-client";
+import { parseHqWebchatSessionKey } from "@shared/hq-webchat-session";
 import {
-  buildAssistantTextMessage,
-  buildMessageTextWithAttachmentUrls,
-  buildOptimisticUserMessage,
-  extractText,
   hasBlockingAttachmentState,
-  isAssistantSilentReplyMessage,
   normalizePendingAttachments,
-  parseRawMessage,
-  parseRawMessages,
-  serializeAttachments,
-  type ChatMessage,
+  type ContentBlock,
   type PendingImageAttachment,
-  type QueuedChatMessage,
   type RawMessage,
   type SendOutcome,
 } from "@/hooks/use-chat";
-import {
-  markSessionPending,
-  clearSessionPending,
-} from "@/hooks/use-any-agent-active";
 
-type ChatEventPayload = {
-  runId: string;
-  sessionKey: string;
-  state: "delta" | "final" | "aborted" | "error";
-  message?: unknown;
-  errorMessage?: string;
-};
+const DEFAULT_CHAT_API_URL = "/api/chat";
 
-type AgentEventPayload = {
-  runId: string;
-  sessionKey?: string;
-  stream: string;
-  ts?: number;
-  data?: Record<string, unknown>;
-};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
-type SessionState = {
-  messages: ChatMessage[];
-  rawMessages: RawMessage[];
-  stream: string | null;
-  loading: boolean;
-  error: string | null;
-  queue: QueuedChatMessage[];
-  sending: boolean;
-  activeRunId: string | null;
-  draft: string;
-  attachments: PendingImageAttachment[];
-  needsRefresh: boolean;
-  hasLoaded: boolean;
-  streamStartedAt: number | null;
-};
+function getChatApiUrl(): string {
+  const envValue = import.meta.env.VITE_CHAT_API_URL;
+  return typeof envValue === "string" && envValue.trim().length > 0
+    ? envValue.trim()
+    : DEFAULT_CHAT_API_URL;
+}
 
-type MessengerChatStore = {
-  subscribe: (listener: () => void) => () => void;
-  getSessionSnapshot: (sessionKey: string) => SessionState;
-  setGatewayState: (value: { client: GatewayClient | null; connected: boolean }) => void;
-  retainSession: (sessionKey: string) => () => void;
-  ensureFresh: (sessionKey: string) => Promise<void>;
-  sendMessage: (
-    sessionKey: string,
-    text: string,
-    attachments?: PendingImageAttachment[],
-  ) => Promise<SendOutcome>;
-  abortRun: (sessionKey: string) => Promise<boolean>;
-  setDraft: (sessionKey: string, draft: string) => void;
-  addAttachments: (
-    sessionKey: string,
-    attachments: PendingImageAttachment[],
-  ) => void;
-  updateAttachment: (
-    sessionKey: string,
-    attachmentId: string,
-    patch: Partial<
-      Pick<PendingImageAttachment, "status" | "publicUrl" | "error">
-    >,
-  ) => void;
-  removeAttachment: (sessionKey: string, attachmentId: string) => void;
-  clearAttachments: (sessionKey: string) => void;
-  handleChatEvent: (payload: ChatEventPayload) => void;
-  handleAgentEvent: (payload: AgentEventPayload) => void;
-};
+function getMessageTimestamp(
+  timestamps: Map<string, number>,
+  messageId: string,
+): number {
+  const existing = timestamps.get(messageId);
+  if (existing != null) {
+    return existing;
+  }
 
-const MessengerChatContext = createContext<MessengerChatStore | null>(null);
+  const next = Date.now();
+  timestamps.set(messageId, next);
+  return next;
+}
 
-function createEmptySessionState(): SessionState {
+function toToolArguments(input: unknown): Record<string, unknown> {
+  return isRecord(input) ? input : {};
+}
+
+function inferHermesInlineToolName(label: string): string {
+  const trimmed = label.trim();
+  if (!trimmed) {
+    return "tool";
+  }
+
+  if (
+    trimmed.includes("/") ||
+    trimmed.includes(".") ||
+    trimmed.includes("read_file")
+  ) {
+    return "read";
+  }
+
+  return "exec";
+}
+
+function inferHermesInlineToolArguments(
+  toolName: string,
+  label: string,
+): Record<string, unknown> {
+  const trimmed = label.trim();
+  if (!trimmed) {
+    return {};
+  }
+
+  if (toolName === "read") {
+    return { file_path: trimmed };
+  }
+
+  return { command: trimmed };
+}
+
+function extractHermesInlineToolBlocks(
+  text: string,
+  timestamp: number,
+): {
+  blocks: ContentBlock[];
+  toolResults: RawMessage[];
+  remainingText: string;
+} {
+  const blocks: ContentBlock[] = [];
+  const toolResults: RawMessage[] = [];
+  let remaining = text;
+  let toolIndex = 1;
+
+  const compactToolPattern =
+    /^\s*`([^`\n]+)`\s*→\s*`([^`\n]+)`\s*(?:\n+|$)?/;
+  const markerOnlyPattern = /^\s*`([^`\n]+)`\s*(?:\n+|$)/;
+
+  while (true) {
+    const compactMatch = remaining.match(compactToolPattern);
+    if (compactMatch) {
+      const label = compactMatch[1]?.trim() ?? "";
+      const output = compactMatch[2]?.trim() ?? "";
+      const toolName = inferHermesInlineToolName(label);
+      const toolCallId = `hermes-inline-${timestamp}-${toolIndex++}`;
+
+      blocks.push({
+        type: "toolCall",
+        id: toolCallId,
+        name: toolName,
+        arguments: inferHermesInlineToolArguments(toolName, label),
+      });
+
+      toolResults.push({
+        role: "toolResult",
+        timestamp,
+        blocks: [
+          {
+            type: "toolResult",
+            toolName,
+            content: output,
+          },
+        ],
+      });
+
+      remaining = remaining.slice(compactMatch[0].length);
+      continue;
+    }
+
+    const markerOnlyMatch = remaining.match(markerOnlyPattern);
+    if (markerOnlyMatch) {
+      const label = markerOnlyMatch[1]?.trim() ?? "";
+      const toolName = inferHermesInlineToolName(label);
+      const toolCallId = `hermes-inline-${timestamp}-${toolIndex++}`;
+
+      blocks.push({
+        type: "toolCall",
+        id: toolCallId,
+        name: toolName,
+        arguments: inferHermesInlineToolArguments(toolName, label),
+      });
+
+      remaining = remaining.slice(markerOnlyMatch[0].length);
+      continue;
+    }
+
+    break;
+  }
+
   return {
-    messages: [],
-    rawMessages: [],
-    stream: null,
-    loading: false,
-    error: null,
-    queue: [],
-    sending: false,
-    activeRunId: null,
-    draft: "",
-    attachments: [],
-    needsRefresh: false,
-    hasLoaded: false,
-    streamStartedAt: null,
+    blocks,
+    toolResults,
+    remainingText: remaining.trimStart(),
   };
 }
 
-function rawMessageToChatMessage(message: RawMessage): ChatMessage | null {
-  if (message.role === "toolResult") {
+type ToolLikePart = {
+  type: string;
+  toolName?: string;
+  toolCallId?: string;
+  input?: unknown;
+  output?: unknown;
+  errorText?: string;
+  state?: string;
+  approval?: {
+    reason?: string;
+  };
+};
+
+function isToolLikePart(part: unknown): part is ToolLikePart {
+  return (
+    isRecord(part) &&
+    typeof part.type === "string" &&
+    (part.type === "dynamic-tool" || part.type.startsWith("tool-"))
+  );
+}
+
+function toToolResultContent(part: ToolLikePart): string | null {
+  if (!isToolLikePart(part)) {
     return null;
   }
 
-  const content = message.blocks
-    .filter((block): block is Extract<typeof message.blocks[number], { type: "text" }> => {
-      return block.type === "text";
-    })
-    .map((block) => block.text)
-    .join("");
+  if (part.state === "output-error") {
+    return part.errorText ?? "Tool call failed.";
+  }
+
+  if (part.state === "output-denied") {
+    return part.approval?.reason?.trim() || "Tool call denied.";
+  }
+
+  if (part.state !== "output-available") {
+    return null;
+  }
+
+  if (typeof part.output === "string") {
+    return part.output;
+  }
+
+  try {
+    return JSON.stringify(part.output, null, 2);
+  } catch {
+    return String(part.output);
+  }
+}
+
+function filePartToImageBlock(part: FileUIPart): Extract<ContentBlock, { type: "image" }> | null {
+  if (!part.mediaType.startsWith("image/")) {
+    return null;
+  }
 
   return {
-    role: message.role,
-    content,
-    timestamp: message.timestamp,
-    localId: message.localId,
+    type: "image",
+    url: part.url,
+    mimeType: part.mediaType,
   };
 }
 
-function buildRunKey(sessionKey: string, runId: string): string {
-  return `${sessionKey}::${runId}`;
-}
-
-function createMessengerChatStore(): MessengerChatStore {
-  const sessions = new Map<string, SessionState>();
-  const listeners = new Set<() => void>();
-  const visibleCounts = new Map<string, number>();
-  const agentFallbackFinalizedRuns = new Map<string, number>();
-  let client: GatewayClient | null = null;
-  let connected = false;
-
-  const emitChange = () => {
-    for (const listener of listeners) listener();
-  };
-
-  const pruneAgentFallbackFinalizedRuns = () => {
-    const cutoff = Date.now() - 5 * 60_000;
-    for (const [key, ts] of agentFallbackFinalizedRuns) {
-      if (ts < cutoff) {
-        agentFallbackFinalizedRuns.delete(key);
-      }
-    }
-  };
-
-  const ensureSession = (sessionKey: string): SessionState => {
-    const existing = sessions.get(sessionKey);
-    if (existing) {
-      return existing;
+function uiMessagesToRawMessages(
+  messages: UIMessage[],
+  timestamps: Map<string, number>,
+): RawMessage[] {
+  return messages.flatMap((message) => {
+    if (message.role === "system") {
+      return [];
     }
 
-    const next = createEmptySessionState();
-    sessions.set(sessionKey, next);
-    return next;
-  };
+    const timestamp = getMessageTimestamp(timestamps, message.id);
+    const role = message.role === "user" ? "user" : "assistant";
+    const blocks: ContentBlock[] = [];
+    const toolResults: RawMessage[] = [];
 
-  const updateSession = (
-    sessionKey: string,
-    updater: (session: SessionState) => SessionState,
-  ) => {
-    const current = ensureSession(sessionKey);
-    const next = updater(current);
-    if (next === current) {
-      return;
-    }
-    sessions.set(sessionKey, next);
-    emitChange();
-  };
+    for (const part of message.parts) {
+      if (part.type === "text") {
+        if (part.text) {
+          if (role === "assistant") {
+            const parsed = extractHermesInlineToolBlocks(part.text, timestamp);
+            blocks.push(...parsed.blocks);
+            toolResults.push(...parsed.toolResults);
 
-  const clearStreaming = (sessionKey: string) => {
-    clearSessionPending(sessionKey);
-    updateSession(sessionKey, (session) => ({
-      ...session,
-      stream: null,
-      activeRunId: null,
-      streamStartedAt: null,
-    }));
-  };
-
-  const refreshSessionHistory = (sessionKey: string) => {
-    updateSession(sessionKey, (session) => ({
-      ...session,
-      needsRefresh: true,
-    }));
-    void loadHistory(sessionKey, true);
-  };
-
-  const appendAssistantMessage = (
-    sessionKey: string,
-    message: unknown,
-    fallbackText?: string,
-  ) => {
-    if (isAssistantSilentReplyMessage(message)) {
-      return;
-    }
-
-    const parsed = parseRawMessage(message);
-    const fallback = fallbackText?.trim() ?? "";
-    const nextRaw =
-      parsed?.role === "assistant"
-        ? {
-            ...parsed,
-            timestamp: parsed.timestamp || Date.now(),
+            if (parsed.remainingText) {
+              blocks.push({ type: "text", text: parsed.remainingText });
+            }
+          } else {
+            blocks.push({ type: "text", text: part.text });
           }
-        : buildAssistantTextMessage(fallback);
+        }
+        continue;
+      }
 
-    if (!nextRaw) {
-      return;
-    }
+      if (part.type === "reasoning") {
+        if (part.text) {
+          blocks.push({ type: "thinking", thinking: part.text });
+        }
+        continue;
+      }
 
-    const nextText = extractText(message) || fallback;
-    updateSession(sessionKey, (session) => ({
-      ...session,
-      rawMessages: [...session.rawMessages, nextRaw],
-      messages: [
-        ...session.messages,
-        {
-          role: "assistant",
-          content: nextText,
-          timestamp: nextRaw.timestamp,
-        },
-      ],
-    }));
-  };
+      if (part.type === "file") {
+        const imageBlock = filePartToImageBlock(part);
+        if (imageBlock) {
+          blocks.push(imageBlock);
+        }
+        continue;
+      }
 
-  const loadHistory = async (sessionKey: string, force = false) => {
-    const session = ensureSession(sessionKey);
-    if (!client || !connected) {
-      return;
-    }
-    if (session.loading) {
-      return;
-    }
-    if (!force && session.hasLoaded && !session.needsRefresh) {
-      return;
-    }
+      if (!isToolLikePart(part)) {
+        continue;
+      }
 
-    updateSession(sessionKey, (current) => ({
-      ...current,
-      loading: true,
-      error: null,
-    }));
+      const rawToolType = String(part.type);
+      const toolName =
+        rawToolType === "dynamic-tool"
+          ? (typeof part.toolName === "string" ? part.toolName : "tool")
+          : rawToolType.slice(5);
 
-    try {
-      const response = await client.request<{ messages?: Array<unknown> }>(
-        "chat.history",
-        {
-          sessionKey,
-          limit: 200,
-        },
-      );
-
-      let shouldFlushQueue = false;
-      updateSession(sessionKey, (current) => {
-        const parsedRawMessages = parseRawMessages(response.messages ?? []);
-        const parsedMessages = parsedRawMessages
-          .map(rawMessageToChatMessage)
-          .filter((message): message is ChatMessage => message !== null);
-        const shouldClearStreaming =
-          current.streamStartedAt !== null &&
-          parsedRawMessages.some(
-            (message) =>
-              message.role === "assistant" &&
-              message.timestamp >= current.streamStartedAt!,
-          );
-
-        shouldFlushQueue = shouldClearStreaming && current.queue.length > 0;
-
-        return {
-          ...current,
-          messages: parsedMessages,
-          rawMessages: parsedRawMessages,
-          loading: false,
-          error: null,
-          hasLoaded: true,
-          needsRefresh: false,
-          ...(shouldClearStreaming
-            ? {
-                stream: null,
-                activeRunId: null,
-                streamStartedAt: null,
-              }
-            : {}),
-        };
+      blocks.push({
+        type: "toolCall",
+        id: part.toolCallId ?? `${toolName}-${timestamp}`,
+        name: toolName,
+        arguments: toToolArguments(part.input),
       });
 
-      if (shouldFlushQueue) {
-        void flushNextQueuedMessage(sessionKey);
+      const content = toToolResultContent(part);
+      if (!content) {
+        continue;
       }
-    } catch (error) {
-      updateSession(sessionKey, (current) => ({
-        ...current,
-        loading: false,
-        error: String(error),
-      }));
-    }
-  };
 
-  const rollbackOptimisticMessage = (sessionKey: string, localId: string) => {
-    updateSession(sessionKey, (session) => ({
-      ...session,
-      rawMessages: session.rawMessages.filter((message) => message.localId !== localId),
-      messages: session.messages.filter((message) => message.localId !== localId),
-    }));
-  };
-
-  const sendImmediate = async (
-    sessionKey: string,
-    text: string,
-    attachments: PendingImageAttachment[],
-  ): Promise<SendOutcome> => {
-    if (!client || !connected) {
-      return "ignored";
-    }
-
-    const trimmed = text.trim();
-    const normalizedAttachments = normalizePendingAttachments(attachments);
-    if (hasBlockingAttachmentState(normalizedAttachments)) {
-      return "ignored";
-    }
-    const messageText = buildMessageTextWithAttachmentUrls(
-      trimmed,
-      normalizedAttachments,
-    );
-    const serializedAttachments = serializeAttachments(normalizedAttachments);
-    if (!messageText && !serializedAttachments?.length) {
-      return "ignored";
-    }
-
-    const now = Date.now();
-    const localId = crypto.randomUUID();
-    const runId = crypto.randomUUID();
-
-    updateSession(sessionKey, (session) => ({
-      ...session,
-      messages: [
-        ...session.messages,
-        {
-          role: "user",
-          content:
-            messageText ||
-            `Image${normalizedAttachments.length > 1 ? "s" : ""} (${
-              normalizedAttachments.length
-            })`,
-          timestamp: now,
-          localId,
-        },
-      ],
-      rawMessages: [
-        ...session.rawMessages,
-        buildOptimisticUserMessage(
-          messageText,
-          normalizedAttachments,
-          now,
-          localId,
-        ),
-      ],
-      activeRunId: runId,
-      stream: "",
-      streamStartedAt: now,
-      sending: true,
-      error: null,
-      needsRefresh: false,
-    }));
-    markSessionPending(sessionKey);
-
-    try {
-      await client.request("chat.send", {
-        sessionKey,
-        message: messageText,
-        deliver: false,
-        idempotencyKey: runId,
-        attachments: serializedAttachments,
+      toolResults.push({
+        role: "toolResult",
+        timestamp,
+        blocks: [
+          {
+            type: "toolResult",
+            toolName,
+            content,
+            isError:
+              part.state === "output-error" || part.state === "output-denied",
+          },
+        ],
       });
-      return "sent";
-    } catch (error) {
-      clearStreaming(sessionKey);
-      rollbackOptimisticMessage(sessionKey, localId);
-      updateSession(sessionKey, (session) => ({
-        ...session,
-        sending: false,
-        error: String(error),
-      }));
-      return "error";
-    } finally {
-      updateSession(sessionKey, (session) => ({
-        ...session,
-        sending: false,
-      }));
-    }
-  };
-
-  const flushNextQueuedMessage = async (sessionKey: string) => {
-    const session = ensureSession(sessionKey);
-    if (!client || !connected || session.sending || session.activeRunId) {
-      return;
     }
 
-    const next = session.queue[0];
-    if (!next) {
-      return;
-    }
-
-    updateSession(sessionKey, (current) => ({
-      ...current,
-      queue: current.queue.slice(1),
-    }));
-
-    const outcome = await sendImmediate(sessionKey, next.text, next.attachments);
-    if (outcome !== "sent") {
-      updateSession(sessionKey, (current) => ({
-        ...current,
-        queue: [next, ...current.queue],
-      }));
-    }
-  };
-
-  return {
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-
-    getSessionSnapshot(sessionKey) {
-      return ensureSession(sessionKey);
-    },
-
-    setGatewayState(value) {
-      const clientChanged = client !== value.client;
-      const connectedChanged = connected !== value.connected;
-
-      client = value.client;
-      connected = value.connected;
-
-      if (!clientChanged && !connectedChanged) {
-        return;
-      }
-
-      if (connected && client) {
-        for (const sessionKey of visibleCounts.keys()) {
-          void loadHistory(sessionKey);
-        }
-      }
-    },
-
-    retainSession(sessionKey) {
-      const nextCount = (visibleCounts.get(sessionKey) ?? 0) + 1;
-      visibleCounts.set(sessionKey, nextCount);
-
-      return () => {
-        const current = visibleCounts.get(sessionKey) ?? 0;
-        if (current <= 1) {
-          visibleCounts.delete(sessionKey);
-          return;
-        }
-        visibleCounts.set(sessionKey, current - 1);
-      };
-    },
-
-    async ensureFresh(sessionKey) {
-      const session = ensureSession(sessionKey);
-      if (!session.hasLoaded || session.needsRefresh) {
-        await loadHistory(sessionKey, session.needsRefresh);
-      }
-    },
-
-    async sendMessage(sessionKey, text, attachments = []) {
-      const normalizedAttachments = normalizePendingAttachments(attachments);
-      if (hasBlockingAttachmentState(normalizedAttachments)) {
-        return "ignored";
-      }
-      if (!client || !connected) {
-        return "ignored";
-      }
-      if (!text.trim() && normalizedAttachments.length === 0) {
-        return "ignored";
-      }
-
-      const session = ensureSession(sessionKey);
-      if (session.sending || session.activeRunId) {
-        updateSession(sessionKey, (current) => ({
-          ...current,
-          queue: [
-            ...current.queue,
+    const rawMessage =
+      blocks.length > 0
+        ? [
             {
-              id: crypto.randomUUID(),
-              text: text.trim(),
-              attachments: normalizedAttachments,
-              createdAt: Date.now(),
-            },
-          ],
-        }));
-        return "queued";
+              role,
+              timestamp,
+              blocks,
+              localId: message.id,
+            } satisfies RawMessage,
+          ]
+        : [];
+
+    return [...rawMessage, ...toolResults];
+  });
+}
+
+function getStreamingText(message: UIMessage | undefined): string | null {
+  if (!message || message.role !== "assistant") {
+    return null;
+  }
+
+  const text = message.parts
+    .flatMap((part) => {
+      if (part.type === "text" || part.type === "reasoning") {
+        return [part.text];
       }
+      return [];
+    })
+    .join("")
+    .trim();
 
-      return sendImmediate(sessionKey, text, normalizedAttachments);
-    },
+  return text || null;
+}
 
-    async abortRun(sessionKey) {
-      const session = ensureSession(sessionKey);
-      if (!client || !connected || session.activeRunId === null) {
-        return false;
-      }
-
-      try {
-        await client.request("chat.abort", {
-          sessionKey,
-          runId: session.activeRunId,
-        });
-        return true;
-      } catch (error) {
-        updateSession(sessionKey, (current) => ({
-          ...current,
-          error: String(error),
-        }));
-        return false;
-      }
-    },
-
-    setDraft(sessionKey, draft) {
-      updateSession(sessionKey, (session) => ({
-        ...session,
-        draft,
-      }));
-    },
-
-    addAttachments(sessionKey, attachments) {
-      if (attachments.length === 0) {
-        return;
-      }
-      updateSession(sessionKey, (session) => ({
-        ...session,
-        attachments: [...session.attachments, ...attachments],
-      }));
-    },
-
-    updateAttachment(sessionKey, attachmentId, patch) {
-      updateSession(sessionKey, (session) => {
-        let didUpdate = false;
-        const nextAttachments = session.attachments.map((attachment) => {
-          if (attachment.id !== attachmentId) {
-            return attachment;
-          }
-
-          didUpdate = true;
-          return {
-            ...attachment,
-            ...patch,
-          };
-        });
-
-        if (!didUpdate) {
-          return session;
-        }
-
-        return {
-          ...session,
-          attachments: nextAttachments,
-        };
-      });
-    },
-
-    removeAttachment(sessionKey, attachmentId) {
-      updateSession(sessionKey, (session) => ({
-        ...session,
-        attachments: session.attachments.filter(
-          (attachment) => attachment.id !== attachmentId,
-        ),
-      }));
-    },
-
-    clearAttachments(sessionKey) {
-      updateSession(sessionKey, (session) => ({
-        ...session,
-        attachments: [],
-      }));
-    },
-
-    handleChatEvent(payload) {
-      if (!payload?.sessionKey) {
-        return;
-      }
-
-      const sessionKey = payload.sessionKey;
-      const session = ensureSession(sessionKey);
-      const isVisible = (visibleCounts.get(sessionKey) ?? 0) > 0;
-      const finalizedRunKey =
-        payload.runId && payload.sessionKey
-          ? buildRunKey(payload.sessionKey, payload.runId)
-          : null;
-
-      pruneAgentFallbackFinalizedRuns();
-
-      if (!isVisible) {
-        updateSession(sessionKey, (current) => ({
-          ...current,
-          needsRefresh: true,
-        }));
-        return;
-      }
-
-      if (
-        finalizedRunKey &&
-        agentFallbackFinalizedRuns.has(finalizedRunKey) &&
-        (payload.state === "final" ||
-          payload.state === "aborted" ||
-          payload.state === "error")
-      ) {
-        agentFallbackFinalizedRuns.delete(finalizedRunKey);
-        refreshSessionHistory(sessionKey);
-        return;
-      }
-
-      const knownRunId = session.activeRunId;
-      if (knownRunId && payload.runId && payload.runId !== knownRunId) {
-        if (payload.state === "final") {
-          appendAssistantMessage(sessionKey, payload.message);
-          void flushNextQueuedMessage(sessionKey);
-        }
-        return;
-      }
-
-      switch (payload.state) {
-        case "delta": {
-          clearSessionPending(sessionKey);
-          if (!isAssistantSilentReplyMessage(payload.message)) {
-            const nextText = extractText(payload.message);
-            updateSession(sessionKey, (current) => ({
-              ...current,
-              streamStartedAt: current.streamStartedAt ?? Date.now(),
-              stream:
-                typeof nextText === "string" && nextText.length >= (current.stream?.length ?? 0)
-                  ? nextText
-                  : current.stream,
-            }));
-          }
-          break;
-        }
-        case "final":
-          appendAssistantMessage(sessionKey, payload.message, session.stream ?? undefined);
-          clearStreaming(sessionKey);
-          void flushNextQueuedMessage(sessionKey);
-          break;
-        case "aborted":
-          appendAssistantMessage(sessionKey, payload.message, session.stream ?? undefined);
-          clearStreaming(sessionKey);
-          void flushNextQueuedMessage(sessionKey);
-          break;
-        case "error":
-          clearStreaming(sessionKey);
-          updateSession(sessionKey, (current) => ({
-            ...current,
-            error: payload.errorMessage ?? "chat error",
-          }));
-          void flushNextQueuedMessage(sessionKey);
-          break;
-      }
-    },
-
-    handleAgentEvent(payload) {
-      const sessionKey =
-        typeof payload?.sessionKey === "string" ? payload.sessionKey : null;
-      if (!sessionKey) {
-        return;
-      }
-
-      const session = ensureSession(sessionKey);
-      const isVisible = (visibleCounts.get(sessionKey) ?? 0) > 0;
-      const runKey =
-        typeof payload.runId === "string" && payload.runId
-          ? buildRunKey(sessionKey, payload.runId)
-          : null;
-
-      pruneAgentFallbackFinalizedRuns();
-
-      if (!isVisible) {
-        updateSession(sessionKey, (current) => ({
-          ...current,
-          needsRefresh: true,
-        }));
-        return;
-      }
-
-      if (payload.stream === "assistant") {
-        const nextText = extractText(payload.data);
-        if (!nextText || isAssistantSilentReplyMessage({ role: "assistant", text: nextText })) {
-          return;
-        }
-
-        clearSessionPending(sessionKey);
-        updateSession(sessionKey, (current) => ({
-          ...current,
-          streamStartedAt:
-            current.streamStartedAt ??
-            (typeof payload.ts === "number" ? payload.ts : Date.now()),
-          stream:
-            nextText.length >= (current.stream?.length ?? 0)
-              ? nextText
-              : current.stream,
-        }));
-        return;
-      }
-
-      if (payload.stream === "lifecycle") {
-        const phase =
-          typeof payload.data?.phase === "string" ? payload.data.phase : null;
-        if (phase === "end") {
-          if (runKey) {
-            agentFallbackFinalizedRuns.set(runKey, Date.now());
-          }
-          if (session.stream?.trim()) {
-            appendAssistantMessage(sessionKey, undefined, session.stream);
-          }
-          clearStreaming(sessionKey);
-          refreshSessionHistory(sessionKey);
-          void flushNextQueuedMessage(sessionKey);
-          return;
-        }
-
-        if (phase === "error") {
-          if (runKey) {
-            agentFallbackFinalizedRuns.set(runKey, Date.now());
-          }
-          clearStreaming(sessionKey);
-          updateSession(sessionKey, (current) => ({
-            ...current,
-            error:
-              typeof payload.data?.error === "string"
-                ? payload.data.error
-                : typeof payload.data?.reason === "string"
-                  ? payload.data.reason
-                  : "chat error",
-          }));
-          refreshSessionHistory(sessionKey);
-          void flushNextQueuedMessage(sessionKey);
-        }
-        return;
-      }
-
-      if (payload.stream === "error") {
-        if (runKey) {
-          agentFallbackFinalizedRuns.set(runKey, Date.now());
-        }
-        clearStreaming(sessionKey);
-        updateSession(sessionKey, (current) => ({
-          ...current,
-          error:
-            typeof payload.data?.error === "string"
-              ? payload.data.error
-              : typeof payload.data?.reason === "string"
-                ? payload.data.reason
-                : "chat error",
-        }));
-        refreshSessionHistory(sessionKey);
-        void flushNextQueuedMessage(sessionKey);
-      }
-    },
+function attachmentToFilePart(attachment: PendingImageAttachment): FileUIPart {
+  return {
+    type: "file",
+    mediaType: attachment.mimeType,
+    filename: attachment.fileName,
+    url: attachment.publicUrl ?? attachment.dataUrl,
   };
+}
+
+function buildInitialMessages(userName?: string): UIMessage[] {
+  const trimmedUserName = userName?.trim();
+  if (!trimmedUserName) {
+    return [];
+  }
+
+  return [
+    {
+      id: `system-user-${trimmedUserName.toLowerCase().replace(/\s+/g, "-")}`,
+      role: "system",
+      parts: [
+        {
+          type: "text",
+          text: `FYI, You are speaking with ${trimmedUserName}`,
+        },
+      ],
+    },
+  ];
 }
 
 export function MessengerChatProvider({ children }: { children: ReactNode }) {
-  const { client, connected, subscribe } = useGateway();
-  const [store] = useState<MessengerChatStore>(() => createMessengerChatStore());
-
-  useEffect(() => {
-    store.setGatewayState({ client, connected });
-  }, [client, connected, store]);
-
-  useEffect(() => {
-    return subscribe((event: EventFrame) => {
-      if (event.event === "chat") {
-        store.handleChatEvent(event.payload as ChatEventPayload);
-        return;
-      }
-
-      if (event.event === "agent") {
-        store.handleAgentEvent(event.payload as AgentEventPayload);
-      }
-    });
-  }, [store, subscribe]);
-
-  return (
-    <MessengerChatContext.Provider value={store}>
-      {children}
-    </MessengerChatContext.Provider>
-  );
+  return <>{children}</>;
 }
 
 export function useMessengerChat(sessionKey: string) {
-  const store = useContext(MessengerChatContext);
-  if (!store) {
-    throw new Error("useMessengerChat must be used within MessengerChatProvider");
-  }
-
-  const session = useSyncExternalStore(
-    store.subscribe,
-    () => store.getSessionSnapshot(sessionKey),
-    () => store.getSessionSnapshot(sessionKey),
+  const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<PendingImageAttachment[]>([]);
+  const parsedSession = useMemo(
+    () => parseHqWebchatSessionKey(sessionKey),
+    [sessionKey],
+  );
+  const initialMessages = useMemo(
+    () => buildInitialMessages(parsedSession?.userName),
+    [parsedSession?.userName],
+  );
+  const timestampsRef = useRef(new Map<string, number>());
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: getChatApiUrl(),
+        credentials: "include",
+        body: {
+          sessionKey,
+          agentId: parsedSession?.agentId,
+          userSlug: parsedSession?.userSlug,
+        },
+      }),
+    [parsedSession?.agentId, parsedSession?.userSlug, sessionKey],
   );
 
-  useEffect(() => {
-    return store.retainSession(sessionKey);
-  }, [sessionKey, store]);
+  const {
+    messages,
+    sendMessage: sendSdkMessage,
+    stop,
+    status,
+    error,
+    clearError,
+  } = useVercelChat({
+    id: sessionKey,
+    messages: initialMessages,
+    transport,
+  });
 
-  useEffect(() => {
-    void store.ensureFresh(sessionKey);
-  }, [sessionKey, session.hasLoaded, session.needsRefresh, store]);
-
-  const setDraft = useCallback(
-    (draft: string) => {
-      store.setDraft(sessionKey, draft);
-    },
-    [sessionKey, store],
+  const rawMessages = useMemo(
+    () => uiMessagesToRawMessages(messages, timestampsRef.current),
+    [messages],
+  );
+  const stream = useMemo(
+    () =>
+      status === "streaming" ? getStreamingText(messages[messages.length - 1]) : null,
+    [messages, status],
   );
 
-  const addAttachments = useCallback(
-    (attachments: PendingImageAttachment[]) => {
-      store.addAttachments(sessionKey, attachments);
-    },
-    [sessionKey, store],
-  );
-
-  const removeAttachment = useCallback(
-    (attachmentId: string) => {
-      store.removeAttachment(sessionKey, attachmentId);
-    },
-    [sessionKey, store],
-  );
+  const addAttachments = useCallback((next: PendingImageAttachment[]) => {
+    setAttachments((current) => [...current, ...next]);
+  }, []);
 
   const updateAttachment = useCallback(
     (
@@ -853,44 +434,93 @@ export function useMessengerChat(sessionKey: string) {
         Pick<PendingImageAttachment, "status" | "publicUrl" | "error">
       >,
     ) => {
-      store.updateAttachment(sessionKey, attachmentId, patch);
+      setAttachments((current) =>
+        current.map((attachment) =>
+          attachment.id === attachmentId ? { ...attachment, ...patch } : attachment,
+        ),
+      );
     },
-    [sessionKey, store],
+    [],
   );
+
+  const removeAttachment = useCallback((attachmentId: string) => {
+    setAttachments((current) =>
+      current.filter((attachment) => attachment.id !== attachmentId),
+    );
+  }, []);
 
   const clearAttachments = useCallback(() => {
-    store.clearAttachments(sessionKey);
-  }, [sessionKey, store]);
+    setAttachments([]);
+  }, []);
 
   const sendMessage = useCallback(
-    (text: string, attachments: PendingImageAttachment[] = []) =>
-      store.sendMessage(sessionKey, text, attachments),
-    [sessionKey, store],
+    async (
+      text: string,
+      pendingAttachments: PendingImageAttachment[] = [],
+    ): Promise<SendOutcome> => {
+      const trimmed = text.trim();
+      const normalizedAttachments = normalizePendingAttachments(pendingAttachments);
+      if (hasBlockingAttachmentState(normalizedAttachments)) {
+        return "ignored";
+      }
+
+      const files = normalizedAttachments.map(attachmentToFilePart);
+      if (!trimmed && files.length === 0) {
+        return "ignored";
+      }
+
+      try {
+        clearError();
+        await sendSdkMessage(
+          files.length > 0 ? { text: trimmed, files } : { text: trimmed },
+        );
+        return "sent";
+      } catch {
+        return "error";
+      }
+    },
+    [clearError, sendSdkMessage],
   );
 
-  const abortRun = useCallback(
-    () => store.abortRun(sessionKey),
-    [sessionKey, store],
-  );
+  const abortRun = useCallback(async () => {
+    if (status !== "submitted" && status !== "streaming") {
+      return false;
+    }
+
+    stop();
+    return true;
+  }, [status, stop]);
 
   return {
-    messages: session.messages,
-    rawMessages: session.rawMessages,
-    stream: session.stream,
-    isBusy: session.sending || session.activeRunId !== null,
-    isStreaming: session.stream !== null,
-    loading: session.loading,
-    error: session.error,
+    messages: rawMessages
+      .filter((message) => message.role !== "toolResult")
+      .map((message) => ({
+        role: message.role,
+        content: message.blocks
+          .filter((block): block is Extract<ContentBlock, { type: "text" }> => {
+            return block.type === "text";
+          })
+          .map((block) => block.text)
+          .join(""),
+        timestamp: message.timestamp,
+        localId: message.localId,
+      })),
+    rawMessages,
+    stream,
+    isBusy: status === "submitted" || status === "streaming",
+    isStreaming: status === "streaming",
+    loading: false,
+    error: error?.message ?? null,
     sendMessage,
-    queue: session.queue,
-    canAbort: session.activeRunId !== null,
+    queue: [],
+    canAbort: status === "submitted" || status === "streaming",
     abortRun,
     removeQueuedMessage: () => {
-      // Messenger does not expose queued item controls yet.
+      // Queueing is handled by the API endpoint when needed.
     },
-    draft: session.draft,
+    draft,
     setDraft,
-    attachments: session.attachments,
+    attachments,
     addAttachments,
     updateAttachment,
     removeAttachment,

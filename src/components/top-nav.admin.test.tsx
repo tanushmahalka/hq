@@ -59,8 +59,8 @@ describe("TopNav admin surfaces", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: /marketing/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /usage/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /agents/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /db/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /agents/i })).not.toBeInTheDocument();
   });
 });

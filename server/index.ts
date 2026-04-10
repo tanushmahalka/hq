@@ -51,10 +51,12 @@ function getAppEnv(): Env {
     DATABASE_URL: getRequiredEnv("DATABASE_URL"),
     BETTER_AUTH_SECRET: getRequiredEnv("BETTER_AUTH_SECRET"),
     BETTER_AUTH_URL: getRequiredEnv("BETTER_AUTH_URL"),
+    HERMES_API_URL: process.env.HERMES_API_URL,
+    HERMES_API_KEY: process.env.HERMES_API_KEY,
+    HERMES_MODEL: process.env.HERMES_MODEL,
     OPENCLAW_HOOKS_URL: process.env.OPENCLAW_HOOKS_URL,
     OPENCLAW_HOOKS_TOKEN: process.env.OPENCLAW_HOOKS_TOKEN,
     LOCAL_PG_ADMIN_URL: process.env.LOCAL_PG_ADMIN_URL,
-    HQ_EBOOK_STORAGE_DIR: process.env.HQ_EBOOK_STORAGE_DIR,
     S3_BUCKET: process.env.S3_BUCKET,
     S3_REGION: process.env.S3_REGION,
     S3_ENDPOINT_URL: process.env.S3_ENDPOINT_URL,
@@ -117,7 +119,7 @@ app.get("*", async (c, next) => {
   return serveStatic({ root: distRoot, path: "index.html" })(c, next);
 });
 
-const port = Number.parseInt(process.env.PORT ?? "5174", 10);
+const port = Number.parseInt(process.env.PORT ?? "8787", 10);
 
 serve({
   fetch: app.fetch,

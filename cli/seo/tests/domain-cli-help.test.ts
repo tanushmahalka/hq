@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import fs from "node:fs/promises";
 import { promisify } from "node:util";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
@@ -54,4 +56,24 @@ test("bin/seo exposes keyword relevance classification help on the CLI", async (
   assert.match(stdout, /seo keywords classify-relevance \(\-\-query <keyword> \| \-\-jsonl <path\|->\)/);
   assert.match(stdout, /--brand <overview>/);
   assert.match(stdout, /--concurrency <n>/);
+});
+
+test("bin/seo works when launched through a symlink", async () => {
+  const projectDir = path.resolve(import.meta.dirname, "..");
+  const seoBin = path.join(projectDir, "bin", "seo");
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "seo-bin-link-"));
+  const linkedBin = path.join(tempDir, "seo");
+
+  try {
+    await fs.symlink(seoBin, linkedBin);
+    const { stdout } = await execFileAsync(linkedBin, ["--help"], {
+      cwd: projectDir,
+      env: process.env,
+    });
+
+    assert.match(stdout, /SEO CLI/);
+    assert.match(stdout, /seo page audit --page <url>/);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
 });

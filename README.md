@@ -2,7 +2,7 @@
 
 HQ is a control plane for human-directed AI operations.
 
-It brings agent orchestration, task execution, mission planning, SEO intelligence, content production, approval flows, usage analytics, and workspace visibility into one product. The goal is not just to "chat with agents", but to run repeatable business work with structure, accountability, and live operational feedback.
+It brings agent orchestration, task execution, mission planning, SEO intelligence, approval flows, usage analytics, and workspace visibility into one product. The goal is not just to "chat with agents", but to run repeatable business work with structure, accountability, and live operational feedback.
 
 ## What HQ Does
 
@@ -14,7 +14,6 @@ This project provides that surface:
 - A task system for simple execution with rich metadata, comments, and agent notifications
 - Mission, objective, and campaign tracking for longer-running strategic work
 - Live OpenClaw gateway connectivity for approvals, logs, events, and agent state
-- A built-in marketing asset pipeline with version history, live HTML preview, and PDF export
 - An SEO intelligence workspace backed by stored crawl, analytics, keyword, backlink, and competitor data
 - File and skill introspection for connected agents
 - Usage analytics for understanding session activity, token/cost trends, and operational health
@@ -25,10 +24,10 @@ This is the kind of product I like building most: systems that sit at the inters
 
 HQ is not a demo dashboard. It spans the full stack:
 
-- Product and UX: a real operator console with distinct workflows for tasks, missions, files, SEO, usage, and content
+- Product and UX: a real operator console with distinct workflows for tasks, missions, files, SEO, and usage
 - Application architecture: a typed React frontend, Hono server, tRPC API layer, and Drizzle/Postgres data model
 - Agent systems design: hook-based task triggering, live agent session linking, and human-in-the-loop approvals
-- Business use cases: content generation, campaign tracking, operational task routing, and SEO/GEO analysis
+- Business use cases: campaign tracking, operational task routing, and SEO/GEO analysis
 - Platform thinking: auth, org boundaries, invite-only onboarding, deployment scripts, CLI tooling, and runtime integration with an external gateway
 
 If someone wants to understand the kind of product and systems work I can own end-to-end, this repository is a good example.
@@ -56,15 +55,7 @@ If someone wants to understand the kind of product and systems work I can own en
 - Campaigns attached to objectives with lifecycle tracking
 - A structure for turning high-level goals into measurable operational work
 
-### 4. Marketing Asset Production
-
-- Asset types for ebooks, email, landing pages, and social assets
-- Revision history for every asset update
-- Live HTML preview endpoints
-- PDF generation for ebook-style deliverables
-- Support for both local file storage and S3-backed media flows
-
-### 5. SEO and GEO Intelligence
+### 4. SEO and GEO Intelligence
 
 - Site-level overview across pages, clusters, competitors, and analytics
 - Stored crawl and audit data for tracked pages
@@ -73,7 +64,7 @@ If someone wants to understand the kind of product and systems work I can own en
 - Analytics summaries and backlink-oriented workflows
 - CLI support for DataForSEO and Google Search Console powered workflows
 
-### 6. Usage Analytics
+### 5. Usage Analytics
 
 - Session-level usage breakdowns
 - Token and cost trend views
@@ -88,12 +79,11 @@ flowchart LR
     B --> C["tRPC Routers"]
     C --> D["Postgres via Drizzle ORM"]
     B --> E["Better Auth"]
-    B --> F["Marketing Preview / PDF / Upload Endpoints"]
-    B --> G["OpenClaw Hooks + Gateway"]
-    G --> H["Connected Agents"]
-    C --> I["Task Workflow Engine"]
-    C --> J["SEO / Marketing / Mission Procedures"]
-    J --> K["CLI Tools and External Providers"]
+    B --> F["OpenClaw Hooks + Gateway"]
+    F --> G["Connected Agents"]
+    C --> H["Task Workflow Engine"]
+    C --> I["SEO / Mission Procedures"]
+    I --> J["CLI Tools and External Providers"]
 ```
 
 ## Architecture
@@ -104,7 +94,7 @@ flowchart LR
 - React Router for app navigation
 - TanStack Query + tRPC client for typed data access
 - Tailwind CSS and shared UI primitives
-- Dedicated product areas for dashboard, tasks, missions, marketing, SEO, files, usage, settings, and auth
+- Dedicated product areas for dashboard, tasks, missions, SEO, files, usage, settings, and auth
 
 ### Backend
 
@@ -112,7 +102,7 @@ flowchart LR
 - tRPC for typed procedures
 - Better Auth for authentication, session handling, organizations, and admin roles
 - Drizzle ORM for schema and queries
-- REST endpoints for auth, invitation lookup, uploads, previews, PDFs, and event streams
+- REST endpoints for auth, invitation lookup, uploads, and event streams
 
 ### Data Model
 
@@ -121,7 +111,7 @@ The schema is split into a few clear domains:
 - `auth`: users, sessions, organizations, members, invitations, API keys
 - `core`: tasks, comments, and agent database bindings
 - `custom`: missions and objectives
-- `marketing`: assets, revisions, campaigns
+- `marketing`: campaigns
 - `seo`: sites, crawls, pages, clusters, queries, analytics, competitors, backlinks, and GEO/SEO support tables
 
 ### Runtime Model
@@ -233,7 +223,6 @@ The app reads `.env` and `.dev.vars` locally. A safe template lives in `.env.exa
 
 ### Storage
 
-- `HQ_EBOOK_STORAGE_DIR`
 - `S3_BUCKET`
 - `S3_REGION`
 - `S3_ENDPOINT_URL`

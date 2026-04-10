@@ -59,7 +59,6 @@ describe("TopNav", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: /marketing/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /files/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /agents/i })).not.toBeInTheDocument();
   });

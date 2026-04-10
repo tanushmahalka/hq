@@ -1,317 +1,146 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
-import { MessengerChatProvider, useMessengerChat } from "./use-messenger-chat";
+import type { UIMessage } from "ai";
+import { useMessengerChat } from "./use-messenger-chat";
 import { buildHqWebchatSessionKey } from "@shared/hq-webchat-session";
 
-type GatewaySubscriber = (event: {
-  type: "event";
-  event: string;
-  payload?: unknown;
-}) => void;
+const transportInstances: Array<{ config: Record<string, unknown> }> = [];
+let latestUseChatOptions: Record<string, unknown> | null = null;
 
-const subscribers = new Set<GatewaySubscriber>();
-let connected = true;
-const request = vi.fn<
-  (method: string, params?: Record<string, unknown>) => Promise<unknown>
->();
-const client = { request };
+const mockSendMessage = vi.fn<(message?: unknown) => Promise<void>>();
+const mockStop = vi.fn();
+const mockClearError = vi.fn();
 
-vi.mock("./use-gateway", () => ({
-  useGateway: () => ({
-    client,
-    connected,
-    subscribe: (handler: GatewaySubscriber) => {
-      subscribers.add(handler);
-      return () => subscribers.delete(handler);
-    },
-    agents: [],
-    snapshot: null,
+let mockChatState: {
+  messages: UIMessage[];
+  status: "ready" | "submitted" | "streaming" | "error";
+  error: Error | undefined;
+} = {
+  messages: [],
+  status: "ready",
+  error: undefined,
+};
+
+vi.mock("ai", async () => {
+  const actual = await vi.importActual<typeof import("ai")>("ai");
+
+  class MockDefaultChatTransport {
+    config: Record<string, unknown>;
+
+    constructor(config: Record<string, unknown> = {}) {
+      this.config = config;
+      transportInstances.push(this);
+    }
+  }
+
+  return {
+    ...actual,
+    DefaultChatTransport: MockDefaultChatTransport,
+  };
+});
+
+vi.mock("@ai-sdk/react", () => ({
+  useChat: vi.fn((options: Record<string, unknown>) => {
+    latestUseChatOptions = options;
+    return {
+      messages: mockChatState.messages,
+      sendMessage: mockSendMessage,
+      stop: mockStop,
+      status: mockChatState.status,
+      error: mockChatState.error,
+      clearError: mockClearError,
+    };
   }),
 }));
-
-function Wrapper({ children }: { children: ReactNode }) {
-  return <MessengerChatProvider>{children}</MessengerChatProvider>;
-}
 
 function getSessionKey(agentId = "agent-1", userName = "Tanush Mahalka") {
   return buildHqWebchatSessionKey({ agentId, userName });
 }
 
-async function emitChat(payload: {
-  sessionKey: string;
-  runId: string;
-  state: "delta" | "final" | "aborted" | "error";
-  message?: unknown;
-  errorMessage?: string;
-}) {
-  await act(async () => {
-    for (const subscriber of subscribers) {
-      subscriber({ type: "event", event: "chat", payload });
-    }
-    await Promise.resolve();
-  });
-}
-
-async function emitAgent(payload: {
-  sessionKey?: string;
-  runId: string;
-  stream: string;
-  ts?: number;
-  data?: Record<string, unknown>;
-}) {
-  await act(async () => {
-    for (const subscriber of subscribers) {
-      subscriber({ type: "event", event: "agent", payload });
-    }
-    await Promise.resolve();
-  });
-}
-
 describe("useMessengerChat", () => {
   beforeEach(() => {
-    subscribers.clear();
-    connected = true;
-    request.mockReset();
-    request.mockImplementation(async (method, params) => {
-      if (method === "chat.history") {
-        return { messages: [], sessionKey: params?.sessionKey };
-      }
-      return {};
-    });
+    transportInstances.length = 0;
+    latestUseChatOptions = null;
+    mockSendMessage.mockReset();
+    mockSendMessage.mockResolvedValue(undefined);
+    mockStop.mockReset();
+    mockClearError.mockReset();
+    mockChatState = {
+      messages: [],
+      status: "ready",
+      error: undefined,
+    };
   });
 
-  it("keeps busy state isolated when switching sessions", async () => {
-    const { result, rerender } = renderHook(
-      ({ sessionKey }) => useMessengerChat(sessionKey),
+  it("configures the SDK chat transport with the session metadata", () => {
+    const sessionKey = getSessionKey("agent-a", "Tanush Mahalka");
+
+    renderHook(() => useMessengerChat(sessionKey));
+
+    expect(latestUseChatOptions?.id).toBe(sessionKey);
+    expect(latestUseChatOptions?.messages).toEqual([
       {
-        initialProps: { sessionKey: getSessionKey("agent-a") },
-        wrapper: Wrapper,
+        id: "system-user-tanush-mahalka",
+        role: "system",
+        parts: [
+          {
+            type: "text",
+            text: "FYI, You are speaking with Tanush Mahalka",
+          },
+        ],
       },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    let sendOutcome: Awaited<ReturnType<typeof result.current.sendMessage>> = "ignored";
-    await act(async () => {
-      sendOutcome = await result.current.sendMessage("hello");
+    ]);
+    expect(transportInstances).toHaveLength(1);
+    expect(transportInstances[0]?.config).toMatchObject({
+      api: "/api/chat",
+      credentials: "include",
+      body: {
+        sessionKey,
+        agentId: "agent-a",
+        userSlug: "tanush-mahalka",
+      },
     });
-
-    expect(sendOutcome).toBe("sent");
-    const runId = request.mock.calls.find(([method]) => method === "chat.send")?.[1]
-      ?.idempotencyKey;
-    expect(typeof runId).toBe("string");
-
-    await emitChat({
-      sessionKey: getSessionKey("agent-a"),
-      runId: String(runId),
-      state: "delta",
-      message: { role: "assistant", content: [{ type: "text", text: "Working" }] },
-    });
-
-    expect(result.current.isBusy).toBe(true);
-    expect(result.current.stream).toBe("Working");
-
-    rerender({ sessionKey: getSessionKey("agent-b") });
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.isBusy).toBe(false);
-    expect(result.current.stream).toBeNull();
-
-    await act(async () => {
-      sendOutcome = await result.current.sendMessage("second");
-    });
-
-    expect(sendOutcome).toBe("sent");
-    expect(
-      request.mock.calls.filter(([method, params]) => {
-        return method === "chat.send" && params?.sessionKey === getSessionKey("agent-b");
-      }),
-    ).toHaveLength(1);
   });
 
-  it("keeps state isolated for different user slugs on the same agent", async () => {
-    const tanushSessionKey = getSessionKey("agent-a", "Tanush Mahalka");
-    const avaSessionKey = getSessionKey("agent-a", "Ava Stone");
-
-    const { result, rerender } = renderHook(
-      ({ sessionKey }) => useMessengerChat(sessionKey),
-      {
-        initialProps: { sessionKey: tanushSessionKey },
-        wrapper: Wrapper,
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    act(() => {
-      result.current.setDraft("Hello Tanush");
-    });
-
-    rerender({ sessionKey: avaSessionKey });
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.draft).toBe("");
-
-    act(() => {
-      result.current.setDraft("Hello Ava");
-    });
-
-    rerender({ sessionKey: tanushSessionKey });
-    expect(result.current.draft).toBe("Hello Tanush");
-  });
-
-  it("loads initial history once the gateway connection becomes ready", async () => {
-    connected = false;
-
-    const { result, rerender } = renderHook(
-      ({ sessionKey }) => useMessengerChat(sessionKey),
-      {
-        initialProps: { sessionKey: getSessionKey("agent-a") },
-        wrapper: Wrapper,
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(
-      request.mock.calls.filter(([method]) => method === "chat.history"),
-    ).toHaveLength(0);
-
-    connected = true;
-    rerender({ sessionKey: getSessionKey("agent-a") });
-
-    await waitFor(() =>
-      expect(
-        request.mock.calls.filter(
-          ([method, params]) =>
-            method === "chat.history" &&
-            params?.sessionKey === getSessionKey("agent-a"),
-        ),
-      ).toHaveLength(1),
-    );
-  });
-
-  it("preserves per-session drafts and attachments", async () => {
+  it("sends text and uploaded image attachments through the SDK hook", async () => {
+    const sessionKey = getSessionKey("agent-a");
     const attachment = {
       id: "attachment-1",
       dataUrl: "data:image/png;base64,Zm9v",
       mimeType: "image/png",
       fileName: "draft.png",
       status: "uploaded" as const,
-      publicUrl: "https://cdn.example.com/chat-images/draft.png",
+      publicUrl: "https://cdn.example.com/draft.png",
     };
 
-    const { result, rerender } = renderHook(
-      ({ sessionKey }) => useMessengerChat(sessionKey),
-      {
-        initialProps: { sessionKey: getSessionKey("agent-a") },
-        wrapper: Wrapper,
-      },
-    );
+    const { result } = renderHook(() => useMessengerChat(sessionKey));
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    act(() => {
-      result.current.setDraft("Draft A");
-      result.current.addAttachments([attachment]);
-    });
-
-    rerender({ sessionKey: getSessionKey("agent-b") });
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    act(() => {
-      result.current.setDraft("Draft B");
-    });
-
-    expect(result.current.draft).toBe("Draft B");
-    expect(result.current.attachments).toHaveLength(0);
-
-    rerender({ sessionKey: getSessionKey("agent-a") });
-
-    expect(result.current.draft).toBe("Draft A");
-    expect(result.current.attachments).toMatchObject([attachment]);
-  });
-
-  it("updates attachment upload state in place", async () => {
-    const { result } = renderHook(() => useMessengerChat(getSessionKey("agent-a")), {
-      wrapper: Wrapper,
-    });
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    act(() => {
-      result.current.addAttachments([
-        {
-          id: "attachment-1",
-          dataUrl: "data:image/png;base64,Zm9v",
-          mimeType: "image/png",
-          status: "uploading",
-        },
-      ]);
-    });
-
-    act(() => {
-      result.current.updateAttachment("attachment-1", {
-        status: "uploaded",
-        publicUrl: "https://cdn.example.com/chat-images/uploaded.png",
-      });
-    });
-
-    expect(result.current.attachments).toMatchObject([
-      {
-        id: "attachment-1",
-        status: "uploaded",
-        publicUrl: "https://cdn.example.com/chat-images/uploaded.png",
-      },
-    ]);
-  });
-
-  it("appends uploaded public urls to the outgoing message text", async () => {
-    const { result } = renderHook(() => useMessengerChat(getSessionKey("agent-a")), {
-      wrapper: Wrapper,
-    });
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
+    let outcome: Awaited<ReturnType<typeof result.current.sendMessage>> = "ignored";
     await act(async () => {
-      await result.current.sendMessage("Check this", [
-        {
-          id: "attachment-1",
-          dataUrl: "data:image/png;base64,Zm9v",
-          mimeType: "image/png",
-          status: "uploaded",
-          publicUrl: "https://cdn.example.com/chat-images/example.png",
-        },
-      ]);
+      outcome = await result.current.sendMessage("Hello", [attachment]);
     });
 
-    expect(request).toHaveBeenCalledWith("chat.send", {
-      sessionKey: getSessionKey("agent-a"),
-      message:
-        "Check this\n\nhttps://cdn.example.com/chat-images/example.png",
-      deliver: false,
-      idempotencyKey: expect.any(String),
-      attachments: [
+    expect(outcome).toBe("sent");
+    expect(mockClearError).toHaveBeenCalledTimes(1);
+    expect(mockSendMessage).toHaveBeenCalledWith({
+      text: "Hello",
+      files: [
         {
-          type: "image",
-          mimeType: "image/png",
-          content: "Zm9v",
+          type: "file",
+          mediaType: "image/png",
+          filename: "draft.png",
+          url: "https://cdn.example.com/draft.png",
         },
       ],
     });
   });
 
-  it("blocks sends while an attachment upload is still pending", async () => {
-    const { result } = renderHook(() => useMessengerChat(getSessionKey("agent-a")), {
-      wrapper: Wrapper,
-    });
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
+  it("ignores sends while attachments are still uploading", async () => {
+    const { result } = renderHook(() => useMessengerChat(getSessionKey("agent-a")));
 
     let outcome: Awaited<ReturnType<typeof result.current.sendMessage>> = "sent";
     await act(async () => {
-      outcome = await result.current.sendMessage("", [
+      outcome = await result.current.sendMessage("Hello", [
         {
           id: "attachment-1",
           dataUrl: "data:image/png;base64,Zm9v",
@@ -322,243 +151,154 @@ describe("useMessengerChat", () => {
     });
 
     expect(outcome).toBe("ignored");
-    expect(
-      request.mock.calls.filter(([method]) => method === "chat.send"),
-    ).toHaveLength(0);
+    expect(mockSendMessage).not.toHaveBeenCalled();
   });
 
-  it("shows cached thinking when reopening a hidden in-flight session, then reconciles", async () => {
-    let agentAFinalVisible = false;
-    request.mockImplementation(async (method, params) => {
-      if (method === "chat.history") {
-        if (params?.sessionKey === getSessionKey("agent-a") && agentAFinalVisible) {
-          const now = Date.now();
-          return {
-            messages: [
-              {
-                role: "user",
-                timestamp: now - 50,
-                content: [{ type: "text", text: "hello" }],
-              },
-              {
-                role: "assistant",
-                timestamp: now + 50,
-                content: [{ type: "text", text: "Done" }],
-              },
-            ],
-          };
-        }
-        return { messages: [] };
-      }
-      return {};
-    });
+  it("adapts SDK UI messages into the existing raw message format", () => {
+    mockChatState = {
+      messages: [
+        {
+          id: "user-1",
+          role: "user",
+          parts: [
+            { type: "text", text: "Show me this" },
+            {
+              type: "file",
+              mediaType: "image/png",
+              url: "https://cdn.example.com/input.png",
+            },
+          ],
+        },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          parts: [
+            { type: "reasoning", text: "Thinking through it" },
+            { type: "text", text: "Here you go" },
+            {
+              type: "dynamic-tool",
+              toolName: "search",
+              toolCallId: "tool-1",
+              state: "output-available",
+              input: { query: "example" },
+              output: { result: "done" },
+            },
+          ],
+        },
+      ],
+      status: "streaming",
+      error: undefined,
+    };
 
-    const { result, rerender } = renderHook(
-      ({ sessionKey }) => useMessengerChat(sessionKey),
-      {
-        initialProps: { sessionKey: getSessionKey("agent-a") },
-        wrapper: Wrapper,
-      },
+    const { result } = renderHook(() => useMessengerChat(getSessionKey("agent-a")));
+
+    expect(result.current.stream).toBe("Thinking through itHere you go");
+    expect(result.current.rawMessages).toHaveLength(3);
+    expect(result.current.rawMessages[0]).toMatchObject({
+      role: "user",
+      blocks: [
+        { type: "text", text: "Show me this" },
+        {
+          type: "image",
+          url: "https://cdn.example.com/input.png",
+          mimeType: "image/png",
+        },
+      ],
+    });
+    expect(result.current.rawMessages[1]).toMatchObject({
+      role: "assistant",
+      blocks: [
+        { type: "thinking", thinking: "Thinking through it" },
+        { type: "text", text: "Here you go" },
+        {
+          type: "toolCall",
+          id: "tool-1",
+          name: "search",
+          arguments: { query: "example" },
+        },
+      ],
+    });
+    expect(result.current.rawMessages[2]).toMatchObject({
+      role: "toolResult",
+      blocks: [
+        {
+          type: "toolResult",
+          toolName: "search",
+          content: '{\n  "result": "done"\n}',
+        },
+      ],
+    });
+  });
+
+  it("converts Hermes inline tool progress text into tool blocks", () => {
+    mockChatState = {
+      messages: [
+        {
+          id: "assistant-inline-1",
+          role: "assistant",
+          parts: [
+            {
+              type: "text",
+              text: "\n\n`pwd` → `/home/ubuntu/.openclaw/workspace`\n\nDone.",
+            },
+          ],
+        },
+      ],
+      status: "ready",
+      error: undefined,
+    };
+
+    const { result } = renderHook(() => useMessengerChat(getSessionKey("agent-a")));
+
+    expect(result.current.rawMessages).toHaveLength(2);
+    expect(result.current.rawMessages[0]).toMatchObject({
+      role: "assistant",
+      blocks: [
+        {
+          type: "toolCall",
+          name: "exec",
+          arguments: { command: "pwd" },
+        },
+        {
+          type: "text",
+          text: "Done.",
+        },
+      ],
+    });
+    expect(result.current.rawMessages[1]).toMatchObject({
+      role: "toolResult",
+      blocks: [
+        {
+          type: "toolResult",
+          toolName: "exec",
+          content: "/home/ubuntu/.openclaw/workspace",
+        },
+      ],
+    });
+  });
+
+  it("stops the active run only while the SDK hook is busy", async () => {
+    mockChatState.status = "streaming";
+    const { result, rerender } = renderHook(() =>
+      useMessengerChat(getSessionKey("agent-a")),
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    let aborted = false;
+    await act(async () => {
+      aborted = await result.current.abortRun();
+    });
+
+    expect(aborted).toBe(true);
+    expect(mockStop).toHaveBeenCalledTimes(1);
+
+    mockChatState.status = "ready";
+    rerender();
 
     await act(async () => {
-      await result.current.sendMessage("hello");
+      aborted = await result.current.abortRun();
     });
 
-    const runId = request.mock.calls.find(([method]) => method === "chat.send")?.[1]
-      ?.idempotencyKey;
-
-    await emitChat({
-      sessionKey: getSessionKey("agent-a"),
-      runId: String(runId),
-      state: "delta",
-      message: { role: "assistant", content: [{ type: "text", text: "Working" }] },
-    });
-
-    rerender({ sessionKey: getSessionKey("agent-b") });
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    agentAFinalVisible = true;
-    await emitChat({
-      sessionKey: getSessionKey("agent-a"),
-      runId: String(runId),
-      state: "final",
-      message: { role: "assistant", content: [{ type: "text", text: "Done" }] },
-    });
-
-    rerender({ sessionKey: getSessionKey("agent-a") });
-
-    expect(result.current.stream).toBe("Working");
-    expect(result.current.isBusy).toBe(true);
-
-    await waitFor(() => expect(result.current.isBusy).toBe(false));
-    expect(result.current.stream).toBeNull();
-    expect(
-      result.current.rawMessages.some((message) =>
-        message.blocks.some(
-          (block) => block.type === "text" && block.text === "Done",
-        ),
-      ),
-    ).toBe(true);
-  });
-
-  it("streams assistant text from raw agent websocket events", async () => {
-    const { result } = renderHook(
-      ({ sessionKey }) => useMessengerChat(sessionKey),
-      {
-        initialProps: { sessionKey: getSessionKey("agent-a") },
-        wrapper: Wrapper,
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    await emitAgent({
-      sessionKey: getSessionKey("agent-a"),
-      runId: "run-agent-stream",
-      stream: "assistant",
-      data: {
-        text:
-          "I've confirmed the site itself is on Framer. The remaining question is whether I can only",
-        delta: " only",
-      },
-    });
-
-    expect(result.current.stream).toBe(
-      "I've confirmed the site itself is on Framer. The remaining question is whether I can only",
-    );
-    expect(result.current.rawMessages).toHaveLength(0);
-  });
-
-  it("reconciles a visible session from raw agent lifecycle events when chat events are absent", async () => {
-    let agentAFinalVisible = false;
-    request.mockImplementation(async (method, params) => {
-      if (method === "chat.history") {
-        if (params?.sessionKey === getSessionKey("agent-a") && agentAFinalVisible) {
-          const now = Date.now();
-          return {
-            messages: [
-              {
-                role: "user",
-                timestamp: now - 50,
-                content: [{ type: "text", text: "hello" }],
-              },
-              {
-                role: "assistant",
-                timestamp: now + 50,
-                content: [{ type: "text", text: "Done" }],
-              },
-            ],
-          };
-        }
-        return { messages: [] };
-      }
-      return {};
-    });
-
-    const { result } = renderHook(
-      ({ sessionKey }) => useMessengerChat(sessionKey),
-      {
-        initialProps: { sessionKey: getSessionKey("agent-a") },
-        wrapper: Wrapper,
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    await emitAgent({
-      sessionKey: getSessionKey("agent-a"),
-      runId: "run-agent-lifecycle",
-      stream: "assistant",
-      data: {
-        text: "Working",
-        delta: "Working",
-      },
-    });
-
-    expect(result.current.stream).toBe("Working");
-
-    agentAFinalVisible = true;
-    await emitAgent({
-      sessionKey: getSessionKey("agent-a"),
-      runId: "run-agent-lifecycle",
-      stream: "lifecycle",
-      data: {
-        phase: "end",
-      },
-    });
-
-    await waitFor(() => expect(result.current.stream).toBeNull());
-    expect(
-      result.current.rawMessages.some((message) =>
-        message.blocks.some(
-          (block) => block.type === "text" && block.text === "Done",
-        ),
-      ),
-    ).toBe(true);
-
-  });
-
-  it("marks hidden sessions dirty when only raw agent lifecycle events arrive", async () => {
-    let agentAFinalVisible = false;
-    request.mockImplementation(async (method, params) => {
-      if (method === "chat.history") {
-        if (params?.sessionKey === getSessionKey("agent-a") && agentAFinalVisible) {
-          const now = Date.now();
-          return {
-            messages: [
-              {
-                role: "user",
-                timestamp: now - 50,
-                content: [{ type: "text", text: "hello" }],
-              },
-              {
-                role: "assistant",
-                timestamp: now + 50,
-                content: [{ type: "text", text: "Done" }],
-              },
-            ],
-          };
-        }
-        return { messages: [] };
-      }
-      return {};
-    });
-
-    const { result, rerender } = renderHook(
-      ({ sessionKey }) => useMessengerChat(sessionKey),
-      {
-        initialProps: { sessionKey: getSessionKey("agent-a") },
-        wrapper: Wrapper,
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    rerender({ sessionKey: getSessionKey("agent-b") });
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    agentAFinalVisible = true;
-    await emitAgent({
-      sessionKey: getSessionKey("agent-a"),
-      runId: "run-agent-hidden",
-      stream: "lifecycle",
-      data: {
-        phase: "end",
-      },
-    });
-
-    rerender({ sessionKey: getSessionKey("agent-a") });
-    await waitFor(() =>
-      expect(
-        result.current.rawMessages.some((message) =>
-          message.blocks.some(
-            (block) => block.type === "text" && block.text === "Done",
-          ),
-        ),
-      ).toBe(true),
-    );
+    expect(aborted).toBe(false);
+    expect(mockStop).toHaveBeenCalledTimes(1);
   });
 });
