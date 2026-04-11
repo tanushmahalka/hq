@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prospect CLI"
+  short_description: "Use the local prospecting and Apollo CLI"
+  default_prompt: "Use $prospect-cli to run or extend the local Prospect CLI for search, enrichment, Apollo usage checks, or command validation."

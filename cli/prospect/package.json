@@ -1,0 +1,20 @@
+{
+  "name": "@hq/prospect-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "prospect": "./bin/prospect"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "prospect": "./bin/prospect",
+    "test": "npx --yes tsx --test ./tests/*.test.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.21.0"
+  }
+}

@@ -15,10 +15,13 @@
     "start": "node ./dist-server/server/index.js",
     "hq": "./cli/hq/bin/hq",
     "aweber": "./cli/aweber/bin/aweber",
+    "prospect": "./cli/prospect/bin/prospect",
     "twenty": "./cli/twenty/bin/twenty",
     "framer": "./cli/framer/bin/framer",
     "bootstrap:hq": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/bootstrap-hq.ts",
     "grant:super-admin": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/grant-super-admin.ts",
+    "facebook:ads": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/facebook-ads-from-page-url.ts",
+    "facebook:ads:from-website": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/facebook-ads-from-website-url.ts",
     "db:migrate:uuid-ids": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/migrate-uuid-ids-to-integers.ts",
     "db:remove-task-workflows": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/remove-task-workflows.ts",
     "db:generate": "drizzle-kit generate",
@@ -99,6 +102,7 @@
   },
   "bin": {
     "hq": "./cli/hq/bin/hq",
+    "prospect": "./cli/prospect/bin/prospect",
     "twenty": "./cli/twenty/bin/twenty"
   }
 }
