@@ -39,8 +39,6 @@ const APOLLO_PERSON_ENRICH_SCHEMA = {
   ...PERSON_SCHEMA,
   "--reveal-personal-emails": "boolean",
   "--reveal-phone-number": "boolean",
-  "--run-waterfall-email": "boolean",
-  "--run-waterfall-phone": "boolean",
   "--webhook-url": "string",
   "--wait": "boolean",
   "--wait-timeout-ms": "string",
@@ -53,8 +51,6 @@ const APOLLO_BULK_ENRICH_SCHEMA = {
   "--detail": "string[]",
   "--reveal-personal-emails": "boolean",
   "--reveal-phone-number": "boolean",
-  "--run-waterfall-email": "boolean",
-  "--run-waterfall-phone": "boolean",
   "--webhook-url": "string",
   "--wait": "boolean",
   "--wait-timeout-ms": "string",
@@ -361,7 +357,6 @@ function printApolloEnrichPersonHelp(): void {
   printLine("Usage:");
   printLine("  prospect apollo enrich person --id <apollo-id> [--json] [--debug]");
   printLine("  prospect apollo enrich person --email <email> [--reveal-personal-emails] [--json] [--debug]");
-  printLine("  prospect apollo enrich person --name <name> --domain <domain> [--run-waterfall-email] [--json] [--debug]");
   printLine("  prospect apollo enrich person --email <email> --reveal-phone-number --wait [--json] [--debug]");
   printLine("  prospect apollo enrich person --email <email> --reveal-phone-number --webhook-url <url> [--json] [--debug]");
   printLine("");
@@ -371,8 +366,6 @@ function printApolloEnrichPersonHelp(): void {
   printLine("Enrichment controls:");
   printLine("  --reveal-personal-emails");
   printLine("  --reveal-phone-number");
-  printLine("  --run-waterfall-email");
-  printLine("  --run-waterfall-phone");
   printLine("  --webhook-url <https-url>");
   printLine("  --wait");
   printLine("  --wait-timeout-ms <ms>");
@@ -380,7 +373,6 @@ function printApolloEnrichPersonHelp(): void {
   printLine("Notes:");
   printLine("  Apollo requires --webhook-url when --reveal-phone-number is enabled.");
   printLine("  --wait starts a temporary local webhook receiver and a Cloudflare tunnel automatically.");
-  printLine("  Waterfall enrichment may deliver email and phone data asynchronously.");
 }
 
 function printApolloListPeopleHelp(): void {
@@ -416,14 +408,15 @@ function printApolloBulkEnrichPeopleHelp(): void {
   printLine("");
   printLine("Usage:");
   printLine("  prospect apollo enrich people --detail 'id=<apollo-id>' [--detail 'id=<apollo-id>'] [--json] [--debug]");
-  printLine("  prospect apollo enrich people --detail 'email=jane@example.com' --detail 'name=John Doe;domain=acme.com' --wait [--json] [--debug]");
+  printLine("  prospect apollo enrich people --detail 'email=jane@example.com' --detail 'name=John Doe;domain=acme.com' [--json] [--debug]");
+  printLine("  prospect apollo enrich people --detail 'id=<apollo-id>' --reveal-phone-number --wait [--json] [--debug]");
   printLine("  prospect apollo enrich people --data '{\"details\":[...]}' [--json] [--debug]");
   printLine("  prospect apollo enrich people --data-file payload.json [--json] [--debug]");
   printLine("");
   printLine("Behavior:");
   printLine("  Sends POST /api/v1/people/bulk_match with a details array of 1 to 10 people.");
   printLine("  Use repeated --detail flags for first-class CLI input, or --data/--data-file for raw JSON payloads.");
-  printLine("  Top-level enrichment controls are available via --reveal-personal-emails, --reveal-phone-number, --run-waterfall-email, --run-waterfall-phone, --webhook-url, and --wait.");
+  printLine("  Top-level enrichment controls are available via --reveal-personal-emails, --reveal-phone-number, --webhook-url, and --wait.");
   printLine("  To minimize credit usage, prefer `id` values from People API Search instead of raw identity fields when possible.");
   printLine("");
   printLine("Example detail syntax:");
@@ -655,12 +648,6 @@ function parseApolloEnrichmentOptions(parsed: ReturnType<typeof parseArgs>, gene
   if (getBooleanFlag(parsed, "--reveal-phone-number")) {
     options.reveal_phone_number = true;
   }
-  if (getBooleanFlag(parsed, "--run-waterfall-email")) {
-    options.run_waterfall_email = true;
-  }
-  if (getBooleanFlag(parsed, "--run-waterfall-phone")) {
-    options.run_waterfall_phone = true;
-  }
 
   const webhookUrl = generatedWebhookUrl ?? getStringFlag(parsed, "--webhook-url");
   if (webhookUrl) {
@@ -671,8 +658,8 @@ function parseApolloEnrichmentOptions(parsed: ReturnType<typeof parseArgs>, gene
     throw new CliError("Apollo requires --webhook-url when --reveal-phone-number is enabled.", 2);
   }
 
-  if (webhookUrl && options.reveal_phone_number !== true && options.run_waterfall_email !== true && options.run_waterfall_phone !== true) {
-    throw new CliError("Use --webhook-url only with --reveal-phone-number or Apollo waterfall enrichment flags.", 2);
+  if (webhookUrl && options.reveal_phone_number !== true) {
+    throw new CliError("Use --webhook-url only with --reveal-phone-number.", 2);
   }
 
   return options;
@@ -698,12 +685,9 @@ function parseApolloWaitOptions(parsed: ReturnType<typeof parseArgs>): { enabled
     throw new CliError("Use either --wait or --webhook-url, not both.", 2);
   }
 
-  const expectsWebhook =
-    getBooleanFlag(parsed, "--reveal-phone-number") ||
-    getBooleanFlag(parsed, "--run-waterfall-email") ||
-    getBooleanFlag(parsed, "--run-waterfall-phone");
+  const expectsWebhook = getBooleanFlag(parsed, "--reveal-phone-number");
   if (!expectsWebhook) {
-    throw new CliError("Use --wait only with Apollo flows that send async webhooks, such as --reveal-phone-number or waterfall enrichment flags.", 2);
+    throw new CliError("Use --wait only with Apollo flows that send async webhooks, such as --reveal-phone-number.", 2);
   }
 
   return {

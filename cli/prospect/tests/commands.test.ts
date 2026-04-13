@@ -411,7 +411,6 @@ test("apollo enrich person passes Apollo enrichment flags as query params", asyn
         "--id",
         "587cf802f65125cad923a266",
         "--reveal-personal-emails",
-        "--run-waterfall-email",
         "--json",
       ],
       {
@@ -427,7 +426,6 @@ test("apollo enrich person passes Apollo enrichment flags as query params", asyn
   const url = new URL(requestUrl);
   assert.equal(url.searchParams.get("id"), "587cf802f65125cad923a266");
   assert.equal(url.searchParams.get("reveal_personal_emails"), "true");
-  assert.equal(url.searchParams.get("run_waterfall_email"), "true");
 });
 
 test("apollo enrich person requires webhook url when revealing phone numbers", async () => {
@@ -511,7 +509,7 @@ test("apollo enrich person rejects --wait when no async webhook-producing flag i
       runApolloCommand(["enrich", "person", "--email", "jane@example.com", "--wait"], {
         fetchImpl: async () => jsonResponse({}),
       }),
-    /Use --wait only with Apollo flows that send async webhooks/i,
+    /Use --wait only with Apollo flows that send async webhooks, such as --reveal-phone-number/i,
   );
 });
 
@@ -529,7 +527,7 @@ test("apollo bulk people enrich supports repeated --detail flags and top-level q
         "id=64a7ff0cc4dfae00013df1a5",
         "--detail",
         "name=John Doe;domain=acme.com",
-        "--run-waterfall-phone",
+        "--reveal-phone-number",
         "--webhook-url",
         "https://example.com/apollo-webhook",
         "--json",
@@ -553,7 +551,7 @@ test("apollo bulk people enrich supports repeated --detail flags and top-level q
   const url = new URL(requestUrl);
   const posted = JSON.parse(body) as { details: Array<Record<string, string>> };
 
-  assert.equal(url.searchParams.get("run_waterfall_phone"), "true");
+  assert.equal(url.searchParams.get("reveal_phone_number"), "true");
   assert.equal(url.searchParams.get("webhook_url"), "https://example.com/apollo-webhook");
   assert.equal(parsed.matches.length, 2);
   assert.equal(posted.details[0]?.id, "64a7ff0cc4dfae00013df1a5");
