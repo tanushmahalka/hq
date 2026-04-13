@@ -66,9 +66,13 @@ export interface CollectionEnvelope<T> {
 }
 
 export interface PersonLookupInput {
+  id?: string;
   email?: string;
+  hashedEmail?: string;
   linkedinUrl?: string;
   name?: string;
+  firstName?: string;
+  lastName?: string;
   domain?: string;
   company?: string;
 }
@@ -83,4 +87,5 @@ export interface RequestOptions {
   explain?: boolean;
   timeoutMs?: number;
   providerFilters?: Record<string, unknown>;
+  providerOptions?: Record<string, unknown>;
 }

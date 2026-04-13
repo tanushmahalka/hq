@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+
 import { getBooleanFlag, getStringArrayFlag, getStringFlag, parseArgs, requireFlag } from "../core/args.ts";
 import { readConfig, resolveConfig } from "../core/config.ts";
 import { CliError } from "../core/errors.ts";
@@ -5,6 +7,7 @@ import { parseAssignmentList, readJsonInput } from "../core/http.ts";
 import { printJson, printLine } from "../core/output.ts";
 import { ApolloClient } from "../providers/apollo/client.ts";
 import { createApolloProvider, toCollectionEnvelope, toEnvelope } from "../providers/apollo/index.ts";
+import { createApolloWebhookSession } from "../providers/apollo/webhook.ts";
 import { ACCOUNT_SCHEMA, COMMON_SCHEMA, outputEnvelope, parseAccountInput, parsePersonInput, parseRequestOptions, PERSON_SCHEMA } from "./shared.ts";
 
 const API_SCHEMA = {
@@ -32,10 +35,29 @@ const APOLLO_PERSON_FIND_SCHEMA = {
   "--filters": "boolean",
 } as const;
 
+const APOLLO_PERSON_ENRICH_SCHEMA = {
+  ...PERSON_SCHEMA,
+  "--reveal-personal-emails": "boolean",
+  "--reveal-phone-number": "boolean",
+  "--run-waterfall-email": "boolean",
+  "--run-waterfall-phone": "boolean",
+  "--webhook-url": "string",
+  "--wait": "boolean",
+  "--wait-timeout-ms": "string",
+} as const;
+
 const APOLLO_BULK_ENRICH_SCHEMA = {
   ...COMMON_SCHEMA,
   "--data": "string",
   "--data-file": "string",
+  "--detail": "string[]",
+  "--reveal-personal-emails": "boolean",
+  "--reveal-phone-number": "boolean",
+  "--run-waterfall-email": "boolean",
+  "--run-waterfall-phone": "boolean",
+  "--webhook-url": "string",
+  "--wait": "boolean",
+  "--wait-timeout-ms": "string",
 } as const;
 
 const APOLLO_PEOPLE_SEARCH_FILTERS = [
@@ -66,7 +88,7 @@ const APOLLO_PEOPLE_SEARCH_FILTERS = [
 
 export async function runApolloCommand(
   argv: string[],
-  dependencies: { fetchImpl?: typeof fetch } = {},
+  dependencies: { fetchImpl?: typeof fetch; spawnImpl?: typeof spawn } = {},
 ): Promise<void> {
   const [group = "help", entity, ...rest] = argv;
   const resolved = resolveConfig(await readConfig());
@@ -209,11 +231,33 @@ export async function runApolloCommand(
   }
 
   if (group === "enrich" && entity === "person") {
-    const parsed = parseArgs(rest, PERSON_SCHEMA);
+    const parsed = parseArgs(rest, APOLLO_PERSON_ENRICH_SCHEMA);
+    if (getBooleanFlag(parsed, "--help")) {
+      printApolloEnrichPersonHelp();
+      return;
+    }
     const input = parsePersonInput(parsed);
     const options = parseRequestOptions(parsed);
-    const result = await provider.enrichPerson(input, options);
-    outputEnvelope(toEnvelope("enrich", "person", input, result), options.json);
+    validateApolloEnrichPersonInput(input);
+    const waitConfig = parseApolloWaitOptions(parsed);
+    const webhookSession = await maybeCreateApolloWaitSession(waitConfig, dependencies.spawnImpl);
+    const stopProgress = webhookSession ? startApolloWaitProgress(webhookSession.webhookUrl, waitConfig.timeoutMs) : undefined;
+    try {
+      options.providerOptions = parseApolloEnrichmentOptions(parsed, webhookSession?.webhookUrl);
+      const result = await provider.enrichPerson(input, options);
+
+      if (webhookSession) {
+        const webhookPayload = await webhookSession.waitForPayload(waitConfig.timeoutMs);
+        stopProgress?.("Apollo webhook received.");
+        outputRawApolloWaitResponse(result.providerRaw, webhookPayload);
+        return;
+      }
+
+      outputRawEnrichResponse(result.providerRaw);
+    } finally {
+      stopProgress?.();
+      await webhookSession?.close();
+    }
     return;
   }
 
@@ -222,7 +266,7 @@ export async function runApolloCommand(
     const input = parseAccountInput(parsed);
     const options = parseRequestOptions(parsed);
     const result = await provider.enrichAccount(input, options);
-    outputEnvelope(toEnvelope("enrich", "account", input, result), options.json);
+    outputRawEnrichResponse(result.providerRaw);
     return;
   }
 
@@ -234,18 +278,26 @@ export async function runApolloCommand(
     }
 
     const options = parseRequestOptions(parsed);
-    const payload = validateBulkPeoplePayload(
-      await readJsonInput(getStringFlag(parsed, "--data"), getStringFlag(parsed, "--data-file")),
-    );
-    const result = await provider.bulkEnrichPeople(payload, options);
-    const envelope = toCollectionEnvelope("enrich", "people", { requestedRecords: payload.details.length }, result);
+    const waitConfig = parseApolloWaitOptions(parsed);
+    const webhookSession = await maybeCreateApolloWaitSession(waitConfig, dependencies.spawnImpl);
+    const stopProgress = webhookSession ? startApolloWaitProgress(webhookSession.webhookUrl, waitConfig.timeoutMs) : undefined;
+    try {
+      options.providerOptions = parseApolloEnrichmentOptions(parsed, webhookSession?.webhookUrl);
+      const payload = validateBulkPeoplePayload(await readBulkPeopleInput(parsed));
+      const result = await provider.bulkEnrichPeople(payload, options);
 
-    if (options.json) {
-      printJson(envelope);
-      return;
+      if (webhookSession) {
+        const webhookPayload = await webhookSession.waitForPayload(waitConfig.timeoutMs);
+        stopProgress?.("Apollo webhook received.");
+        outputRawApolloWaitResponse(result.providerRaw, webhookPayload);
+        return;
+      }
+
+      outputRawEnrichResponse(result.providerRaw);
+    } finally {
+      stopProgress?.();
+      await webhookSession?.close();
     }
-
-    printApolloPeopleListHuman(envelope);
     return;
   }
 
@@ -264,9 +316,9 @@ function printHelp(): void {
   printLine("    Credit behavior: may consume Apollo credits for organization search.");
   printLine("  prospect apollo find number --email <email> [--json]");
   printLine("    Credit behavior: may consume credits or trigger async enrichment when phone reveal is requested.");
-  printLine("  prospect apollo enrich person --email <email> [--json]");
+  printLine("  prospect apollo enrich person --email <email> [--reveal-personal-emails] [--reveal-phone-number --webhook-url <url>] [--wait] [--json]");
   printLine("    Credit behavior: potentially credit-consuming depending on enrichment and reveal behavior.");
-  printLine("  prospect apollo enrich people --data-file <path> [--json]");
+  printLine("  prospect apollo enrich people --detail 'id=<apollo-id>' [--detail 'email=jane@example.com'] [--wait] [--json]");
   printLine("    Bulk People Enrichment. Prefer People API Search first, then pass person IDs in details.");
   printLine("  prospect apollo enrich account --domain <domain> [--json]");
   printLine("    Credit behavior: may consume Apollo credits for organization enrichment.");
@@ -301,6 +353,36 @@ function printApolloFindPersonHelp(): void {
   printLine("  prospect apollo find person --query 'person_titles[]=marketing director' --query 'person_locations[]=bangalore, india' --json");
 }
 
+function printApolloEnrichPersonHelp(): void {
+  printLine("Prospect Apollo enrich person");
+  printLine("");
+  printLine("Use this for Apollo People Enrichment for one person.");
+  printLine("");
+  printLine("Usage:");
+  printLine("  prospect apollo enrich person --id <apollo-id> [--json] [--debug]");
+  printLine("  prospect apollo enrich person --email <email> [--reveal-personal-emails] [--json] [--debug]");
+  printLine("  prospect apollo enrich person --name <name> --domain <domain> [--run-waterfall-email] [--json] [--debug]");
+  printLine("  prospect apollo enrich person --email <email> --reveal-phone-number --wait [--json] [--debug]");
+  printLine("  prospect apollo enrich person --email <email> --reveal-phone-number --webhook-url <url> [--json] [--debug]");
+  printLine("");
+  printLine("Identity inputs:");
+  printLine("  --id, --email, --hashed-email, --linkedin-url, --name, --first-name, --last-name, --domain, --company");
+  printLine("");
+  printLine("Enrichment controls:");
+  printLine("  --reveal-personal-emails");
+  printLine("  --reveal-phone-number");
+  printLine("  --run-waterfall-email");
+  printLine("  --run-waterfall-phone");
+  printLine("  --webhook-url <https-url>");
+  printLine("  --wait");
+  printLine("  --wait-timeout-ms <ms>");
+  printLine("");
+  printLine("Notes:");
+  printLine("  Apollo requires --webhook-url when --reveal-phone-number is enabled.");
+  printLine("  --wait starts a temporary local webhook receiver and a Cloudflare tunnel automatically.");
+  printLine("  Waterfall enrichment may deliver email and phone data asynchronously.");
+}
+
 function printApolloListPeopleHelp(): void {
   printLine("Prospect Apollo list people");
   printLine("");
@@ -333,16 +415,21 @@ function printApolloBulkEnrichPeopleHelp(): void {
   printLine("  2. Pass those IDs in the details array here when you need richer person data.");
   printLine("");
   printLine("Usage:");
+  printLine("  prospect apollo enrich people --detail 'id=<apollo-id>' [--detail 'id=<apollo-id>'] [--json] [--debug]");
+  printLine("  prospect apollo enrich people --detail 'email=jane@example.com' --detail 'name=John Doe;domain=acme.com' --wait [--json] [--debug]");
   printLine("  prospect apollo enrich people --data '{\"details\":[...]}' [--json] [--debug]");
   printLine("  prospect apollo enrich people --data-file payload.json [--json] [--debug]");
   printLine("");
   printLine("Behavior:");
-  printLine("  Sends POST /api/v1/people/bulk_match with the provided JSON body.");
-  printLine("  The JSON body must include a details array with between 1 and 10 people.");
+  printLine("  Sends POST /api/v1/people/bulk_match with a details array of 1 to 10 people.");
+  printLine("  Use repeated --detail flags for first-class CLI input, or --data/--data-file for raw JSON payloads.");
+  printLine("  Top-level enrichment controls are available via --reveal-personal-emails, --reveal-phone-number, --run-waterfall-email, --run-waterfall-phone, --webhook-url, and --wait.");
   printLine("  To minimize credit usage, prefer `id` values from People API Search instead of raw identity fields when possible.");
   printLine("");
-  printLine("Example payload:");
-  printLine('  {"details":[{"id":"64a7ff0cc4dfae00013df1a5"},{"id":"64a7ff0cc4dfae00013df1a6"}]}');
+  printLine("Example detail syntax:");
+  printLine("  --detail 'id=64a7ff0cc4dfae00013df1a5'");
+  printLine("  --detail 'name=John Doe;domain=acme.com'");
+  printLine("  --detail '{\"email\":\"jane@example.com\",\"company\":\"Acme\"}'");
 }
 
 function printApolloPeopleSearchFilterNames(): void {
@@ -538,6 +625,187 @@ function validateBulkPeoplePayload(value: unknown): { details: Record<string, un
   };
 }
 
+function validateApolloEnrichPersonInput(input: Record<string, unknown>): void {
+  if (
+    stringValue(input.id) ||
+    stringValue(input.email) ||
+    stringValue(input.hashedEmail) ||
+    stringValue(input.linkedinUrl) ||
+    stringValue(input.name) ||
+    stringValue(input.company) ||
+    stringValue(input.domain) ||
+    stringValue(input.firstName) ||
+    stringValue(input.lastName)
+  ) {
+    return;
+  }
+
+  throw new CliError(
+    "Provide at least one Apollo person identifier such as --id, --email, --hashed-email, --linkedin-url, or name/domain fields.",
+    2,
+  );
+}
+
+function parseApolloEnrichmentOptions(parsed: ReturnType<typeof parseArgs>, generatedWebhookUrl?: string): Record<string, unknown> {
+  const options: Record<string, unknown> = {};
+
+  if (getBooleanFlag(parsed, "--reveal-personal-emails")) {
+    options.reveal_personal_emails = true;
+  }
+  if (getBooleanFlag(parsed, "--reveal-phone-number")) {
+    options.reveal_phone_number = true;
+  }
+  if (getBooleanFlag(parsed, "--run-waterfall-email")) {
+    options.run_waterfall_email = true;
+  }
+  if (getBooleanFlag(parsed, "--run-waterfall-phone")) {
+    options.run_waterfall_phone = true;
+  }
+
+  const webhookUrl = generatedWebhookUrl ?? getStringFlag(parsed, "--webhook-url");
+  if (webhookUrl) {
+    options.webhook_url = webhookUrl;
+  }
+
+  if (options.reveal_phone_number === true && !webhookUrl) {
+    throw new CliError("Apollo requires --webhook-url when --reveal-phone-number is enabled.", 2);
+  }
+
+  if (webhookUrl && options.reveal_phone_number !== true && options.run_waterfall_email !== true && options.run_waterfall_phone !== true) {
+    throw new CliError("Use --webhook-url only with --reveal-phone-number or Apollo waterfall enrichment flags.", 2);
+  }
+
+  return options;
+}
+
+function parseApolloWaitOptions(parsed: ReturnType<typeof parseArgs>): { enabled: boolean; timeoutMs: number } {
+  const enabled = getBooleanFlag(parsed, "--wait");
+  const timeoutValue = getStringFlag(parsed, "--wait-timeout-ms");
+  const timeoutMs = timeoutValue ? Number.parseInt(timeoutValue, 10) : 180_000;
+
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new CliError("Option --wait-timeout-ms expects a positive integer.", 2);
+  }
+
+  if (!enabled) {
+    return {
+      enabled,
+      timeoutMs,
+    };
+  }
+
+  if (getStringFlag(parsed, "--webhook-url")) {
+    throw new CliError("Use either --wait or --webhook-url, not both.", 2);
+  }
+
+  const expectsWebhook =
+    getBooleanFlag(parsed, "--reveal-phone-number") ||
+    getBooleanFlag(parsed, "--run-waterfall-email") ||
+    getBooleanFlag(parsed, "--run-waterfall-phone");
+  if (!expectsWebhook) {
+    throw new CliError("Use --wait only with Apollo flows that send async webhooks, such as --reveal-phone-number or waterfall enrichment flags.", 2);
+  }
+
+  return {
+    enabled,
+    timeoutMs,
+  };
+}
+
+async function maybeCreateApolloWaitSession(
+  waitConfig: { enabled: boolean },
+  spawnImpl?: typeof spawn,
+): Promise<Awaited<ReturnType<typeof createApolloWebhookSession>> | undefined> {
+  if (!waitConfig.enabled) {
+    return undefined;
+  }
+
+  return await createApolloWebhookSession({ spawnImpl });
+}
+
+async function readBulkPeopleInput(parsed: ReturnType<typeof parseArgs>): Promise<unknown> {
+  const data = await readJsonInput(getStringFlag(parsed, "--data"), getStringFlag(parsed, "--data-file"));
+  const details = getStringArrayFlag(parsed, "--detail");
+
+  if (data !== undefined && details.length > 0) {
+    throw new CliError("Use either --detail or --data/--data-file for bulk people enrichment, not both.", 2);
+  }
+
+  if (details.length === 0) {
+    return data;
+  }
+
+  return {
+    details: details.map((entry) => parseBulkDetail(entry)),
+  };
+}
+
+function parseBulkDetail(value: string): Record<string, unknown> {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new CliError("Bulk detail entries cannot be empty.", 2);
+  }
+
+  if (trimmed.startsWith("{")) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch (error) {
+      throw new CliError(`Invalid JSON detail: ${(error as Error).message}`, 2);
+    }
+
+    if (!isPlainObject(parsed) || Object.keys(parsed).length === 0) {
+      throw new CliError("Bulk detail JSON must be a non-empty object.", 2);
+    }
+
+    return parsed;
+  }
+
+  const assignments = trimmed
+    .split(";")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const parsed = parseAssignmentList(assignments);
+
+  if (Object.keys(parsed).length === 0) {
+    throw new CliError("Bulk detail entries must include at least one key=value pair.", 2);
+  }
+
+  return parsed;
+}
+
+function outputRawEnrichResponse(value: unknown): void {
+  printJson(value ?? null);
+}
+
+function outputRawApolloWaitResponse(syncPayload: unknown, webhookPayload: unknown): void {
+  printJson({
+    sync: syncPayload ?? null,
+    webhook: webhookPayload ?? null,
+  });
+}
+
+function startApolloWaitProgress(webhookUrl: string, timeoutMs: number): (message?: string) => void {
+  const startedAt = Date.now();
+  process.stderr.write(`Apollo async wait started.\n`);
+  process.stderr.write(`Temporary webhook: ${webhookUrl}\n`);
+  process.stderr.write(`Timeout: ${Math.round(timeoutMs / 1000)}s\n`);
+  process.stderr.write(`Waiting for Apollo webhook...\n`);
+
+  const interval = setInterval(() => {
+    const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
+    process.stderr.write(`Still waiting for Apollo webhook... ${elapsedSeconds}s elapsed\n`);
+  }, 15_000);
+
+  return (message?: string) => {
+    clearInterval(interval);
+    if (message) {
+      const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
+      process.stderr.write(`${message} ${elapsedSeconds}s elapsed\n`);
+    }
+  };
+}
+
 function looksLikeApolloUsageEndpointKey(key: string): boolean {
   return key.startsWith("[") && key.includes("api/v1/");
 }
@@ -549,6 +817,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 function stringField(value: Record<string, unknown>, key: string): string | undefined {
   const field = value[key];
   return typeof field === "string" && field.trim() ? field : undefined;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
 }
 
 function numberField(value: Record<string, unknown>, key: string): number | undefined {

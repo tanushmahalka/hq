@@ -1,5 +1,6 @@
 import { runApolloCommand } from "./commands/apollo.ts";
 import { runAuthCommand } from "./commands/auth.ts";
+import { runDoctorCommand } from "./commands/doctor.ts";
 import { runEnrichCommand } from "./commands/enrich.ts";
 import { runFindCommand } from "./commands/find.ts";
 import { runProvidersCommand } from "./commands/providers.ts";
@@ -21,6 +22,11 @@ async function main(argv: string[]): Promise<void> {
 
   if (group === "providers") {
     await runProvidersCommand([action, ...rest].filter(Boolean) as string[]);
+    return;
+  }
+
+  if (group === "doctor") {
+    await runDoctorCommand([action, ...rest].filter(Boolean) as string[]);
     return;
   }
 
@@ -54,10 +60,11 @@ function printHelp(): void {
   printLine("  prospect enrich person --email <email> [--provider apollo] [--json]");
   printLine("  prospect enrich account --domain <domain> [--provider apollo] [--json]");
   printLine("  prospect auth set apollo --api-key <key> [--base-url <url>]");
+  printLine("  prospect doctor [--fix] [--json]");
   printLine("  prospect providers list");
   printLine("  prospect apollo find person --email <email> [--json]");
   printLine("  prospect apollo list people --query 'person_titles[]=marketing director' [--json]");
-  printLine("  prospect apollo enrich people --data-file payload.json [--json]");
+  printLine("  prospect apollo enrich people --detail 'id=<apollo-id>' [--json]");
   printLine("  prospect apollo enrich account --domain <domain> [--json]");
   printLine("  prospect apollo api --method GET --path /api/v1/auth/health [--json]");
 }

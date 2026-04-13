@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { PassThrough } from "node:stream";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -12,12 +13,14 @@ import { executeWithFallback } from "../src/providers/index.ts";
 
 test("find person uses Apollo people match for email identity lookups", async () => {
   process.env.APOLLO_API_KEY = "test-apollo-key";
+  let requestUrl = "";
 
   const output = await captureStdout(async () => {
     await runFindCommand(["person", "--email", "jane@example.com", "--json", "--debug"], {
       fetchImpl: async (input, init) => {
-        assert.match(String(input), /\/api\/v1\/people\/match$/);
-        assert.match(String(init?.body), /jane@example.com/);
+        requestUrl = String(input);
+        assert.match(String(input), /\/api\/v1\/people\/match(\?|$)/);
+        assert.equal(init?.body, undefined);
         return jsonResponse({
           person: {
             id: "p_1",
@@ -51,6 +54,7 @@ test("find person uses Apollo people match for email identity lookups", async ()
   assert.equal(parsed.result.fullName, "Jane Doe");
   assert.equal(parsed.result.company.domain, "acme.com");
   assert.ok(parsed.explain.some((entry) => /People Match/i.test(entry)));
+  assert.equal(new URL(requestUrl).searchParams.get("email"), "jane@example.com");
 });
 
 test("apollo find person supports direct People API Search filters via --query", async () => {
@@ -303,10 +307,11 @@ test("json output always includes provider raw payload and explain metadata", as
     });
   });
 
-  const parsed = parseCapturedJson(output) as { providerRaw: unknown; explain: string[]; provider: string };
-  assert.equal(parsed.provider, "apollo");
-  assert.ok(parsed.providerRaw);
-  assert.ok(parsed.explain.length > 0);
+  const parsed = parseCapturedJson(output) as { id: string; name: string; email: string; title: string };
+  assert.equal(parsed.id, "p_1");
+  assert.equal(parsed.name, "Jane Doe");
+  assert.equal(parsed.email, "jane@example.com");
+  assert.equal(parsed.title, "Head of Growth");
 });
 
 test("apollo bulk people enrich posts details payload and returns normalized results", async () => {
@@ -363,24 +368,16 @@ test("apollo bulk people enrich posts details payload and returns normalized res
   });
 
   const parsed = parseCapturedJson(output) as {
-    command: string;
-    entity: string;
-    input: { requestedRecords: number };
-    results: Array<{ fullName: string; company?: { domain?: string } }>;
-    explain: string[];
+    matches: Array<{ person: { name: string; organization?: { primary_domain?: string } } }>;
   };
 
   assert.match(url, /\/api\/v1\/people\/bulk_match$/);
   assert.equal(method, "POST");
   assert.match(body, /jane@example\.com/);
   assert.match(body, /"details"/);
-  assert.equal(parsed.command, "enrich");
-  assert.equal(parsed.entity, "people");
-  assert.equal(parsed.input.requestedRecords, 2);
-  assert.equal(parsed.results.length, 2);
-  assert.equal(parsed.results[0]?.fullName, "Jane Doe");
-  assert.equal(parsed.results[1]?.company?.domain, "acme.com");
-  assert.ok(parsed.explain.some((entry) => /Bulk People Enrichment/i.test(entry)));
+  assert.equal(parsed.matches.length, 2);
+  assert.equal(parsed.matches[0]?.person.name, "Jane Doe");
+  assert.equal(parsed.matches[1]?.person.organization?.primary_domain, "acme.com");
 });
 
 test("apollo bulk people enrich validates details array length", async () => {
@@ -400,6 +397,168 @@ test("apollo bulk people enrich validates details array length", async () => {
       }),
     /at most 10 people/i,
   );
+});
+
+test("apollo enrich person passes Apollo enrichment flags as query params", async () => {
+  process.env.APOLLO_API_KEY = "test-apollo-key";
+  let requestUrl = "";
+
+  await captureStdout(async () => {
+    await runApolloCommand(
+      [
+        "enrich",
+        "person",
+        "--id",
+        "587cf802f65125cad923a266",
+        "--reveal-personal-emails",
+        "--run-waterfall-email",
+        "--json",
+      ],
+      {
+        fetchImpl: async (input, init) => {
+          requestUrl = String(input);
+          assert.equal(init?.body, undefined);
+          return jsonResponse({ id: "p_1", name: "Jane Doe" });
+        },
+      },
+    );
+  });
+
+  const url = new URL(requestUrl);
+  assert.equal(url.searchParams.get("id"), "587cf802f65125cad923a266");
+  assert.equal(url.searchParams.get("reveal_personal_emails"), "true");
+  assert.equal(url.searchParams.get("run_waterfall_email"), "true");
+});
+
+test("apollo enrich person requires webhook url when revealing phone numbers", async () => {
+  process.env.APOLLO_API_KEY = "test-apollo-key";
+
+  await assert.rejects(
+    () =>
+      runApolloCommand(["enrich", "person", "--email", "jane@example.com", "--reveal-phone-number"], {
+        fetchImpl: async () => jsonResponse({}),
+      }),
+    /requires --webhook-url/i,
+  );
+});
+
+test("apollo enrich person --wait starts a temporary webhook tunnel and returns the callback payload", async () => {
+  process.env.APOLLO_API_KEY = "test-apollo-key";
+  let requestUrl = "";
+
+  const output = await captureStdout(async () => {
+    await runApolloCommand(
+      [
+        "enrich",
+        "person",
+        "--email",
+        "jane@example.com",
+        "--reveal-phone-number",
+        "--wait",
+        "--wait-timeout-ms",
+        "5000",
+        "--json",
+      ],
+      {
+        spawnImpl: createMockCloudflaredSpawn(),
+        fetchImpl: async (input) => {
+          requestUrl = String(input);
+          const url = new URL(requestUrl);
+          const webhookUrl = url.searchParams.get("webhook_url");
+          assert.ok(webhookUrl);
+
+          queueMicrotask(async () => {
+            await fetch(webhookUrl!, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                person: {
+                  id: "p_1",
+                  phone_number: "+1 555 111 2222",
+                },
+              }),
+            });
+          });
+
+          return jsonResponse({
+            id: "p_1",
+            name: "Jane Doe",
+            waterfall_enrichment_status: "pending",
+          });
+        },
+      },
+    );
+  });
+
+  const parsed = parseCapturedJson(output) as {
+    sync: { id: string; name: string; waterfall_enrichment_status: string };
+    webhook: { person: { phone_number: string } };
+  };
+  const url = new URL(requestUrl);
+
+  assert.equal(url.searchParams.get("reveal_phone_number"), "true");
+  assert.match(url.searchParams.get("webhook_url") ?? "", /\/apollo-webhook\//);
+  assert.equal(parsed.sync.id, "p_1");
+  assert.equal(parsed.sync.waterfall_enrichment_status, "pending");
+  assert.equal(parsed.webhook.person.phone_number, "+1 555 111 2222");
+});
+
+test("apollo enrich person rejects --wait when no async webhook-producing flag is enabled", async () => {
+  process.env.APOLLO_API_KEY = "test-apollo-key";
+
+  await assert.rejects(
+    () =>
+      runApolloCommand(["enrich", "person", "--email", "jane@example.com", "--wait"], {
+        fetchImpl: async () => jsonResponse({}),
+      }),
+    /Use --wait only with Apollo flows that send async webhooks/i,
+  );
+});
+
+test("apollo bulk people enrich supports repeated --detail flags and top-level query options", async () => {
+  process.env.APOLLO_API_KEY = "test-apollo-key";
+  let requestUrl = "";
+  let body = "";
+
+  const output = await captureStdout(async () => {
+    await runApolloCommand(
+      [
+        "enrich",
+        "people",
+        "--detail",
+        "id=64a7ff0cc4dfae00013df1a5",
+        "--detail",
+        "name=John Doe;domain=acme.com",
+        "--run-waterfall-phone",
+        "--webhook-url",
+        "https://example.com/apollo-webhook",
+        "--json",
+      ],
+      {
+        fetchImpl: async (input, init) => {
+          requestUrl = String(input);
+          body = String(init?.body);
+          return jsonResponse({
+            matches: [
+              { person: { id: "p_1", name: "Jane Doe" } },
+              { person: { id: "p_2", name: "John Doe", organization: { name: "Acme", primary_domain: "acme.com" } } },
+            ],
+          });
+        },
+      },
+    );
+  });
+
+  const parsed = parseCapturedJson(output) as { matches: Array<{ person: { id: string; name: string } }> };
+  const url = new URL(requestUrl);
+  const posted = JSON.parse(body) as { details: Array<Record<string, string>> };
+
+  assert.equal(url.searchParams.get("run_waterfall_phone"), "true");
+  assert.equal(url.searchParams.get("webhook_url"), "https://example.com/apollo-webhook");
+  assert.equal(parsed.matches.length, 2);
+  assert.equal(posted.details[0]?.id, "64a7ff0cc4dfae00013df1a5");
+  assert.equal(posted.details[1]?.name, "John Doe");
+  assert.equal(posted.details[1]?.domain, "acme.com");
 });
 
 test("apollo raw api passthrough parses payloads", async () => {
@@ -553,12 +712,64 @@ function jsonResponse(value: unknown, status = 200): Response {
   });
 }
 
+function createMockCloudflaredSpawn() {
+  return (_command?: string, args?: string[]) => {
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const listeners = new Map<string, Array<(...args: unknown[]) => void>>();
+    const localUrl = args?.[2] ?? "http://127.0.0.1:0";
+    const child = {
+      stdout,
+      stderr,
+      on(event: string, listener: (...args: unknown[]) => void) {
+        const current = listeners.get(event) ?? [];
+        current.push(listener);
+        listeners.set(event, current);
+        return child;
+      },
+      off(event: string, listener: (...args: unknown[]) => void) {
+        const current = listeners.get(event) ?? [];
+        listeners.set(
+          event,
+          current.filter((entry) => entry !== listener),
+        );
+        return child;
+      },
+      once(event: string, listener: (...args: unknown[]) => void) {
+        const wrapped = (...eventArgs: unknown[]) => {
+          child.off(event, wrapped);
+          listener(...eventArgs);
+        };
+        child.on(event, wrapped);
+        return child;
+      },
+      kill() {
+        queueMicrotask(() => {
+          for (const listener of listeners.get("exit") ?? []) {
+            listener(0);
+          }
+        });
+        return true;
+      },
+    };
+
+    queueMicrotask(() => {
+      stderr.write(`{"message":"${localUrl}"}\n`);
+    });
+
+    return child;
+  };
+}
+
 async function captureStdout(run: () => Promise<void>): Promise<string> {
   let output = "";
   const originalWrite = process.stdout.write.bind(process.stdout);
 
-  process.stdout.write = ((chunk: string | Uint8Array) => {
+  process.stdout.write = ((chunk: string | Uint8Array, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void) => {
     output += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+
+    const done = typeof encoding === "function" ? encoding : callback;
+    done?.(null);
     return true;
   }) as typeof process.stdout.write;
 
@@ -571,11 +782,64 @@ async function captureStdout(run: () => Promise<void>): Promise<string> {
 }
 
 function parseCapturedJson(output: string): unknown {
-  const start = output.indexOf("{");
-  const end = output.lastIndexOf("}");
-  if (start === -1 || end === -1 || end < start) {
-    throw new Error(`No JSON object found in output: ${output}`);
+  for (let start = output.indexOf("{"); start !== -1; start = output.indexOf("{", start + 1)) {
+    const parsed = tryParseJsonObjectAt(output, start);
+    if (parsed !== undefined) {
+      return parsed;
+    }
   }
 
-  return JSON.parse(output.slice(start, end + 1));
+  throw new Error(`No complete JSON object found in output: ${output}`);
+}
+
+function tryParseJsonObjectAt(output: string, start: number): unknown {
+  let depth = 0;
+  let inString = false;
+  let escaping = false;
+
+  for (let index = start; index < output.length; index += 1) {
+    const char = output[index];
+
+    if (escaping) {
+      escaping = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaping = true;
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+
+    if (char !== "}") {
+      continue;
+    }
+
+    depth -= 1;
+    if (depth !== 0) {
+      continue;
+    }
+
+    const slice = output.slice(start, index + 1);
+    try {
+      return JSON.parse(slice);
+    } catch {
+      return undefined;
+    }
+  }
+
+  return undefined;
 }

@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "prospect": "./bin/prospect",
-    "test": "npx --yes tsx --test ./tests/*.test.ts"
+    "test": "npx --yes tsx --test --test-concurrency=1 ./tests/*.test.ts"
   },
   "dependencies": {
     "tsx": "^4.21.0"

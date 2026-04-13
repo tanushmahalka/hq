@@ -1,11 +1,10 @@
 import { getBooleanFlag, parseArgs } from "../core/args.ts";
 import { readConfig, resolveConfig } from "../core/config.ts";
 import { CliError } from "../core/errors.ts";
-import { printLine } from "../core/output.ts";
+import { printJson, printLine } from "../core/output.ts";
 import { createProviders, executeWithFallback } from "../providers/index.ts";
-import { toEnvelope } from "../providers/apollo/index.ts";
 import type { AccountLookupInput, PersonLookupInput } from "../types/normalized.ts";
-import { ACCOUNT_SCHEMA, outputEnvelope, parseAccountInput, parsePersonInput, parseRequestOptions, PERSON_SCHEMA } from "./shared.ts";
+import { ACCOUNT_SCHEMA, parseAccountInput, parsePersonInput, parseRequestOptions, PERSON_SCHEMA } from "./shared.ts";
 
 export async function runEnrichCommand(
   argv: string[],
@@ -37,7 +36,7 @@ export async function runEnrichCommand(
       options.provider,
       (provider) => provider.enrichPerson(input, options),
     );
-    outputEnvelope(toEnvelope("enrich", "person", input, result), options.json);
+    outputRawEnrichResponse(result.providerRaw);
     return;
   }
 
@@ -57,7 +56,7 @@ export async function runEnrichCommand(
       options.provider,
       (provider) => provider.enrichAccount(input, options),
     );
-    outputEnvelope(toEnvelope("enrich", "account", input, result), options.json);
+    outputRawEnrichResponse(result.providerRaw);
     return;
   }
 
@@ -65,15 +64,19 @@ export async function runEnrichCommand(
 }
 
 function validatePersonInput(input: PersonLookupInput): void {
-  if (input.email || input.linkedinUrl) {
+  if (input.id || input.email || input.hashedEmail || input.linkedinUrl) {
     return;
   }
 
-  if (input.name && input.domain) {
+  if (input.name && (input.domain || input.company)) {
     return;
   }
 
-  throw new CliError("Provide --email, --linkedin-url, or --name with --domain.", 2);
+  if ((input.firstName || input.lastName) && (input.domain || input.company || input.email || input.hashedEmail)) {
+    return;
+  }
+
+  throw new CliError("Provide --id, --email, --hashed-email, --linkedin-url, or person name fields with --domain/--company.", 2);
 }
 
 function validateAccountInput(input: AccountLookupInput): void {
@@ -89,5 +92,10 @@ function printHelp(): void {
   printLine("");
   printLine("Usage:");
   printLine("  prospect enrich person --email <email> [--provider apollo] [--json]");
+  printLine("  prospect enrich person --id <apollo-id> [--provider apollo] [--json]");
   printLine("  prospect enrich account --domain <domain> [--provider apollo] [--json]");
+}
+
+function outputRawEnrichResponse(value: unknown): void {
+  printJson(value ?? null);
 }

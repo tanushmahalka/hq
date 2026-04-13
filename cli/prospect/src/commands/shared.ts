@@ -13,9 +13,13 @@ export const COMMON_SCHEMA = {
 
 export const PERSON_SCHEMA = {
   ...COMMON_SCHEMA,
+  "--id": "string",
   "--email": "string",
+  "--hashed-email": "string",
   "--linkedin-url": "string",
   "--name": "string",
+  "--first-name": "string",
+  "--last-name": "string",
   "--domain": "string",
   "--company": "string",
 } as const;
@@ -28,9 +32,13 @@ export const ACCOUNT_SCHEMA = {
 
 export function parsePersonInput(parsed: ParsedArgs): PersonLookupInput {
   return {
+    id: getStringFlag(parsed, "--id"),
     email: getStringFlag(parsed, "--email"),
+    hashedEmail: getStringFlag(parsed, "--hashed-email"),
     linkedinUrl: getStringFlag(parsed, "--linkedin-url"),
     name: getStringFlag(parsed, "--name"),
+    firstName: getStringFlag(parsed, "--first-name"),
+    lastName: getStringFlag(parsed, "--last-name"),
     domain: getStringFlag(parsed, "--domain"),
     company: getStringFlag(parsed, "--company"),
   };

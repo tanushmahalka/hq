@@ -57,7 +57,7 @@ export function createApolloProvider(client: ApolloClient): ApolloProvider {
         const response = await client.request<Record<string, unknown>>({
           method: "POST",
           path: "/api/v1/people/match",
-          json: buildPeopleEnrichmentPayload(input),
+          query: buildPeopleEnrichmentPayload(input),
           timeoutMs: options.timeoutMs,
         });
 
@@ -115,12 +115,13 @@ export function createApolloProvider(client: ApolloClient): ApolloProvider {
     },
     async findNumber(input, options = {}) {
       const payload = buildPeopleEnrichmentPayload(input, {
+        ...options.providerOptions,
         reveal_phone_number: true,
       });
       const response = await client.request<Record<string, unknown>>({
         method: "POST",
         path: "/api/v1/people/match",
-        json: payload,
+        query: payload,
         timeoutMs: options.timeoutMs,
       });
 
@@ -156,10 +157,11 @@ export function createApolloProvider(client: ApolloClient): ApolloProvider {
       };
     },
     async enrichPerson(input, options = {}) {
+      const payload = buildPeopleEnrichmentPayload(input, options.providerOptions);
       const response = await client.request<Record<string, unknown>>({
         method: "POST",
         path: "/api/v1/people/match",
-        json: buildPeopleEnrichmentPayload(input),
+        query: payload,
         timeoutMs: options.timeoutMs,
       });
 
@@ -181,6 +183,7 @@ export function createApolloProvider(client: ApolloClient): ApolloProvider {
       const response = await client.request<Record<string, unknown>>({
         method: "POST",
         path: "/api/v1/people/bulk_match",
+        query: options.providerOptions,
         json: payload,
         timeoutMs: options.timeoutMs,
       });
@@ -309,10 +312,14 @@ function buildPeopleEnrichmentPayload(
   extra: Record<string, unknown> = {},
 ): Record<string, unknown> {
   return {
+    ...(input.id ? { id: input.id } : {}),
     ...extra,
     ...(input.email ? { email: input.email } : {}),
+    ...(input.hashedEmail ? { hashed_email: input.hashedEmail } : {}),
     ...(input.linkedinUrl ? { linkedin_url: input.linkedinUrl } : {}),
     ...(input.name ? { name: input.name } : {}),
+    ...(input.firstName ? { first_name: input.firstName } : {}),
+    ...(input.lastName ? { last_name: input.lastName } : {}),
     ...(input.domain ? { domain: input.domain } : {}),
     ...(input.company ? { organization_name: input.company } : {}),
   };
