@@ -3,16 +3,20 @@ import { pathToFileURL } from "node:url";
 
 import {
   fetchActiveAdsByPageId,
+  launchBrowser,
   normalizeFacebookUrl,
   resolveAdLibraryPageId,
   type FlattenedAd,
 } from "./facebook-ads-from-page-url.ts";
+import type { Browser } from "playwright";
 
 type SiteMetadata = {
   url: string;
   title: string | null;
   description: string | null;
 };
+
+export type SiteMetadataFallback = Partial<Pick<SiteMetadata, "title" | "description">>;
 
 type TavilyResult = {
   title?: string;
@@ -37,6 +41,10 @@ type RankedFacebookPage = {
 };
 
 type DebugLogger = (label: string, value?: unknown) => void;
+
+const TAVILY_REQUESTS_PER_MINUTE = Number(process.env.TAVILY_REQUESTS_PER_MINUTE ?? "100");
+const TAVILY_MIN_INTERVAL_MS = Math.ceil(60_000 / Math.max(1, TAVILY_REQUESTS_PER_MINUTE));
+let tavilyQueue: Promise<void> = Promise.resolve();
 
 function usage(): never {
   console.error(
@@ -115,50 +123,79 @@ async function fetchSiteMetadata(websiteUrl: URL): Promise<SiteMetadata> {
 }
 
 async function runMetaPageProbe(websiteUrl: string): Promise<MetaPageProbeOutput> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(
-      "python3",
-      [
-        "./meta_page_probe.py",
-        websiteUrl,
-        "--provider",
-        "tavily",
-        "--max-results",
-        "8",
-      ],
-      {
-        cwd: process.cwd(),
-        env: process.env,
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    );
+  const maxAttempts = 4;
 
-    let stdout = "";
-    let stderr = "";
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await scheduleTavilySlot();
+      return await new Promise<MetaPageProbeOutput>((resolve, reject) => {
+        const child = spawn(
+          "python3",
+          [
+            "./meta_page_probe.py",
+            websiteUrl,
+            "--provider",
+            "tavily",
+            "--max-results",
+            "8",
+          ],
+          {
+            cwd: process.cwd(),
+            env: process.env,
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        );
 
-    child.stdout.on("data", (chunk) => {
-      stdout += String(chunk);
-    });
+        let stdout = "";
+        let stderr = "";
 
-    child.stderr.on("data", (chunk) => {
-      stderr += String(chunk);
-    });
+        child.stdout.on("data", (chunk) => {
+          stdout += String(chunk);
+        });
 
-    child.on("error", (error) => reject(error));
+        child.stderr.on("data", (chunk) => {
+          stderr += String(chunk);
+        });
 
-    child.on("close", (code) => {
-      if (code !== 0) {
-        reject(new Error(stderr.trim() || stdout.trim() || `meta_page_probe.py exited with code ${code}`));
-        return;
+        child.on("error", (error) => reject(error));
+
+        child.on("close", (code) => {
+          if (code !== 0) {
+            reject(new Error(stderr.trim() || stdout.trim() || `meta_page_probe.py exited with code ${code}`));
+            return;
+          }
+
+          try {
+            resolve(JSON.parse(stdout) as MetaPageProbeOutput);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/429|Too Many Requests/i.test(message) || attempt === maxAttempts) {
+        throw error;
       }
 
-      try {
-        resolve(JSON.parse(stdout) as MetaPageProbeOutput);
-      } catch (error) {
-        reject(error);
-      }
-    });
+      const backoffMs = 2000 * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+
+  throw new Error("Meta page probe failed unexpectedly.");
+}
+
+async function scheduleTavilySlot(): Promise<void> {
+  const previous = tavilyQueue;
+  let release!: () => void;
+  tavilyQueue = new Promise<void>((resolve) => {
+    release = resolve;
   });
+
+  await previous;
+  await new Promise((resolve) => setTimeout(resolve, TAVILY_MIN_INTERVAL_MS));
+  release();
 }
 
 function getGeminiApiKey(): string {
@@ -289,9 +326,10 @@ function createDebugLogger(debug: boolean): DebugLogger {
   return (label, value) => debugLog(debug, label, value);
 }
 
-async function resolveFacebookPageUrlFromWebsite(
+export async function resolveFacebookPageUrlFromWebsite(
   websiteUrl: URL,
   debug: boolean,
+  fallbackMetadata?: SiteMetadataFallback,
 ): Promise<string | null> {
   const log = createDebugLogger(debug);
   log("resolveFacebookPageUrlFromWebsite:start", {
@@ -305,7 +343,26 @@ async function resolveFacebookPageUrlFromWebsite(
     geminiModel: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
   });
 
-  const siteMetadata = await fetchSiteMetadata(websiteUrl);
+  let siteMetadata: SiteMetadata;
+  try {
+    siteMetadata = await fetchSiteMetadata(websiteUrl);
+  } catch (error) {
+    log("siteMetadataFetchFailed", error instanceof Error ? error.message : String(error));
+    siteMetadata = {
+      url: websiteUrl.toString(),
+      title: fallbackMetadata?.title ?? null,
+      description: fallbackMetadata?.description ?? null,
+    };
+  }
+
+  if (!siteMetadata.title && fallbackMetadata?.title) {
+    siteMetadata.title = fallbackMetadata.title;
+  }
+
+  if (!siteMetadata.description && fallbackMetadata?.description) {
+    siteMetadata.description = fallbackMetadata.description;
+  }
+
   log("siteMetadata", siteMetadata);
 
   const probeOutput = await runMetaPageProbe(websiteUrl.toString());
@@ -342,38 +399,73 @@ async function resolveFacebookPageUrlFromWebsite(
   return normalizeFacebookUrl(ranked.selectedUrl).toString();
 }
 
-async function resolveAdsFromWebsiteUrl(websiteUrl: URL, debug: boolean): Promise<FlattenedAd[]> {
+export type WebsiteAdsResolution = {
+  resolvedFacebookPageUrl: string | null;
+  adLibraryPageId: string | null;
+  ads: FlattenedAd[];
+};
+
+export async function resolveAdsFromWebsiteUrl(
+  websiteUrl: URL,
+  debug: boolean,
+  browser?: Browser,
+  fallbackMetadata?: SiteMetadataFallback,
+): Promise<WebsiteAdsResolution> {
   const log = createDebugLogger(debug);
   log("resolveAdsFromWebsiteUrl:start", { websiteUrl: websiteUrl.toString() });
 
-  const facebookPageUrl = await resolveFacebookPageUrlFromWebsite(websiteUrl, debug);
+  const facebookPageUrl = await resolveFacebookPageUrlFromWebsite(
+    websiteUrl,
+    debug,
+    fallbackMetadata,
+  );
   log("facebookPageUrl", facebookPageUrl);
 
   if (!facebookPageUrl) {
     log("resolveAdsFromWebsiteUrl:noFacebookPageUrl");
-    return [];
+    return {
+      resolvedFacebookPageUrl: null,
+      adLibraryPageId: null,
+      ads: [],
+    };
   }
 
-  const adLibraryPageId = await resolveAdLibraryPageId(normalizeFacebookUrl(facebookPageUrl));
+  const adLibraryPageId = await resolveAdLibraryPageId(
+    normalizeFacebookUrl(facebookPageUrl),
+    browser,
+  );
   log("adLibraryPageId", adLibraryPageId);
 
   if (!adLibraryPageId) {
     log("resolveAdsFromWebsiteUrl:noAdLibraryPageId");
-    return [];
+    return {
+      resolvedFacebookPageUrl: facebookPageUrl,
+      adLibraryPageId: null,
+      ads: [],
+    };
   }
 
-  const ads = await fetchActiveAdsByPageId(adLibraryPageId);
+  const ads = await fetchActiveAdsByPageId(adLibraryPageId, browser);
   log("adsResultSummary", {
     adCount: ads.length,
     firstAdArchiveId: ads[0]?.adArchiveId ?? null,
   });
-  return ads;
+  return {
+    resolvedFacebookPageUrl: facebookPageUrl,
+    adLibraryPageId,
+    ads,
+  };
 }
 
 async function main() {
   const { websiteUrl, debug } = parseArgs();
-  const ads = await resolveAdsFromWebsiteUrl(normalizeWebsiteUrl(websiteUrl), debug);
-  console.log(JSON.stringify(ads, null, 2));
+  const browser = await launchBrowser();
+  try {
+    const result = await resolveAdsFromWebsiteUrl(normalizeWebsiteUrl(websiteUrl), debug, browser);
+    console.log(JSON.stringify(result.ads, null, 2));
+  } finally {
+    await browser.close();
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

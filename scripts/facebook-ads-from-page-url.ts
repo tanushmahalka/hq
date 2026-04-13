@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 
-import { chromium } from "playwright";
+import { chromium, type Browser } from "playwright";
 
 type SearchResultsConnection = {
   count?: number;
@@ -213,7 +213,7 @@ function flattenAds(connection: SearchResultsConnection): FlattenedAd[] {
     });
 }
 
-async function launchBrowser() {
+export async function launchBrowser() {
   const executablePath = CHROME_CANDIDATES.find(Boolean);
 
   return chromium.launch({
@@ -222,28 +222,37 @@ async function launchBrowser() {
   });
 }
 
-export async function resolveAdLibraryPageId(pageUrl: URL): Promise<string | null> {
-  const browser = await launchBrowser();
+export async function resolveAdLibraryPageId(
+  pageUrl: URL,
+  browser?: Browser,
+): Promise<string | null> {
+  const localBrowser = browser ?? await launchBrowser();
 
   try {
-    const page = await browser.newPage({ locale: "en-US" });
+    const page = await localBrowser.newPage({ locale: "en-US" });
     await page.goto(buildTransparencyUrl(pageUrl), {
       waitUntil: "domcontentloaded",
       timeout: 60_000,
     });
     await page.waitForTimeout(8_000);
     const bodyText = await page.locator("body").innerText();
+    await page.close();
     return extractPageIdFromTransparencyText(bodyText);
   } finally {
-    await browser.close();
+    if (!browser) {
+      await localBrowser.close();
+    }
   }
 }
 
-export async function fetchActiveAdsByPageId(pageId: string): Promise<FlattenedAd[]> {
-  const browser = await launchBrowser();
+export async function fetchActiveAdsByPageId(
+  pageId: string,
+  browser?: Browser,
+): Promise<FlattenedAd[]> {
+  const localBrowser = browser ?? await launchBrowser();
 
   try {
-    const page = await browser.newPage({ locale: "en-US" });
+    const page = await localBrowser.newPage({ locale: "en-US" });
     const adLibraryUrl = new URL("https://www.facebook.com/ads/library/");
     adLibraryUrl.searchParams.set("active_status", "active");
     adLibraryUrl.searchParams.set("ad_type", "all");
@@ -274,9 +283,12 @@ export async function fetchActiveAdsByPageId(pageId: string): Promise<FlattenedA
     }
 
     const connection = JSON.parse(jsonObject) as SearchResultsConnection;
+    await page.close();
     return flattenAds(connection);
   } finally {
-    await browser.close();
+    if (!browser) {
+      await localBrowser.close();
+    }
   }
 }
 

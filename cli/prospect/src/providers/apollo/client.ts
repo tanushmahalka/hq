@@ -1,5 +1,5 @@
 import { CliError } from "../../core/errors.ts";
-import { readResponseBody, toStringRecord } from "../../core/http.ts";
+import { readResponseBody } from "../../core/http.ts";
 import type { ResolvedApolloConfig } from "../../types/config.ts";
 import { throwApolloError } from "./errors.ts";
 
@@ -41,10 +41,7 @@ export class ApolloClient {
 
     const url = new URL(options.path.startsWith("/") ? options.path : `/${options.path}`, `${baseUrl}/`);
     if (options.query) {
-      const query = toStringRecord(options.query);
-      for (const [key, value] of Object.entries(query)) {
-        url.searchParams.set(key, value);
-      }
+      appendQueryParams(url.searchParams, options.query);
     }
 
     const headers: Record<string, string> = {
@@ -88,4 +85,35 @@ export class ApolloClient {
       clearTimeout(timeout);
     }
   }
+}
+
+function appendQueryParams(params: URLSearchParams, value: Record<string, unknown>): void {
+  for (const [key, entry] of Object.entries(value)) {
+    appendQueryValue(params, key, entry);
+  }
+}
+
+function appendQueryValue(params: URLSearchParams, key: string, value: unknown): void {
+  if (value === undefined) {
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      appendQueryValue(params, key, item);
+    }
+    return;
+  }
+
+  if (value === null) {
+    params.append(key, "null");
+    return;
+  }
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    params.append(key, String(value));
+    return;
+  }
+
+  params.append(key, JSON.stringify(value));
 }

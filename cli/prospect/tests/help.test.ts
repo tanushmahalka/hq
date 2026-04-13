@@ -17,5 +17,6 @@ test("bin/prospect exposes top-level help", async () => {
   assert.match(stdout, /prospect find person --email <email>/);
   assert.match(stdout, /prospect apollo find person --email <email>/);
   assert.match(stdout, /prospect apollo list people --query 'person_titles\[]=/);
+  assert.match(stdout, /prospect apollo enrich people --data-file payload\.json/);
   assert.match(stdout, /prospect apollo api --method GET --path \/api\/v1\/auth\/health/);
 });

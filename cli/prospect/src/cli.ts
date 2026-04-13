@@ -57,6 +57,7 @@ function printHelp(): void {
   printLine("  prospect providers list");
   printLine("  prospect apollo find person --email <email> [--json]");
   printLine("  prospect apollo list people --query 'person_titles[]=marketing director' [--json]");
+  printLine("  prospect apollo enrich people --data-file payload.json [--json]");
   printLine("  prospect apollo enrich account --domain <domain> [--json]");
   printLine("  prospect apollo api --method GET --path /api/v1/auth/health [--json]");
 }

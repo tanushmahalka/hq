@@ -40,7 +40,21 @@ export function parseAssignmentList(values: string[], parseValue = coerceScalar)
       throw new CliError(`Expected key=value but received: ${value}`, 2);
     }
 
-    result[key] = parseValue(rest.join("="));
+    const parsedValue = parseValue(rest.join("="));
+    const existing = result[key];
+
+    if (existing === undefined) {
+      result[key] = parsedValue;
+      continue;
+    }
+
+    if (Array.isArray(existing)) {
+      existing.push(parsedValue);
+      result[key] = existing;
+      continue;
+    }
+
+    result[key] = [existing, parsedValue];
   }
 
   return result;

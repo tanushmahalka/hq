@@ -5,7 +5,7 @@ import { parseAssignmentList, readJsonInput } from "../core/http.ts";
 import { printJson, printLine } from "../core/output.ts";
 import { ApolloClient } from "../providers/apollo/client.ts";
 import { createApolloProvider, toCollectionEnvelope, toEnvelope } from "../providers/apollo/index.ts";
-import { outputEnvelope, parseAccountInput, parsePersonInput, parseRequestOptions, PERSON_SCHEMA, ACCOUNT_SCHEMA } from "./shared.ts";
+import { ACCOUNT_SCHEMA, COMMON_SCHEMA, outputEnvelope, parseAccountInput, parsePersonInput, parseRequestOptions, PERSON_SCHEMA } from "./shared.ts";
 
 const API_SCHEMA = {
   "--method": "string",
@@ -30,6 +30,12 @@ const APOLLO_PERSON_FIND_SCHEMA = {
   ...PERSON_SCHEMA,
   "--query": "string[]",
   "--filters": "boolean",
+} as const;
+
+const APOLLO_BULK_ENRICH_SCHEMA = {
+  ...COMMON_SCHEMA,
+  "--data": "string",
+  "--data-file": "string",
 } as const;
 
 const APOLLO_PEOPLE_SEARCH_FILTERS = [
@@ -220,6 +226,29 @@ export async function runApolloCommand(
     return;
   }
 
+  if (group === "enrich" && entity === "people") {
+    const parsed = parseArgs(rest, APOLLO_BULK_ENRICH_SCHEMA);
+    if (getBooleanFlag(parsed, "--help")) {
+      printApolloBulkEnrichPeopleHelp();
+      return;
+    }
+
+    const options = parseRequestOptions(parsed);
+    const payload = validateBulkPeoplePayload(
+      await readJsonInput(getStringFlag(parsed, "--data"), getStringFlag(parsed, "--data-file")),
+    );
+    const result = await provider.bulkEnrichPeople(payload, options);
+    const envelope = toCollectionEnvelope("enrich", "people", { requestedRecords: payload.details.length }, result);
+
+    if (options.json) {
+      printJson(envelope);
+      return;
+    }
+
+    printApolloPeopleListHuman(envelope);
+    return;
+  }
+
   throw new CliError(`Unknown Apollo command: ${argv.join(" ")}`, 2);
 }
 
@@ -237,6 +266,8 @@ function printHelp(): void {
   printLine("    Credit behavior: may consume credits or trigger async enrichment when phone reveal is requested.");
   printLine("  prospect apollo enrich person --email <email> [--json]");
   printLine("    Credit behavior: potentially credit-consuming depending on enrichment and reveal behavior.");
+  printLine("  prospect apollo enrich people --data-file <path> [--json]");
+  printLine("    Bulk People Enrichment. Prefer People API Search first, then pass person IDs in details.");
   printLine("  prospect apollo enrich account --domain <domain> [--json]");
   printLine("    Credit behavior: may consume Apollo credits for organization enrichment.");
   printLine("  prospect apollo usage [--match people] [--json]");
@@ -290,6 +321,28 @@ function printApolloListPeopleHelp(): void {
   printLine("");
   printLine("Example:");
   printLine("  prospect apollo list people --query 'person_titles[]=marketing director' --query 'person_locations[]=bangalore, india' --query 'per_page=10' --query 'page=1' --json");
+}
+
+function printApolloBulkEnrichPeopleHelp(): void {
+  printLine("Prospect Apollo enrich people");
+  printLine("");
+  printLine("Use this for Apollo Bulk People Enrichment.");
+  printLine("");
+  printLine("Recommended flow:");
+  printLine("  1. Use `prospect apollo list people` to find Apollo person IDs without consuming credits.");
+  printLine("  2. Pass those IDs in the details array here when you need richer person data.");
+  printLine("");
+  printLine("Usage:");
+  printLine("  prospect apollo enrich people --data '{\"details\":[...]}' [--json] [--debug]");
+  printLine("  prospect apollo enrich people --data-file payload.json [--json] [--debug]");
+  printLine("");
+  printLine("Behavior:");
+  printLine("  Sends POST /api/v1/people/bulk_match with the provided JSON body.");
+  printLine("  The JSON body must include a details array with between 1 and 10 people.");
+  printLine("  To minimize credit usage, prefer `id` values from People API Search instead of raw identity fields when possible.");
+  printLine("");
+  printLine("Example payload:");
+  printLine('  {"details":[{"id":"64a7ff0cc4dfae00013df1a5"},{"id":"64a7ff0cc4dfae00013df1a6"}]}');
 }
 
 function printApolloPeopleSearchFilterNames(): void {
@@ -462,6 +515,26 @@ function filterApolloUsage(
     returnedEndpoints: filteredEntries.length,
     ...(match ? { match } : {}),
     endpoints: Object.fromEntries(filteredEntries),
+  };
+}
+
+function validateBulkPeoplePayload(value: unknown): { details: Record<string, unknown>[] } & Record<string, unknown> {
+  if (!isPlainObject(value)) {
+    throw new CliError("Bulk people enrichment expects a JSON object body.", 2);
+  }
+
+  const details = Array.isArray(value.details) ? value.details.filter(isPlainObject) : [];
+  if (details.length === 0) {
+    throw new CliError("Bulk people enrichment expects a non-empty `details` array.", 2);
+  }
+
+  if (details.length > 10) {
+    throw new CliError("Bulk people enrichment supports at most 10 people per request.", 2);
+  }
+
+  return {
+    ...value,
+    details,
   };
 }
 

@@ -99,11 +99,14 @@ Shared flags:
 
 Use these when the task is explicitly Apollo-shaped or when the normalized layer is too narrow:
 
+Prefer `apollo list people` first to collect Apollo `id` values, then bulk enrich by id when you need richer fields.
+
 ```bash
 ./cli/prospect/bin/prospect apollo find person --email jane@acme.com --json
 ./cli/prospect/bin/prospect apollo find account --domain acme.com --json
 ./cli/prospect/bin/prospect apollo find number --email jane@acme.com --json
 ./cli/prospect/bin/prospect apollo enrich person --email jane@acme.com --json
+./cli/prospect/bin/prospect apollo enrich people --data-file payload.json --json
 ./cli/prospect/bin/prospect apollo enrich account --domain acme.com --json
 ```
 

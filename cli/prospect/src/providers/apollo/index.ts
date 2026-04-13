@@ -29,6 +29,17 @@ export interface ApolloProvider {
   findNumber(input: PersonLookupInput, options?: RequestOptions): Promise<ProviderResult<NormalizedPerson>>;
   enrichPerson(input: PersonLookupInput, options?: RequestOptions): Promise<ProviderResult<NormalizedPerson>>;
   enrichAccount(input: AccountLookupInput, options?: RequestOptions): Promise<ProviderResult<NormalizedCompany>>;
+  bulkEnrichPeople(
+    payload: Record<string, unknown>,
+    options?: RequestOptions,
+  ): Promise<{
+    ok: boolean;
+    provider: string;
+    results: NormalizedPerson[];
+    warnings: string[];
+    explain: string[];
+    providerRaw?: unknown;
+  }>;
   rawRequest(options: {
     method?: string;
     path: string;
@@ -165,6 +176,27 @@ export function createApolloProvider(client: ApolloClient): ApolloProvider {
 
       const account = normalizeCompany(firstObject(response.data.organization) ?? response.data);
       return makeResult("apollo", account, response.data, options, ["Used Apollo Organization Enrichment."]);
+    },
+    async bulkEnrichPeople(payload, options = {}) {
+      const response = await client.request<Record<string, unknown>>({
+        method: "POST",
+        path: "/api/v1/people/bulk_match",
+        json: payload,
+        timeoutMs: options.timeoutMs,
+      });
+
+      const people = collectBulkPeopleResults(response.data)
+        .map((person) => normalizePerson(person))
+        .filter((person): person is NormalizedPerson => person !== null);
+
+      return {
+        ok: people.length > 0,
+        provider: "apollo",
+        results: people,
+        warnings: [],
+        explain: options.explain ? ["Used Apollo Bulk People Enrichment."] : [],
+        providerRaw: response.data,
+      };
     },
     async rawRequest(options) {
       const response = await client.request<unknown>(options);
@@ -432,6 +464,19 @@ function collectObjects(value: unknown): Record<string, unknown>[] {
   }
 
   return value.filter(isPlainObject);
+}
+
+function collectBulkPeopleResults(value: Record<string, unknown>): Record<string, unknown>[] {
+  const candidateKeys = ["matches", "people", "contacts", "details"];
+
+  for (const key of candidateKeys) {
+    const records = collectObjects(value[key]);
+    if (records.length > 0) {
+      return records.map((record) => firstObject(record.person) ?? firstObject(record.contact) ?? record);
+    }
+  }
+
+  return [];
 }
 
 function stringField(value: Record<string, unknown>, key: string): string | undefined {

@@ -99,6 +99,36 @@ test("apollo find person supports direct People API Search filters via --query",
   assert.equal(url.searchParams.get("include_similar_titles"), "false");
 });
 
+test("apollo list people preserves repeated query keys for Apollo array filters", async () => {
+  process.env.APOLLO_API_KEY = "test-apollo-key";
+
+  await captureStdout(async () => {
+    await runApolloCommand(
+      [
+        "list",
+        "people",
+        "--query",
+        "q_organization_domains_list[]=foo.com",
+        "--query",
+        "q_organization_domains_list[]=bar.com",
+        "--query",
+        "person_titles[]=Founder",
+        "--query",
+        "person_titles[]=Owner",
+        "--json",
+      ],
+      {
+        fetchImpl: async (input) => {
+          const url = new URL(String(input));
+          assert.deepEqual(url.searchParams.getAll("q_organization_domains_list[]"), ["foo.com", "bar.com"]);
+          assert.deepEqual(url.searchParams.getAll("person_titles[]"), ["Founder", "Owner"]);
+          return jsonResponse({ total_entries: 0, people: [] });
+        },
+      },
+    );
+  });
+});
+
 test("apollo find person exposes available filters", async () => {
   const output = await captureStdout(async () => {
     await runApolloCommand(["find", "person", "--filters", "--json"]);
@@ -277,6 +307,99 @@ test("json output always includes provider raw payload and explain metadata", as
   assert.equal(parsed.provider, "apollo");
   assert.ok(parsed.providerRaw);
   assert.ok(parsed.explain.length > 0);
+});
+
+test("apollo bulk people enrich posts details payload and returns normalized results", async () => {
+  process.env.APOLLO_API_KEY = "test-apollo-key";
+  let url = "";
+  let method = "";
+  let body = "";
+
+  const output = await captureStdout(async () => {
+    await runApolloCommand(
+      [
+        "enrich",
+        "people",
+        "--data",
+        '{"details":[{"email":"jane@example.com"},{"name":"John Doe","domain":"acme.com"}]}',
+        "--json",
+        "--debug",
+      ],
+      {
+        fetchImpl: async (input, init) => {
+          url = String(input);
+          method = String(init?.method);
+          body = String(init?.body);
+          return jsonResponse({
+            matches: [
+              {
+                person: {
+                  id: "p_1",
+                  name: "Jane Doe",
+                  email: "jane@example.com",
+                  title: "Head of Growth",
+                  organization: {
+                    name: "Acme",
+                    primary_domain: "acme.com",
+                  },
+                },
+              },
+              {
+                person: {
+                  id: "p_2",
+                  name: "John Doe",
+                  title: "Sales Director",
+                  organization: {
+                    name: "Acme",
+                    primary_domain: "acme.com",
+                  },
+                },
+              },
+            ],
+          });
+        },
+      },
+    );
+  });
+
+  const parsed = parseCapturedJson(output) as {
+    command: string;
+    entity: string;
+    input: { requestedRecords: number };
+    results: Array<{ fullName: string; company?: { domain?: string } }>;
+    explain: string[];
+  };
+
+  assert.match(url, /\/api\/v1\/people\/bulk_match$/);
+  assert.equal(method, "POST");
+  assert.match(body, /jane@example\.com/);
+  assert.match(body, /"details"/);
+  assert.equal(parsed.command, "enrich");
+  assert.equal(parsed.entity, "people");
+  assert.equal(parsed.input.requestedRecords, 2);
+  assert.equal(parsed.results.length, 2);
+  assert.equal(parsed.results[0]?.fullName, "Jane Doe");
+  assert.equal(parsed.results[1]?.company?.domain, "acme.com");
+  assert.ok(parsed.explain.some((entry) => /Bulk People Enrichment/i.test(entry)));
+});
+
+test("apollo bulk people enrich validates details array length", async () => {
+  process.env.APOLLO_API_KEY = "test-apollo-key";
+
+  await assert.rejects(
+    () => runApolloCommand(["enrich", "people", "--data", "{}"], { fetchImpl: async () => jsonResponse({}) }),
+    /non-empty `details` array/i,
+  );
+
+  const details = Array.from({ length: 11 }, (_, index) => ({ email: `person${index}@example.com` }));
+
+  await assert.rejects(
+    () =>
+      runApolloCommand(["enrich", "people", "--data", JSON.stringify({ details })], {
+        fetchImpl: async () => jsonResponse({}),
+      }),
+    /at most 10 people/i,
+  );
 });
 
 test("apollo raw api passthrough parses payloads", async () => {
