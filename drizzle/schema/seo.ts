@@ -1175,6 +1175,50 @@ export const pageClusterTargets = pgTable(
   ],
 );
 
+export const pageKeywordClusters = pgTable(
+  "page_keyword_clusters",
+  {
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "page_keyword_clusters_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    pageId: integer("page_id").notNull(),
+    keywordClusterId: integer("keyword_cluster_id").notNull(),
+  },
+  (table) => [
+    uniqueIndex("page_keyword_clusters_page_keyword_cluster_unique").using(
+      "btree",
+      table.pageId.asc().nullsLast().op("int4_ops"),
+      table.keywordClusterId.asc().nullsLast().op("int4_ops"),
+    ),
+    index("idx_page_keyword_clusters_page_id").using(
+      "btree",
+      table.pageId.asc().nullsLast().op("int4_ops"),
+    ),
+    index("idx_page_keyword_clusters_keyword_cluster_id").using(
+      "btree",
+      table.keywordClusterId.asc().nullsLast().op("int4_ops"),
+    ),
+    foreignKey({
+      columns: [table.pageId],
+      foreignColumns: [pages.id],
+      name: "page_keyword_clusters_page_id_pages_id_fk",
+    }),
+    foreignKey({
+      columns: [table.keywordClusterId],
+      foreignColumns: [keywordClusters.id],
+      name: "page_keyword_clusters_keyword_cluster_id_keyword_clusters_id_fk",
+    }),
+  ],
+);
+
 export const reviews = pgTable(
   "reviews",
   {

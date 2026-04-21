@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, competitorBacklinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachProspects, linkOpportunities, outreachContacts, outreachThreads, outreachMessages, queryClusters, keywordClusters, pageClusterTargets, queries, reviews, searchConsoleDaily, siteDomainFootprints, siteBacklinkFootprints, competitorBacklinkFootprints, siteKeywords } from "./schema";
+import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, competitorBacklinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachProspects, linkOpportunities, outreachContacts, outreachThreads, outreachMessages, queryClusters, keywordClusters, pageClusterTargets, pageKeywordClusters, queries, reviews, searchConsoleDaily, siteDomainFootprints, siteBacklinkFootprints, competitorBacklinkFootprints, siteKeywords } from "./schema";
 
 export const accountRelations = relations(account, ({one}) => ({
 	user: one(user, {
@@ -137,6 +137,7 @@ export const pagesRelations = relations(pages, ({one, many}) => ({
 	}),
 	linkOpportunities: many(linkOpportunities),
 	pageClusterTargets: many(pageClusterTargets),
+	pageKeywordClusters: many(pageKeywordClusters),
 	site: one(sites, {
 		fields: [pages.siteId],
 		references: [sites.id]
@@ -439,7 +440,19 @@ export const keywordClustersRelations = relations(keywordClusters, ({one, many})
 		fields: [keywordClusters.siteId],
 		references: [sites.id]
 	}),
+	pageKeywordClusters: many(pageKeywordClusters),
 	siteKeywords: many(siteKeywords),
+}));
+
+export const pageKeywordClustersRelations = relations(pageKeywordClusters, ({one}) => ({
+	page: one(pages, {
+		fields: [pageKeywordClusters.pageId],
+		references: [pages.id]
+	}),
+	keywordCluster: one(keywordClusters, {
+		fields: [pageKeywordClusters.keywordClusterId],
+		references: [keywordClusters.id]
+	}),
 }));
 
 export const queriesRelations = relations(queries, ({one, many}) => ({
