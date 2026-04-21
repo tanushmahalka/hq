@@ -1,17 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { getSeoOverview } from "../worker/lib/seo.ts";
+import { getSeoKeywordClusters, getSeoOverview } from "../worker/lib/seo.ts";
 
 function createDb(results: unknown[]) {
   let index = 0;
+  const createQuery = (result: unknown) => ({
+    from() {
+      return {
+        where() {
+          return {
+            orderBy() {
+              return Promise.resolve(result);
+            },
+          };
+        },
+        orderBy() {
+          return Promise.resolve(result);
+        },
+        then(resolve: (value: unknown) => unknown) {
+          return Promise.resolve(result).then(resolve);
+        },
+      };
+    },
+  });
 
   return {
     select() {
       const result = results[index++];
-      return {
-        from() {
-          return Promise.resolve(result);
-        },
-      };
+      return createQuery(result);
     },
     execute() {
       const result = results[index++];
@@ -130,5 +145,40 @@ describe("getSeoOverview", () => {
     expect(overview.competitors[0]?.latestFootprint?.capturedAt).toBeInstanceOf(Date);
     expect(overview.competitors[0]?.latestKeywordCapturedAt).toBeInstanceOf(Date);
     expect(overview.competitors[0]?.topKeywords[0]?.capturedAt).toBeInstanceOf(Date);
+  });
+
+  it("returns reviewed keyword clusters with keywords and rationale fields", async () => {
+    const db = createDb([
+      [
+        {
+          id: 101,
+          siteId: 1,
+          title: "China KOL & Influencer Marketing",
+          mattersForKfd: "High",
+          whyThisMatters: "Directly tied to China brand growth.",
+          howThisCanHelp: "Can generate leads for growth services.",
+          representativeKeyword: "china influencers",
+          keywords: ["china influencers", "kol marketing china"],
+          keywordCount: 2,
+          reviewedAt: "2026-04-21T12:00:00.000Z",
+        },
+      ],
+    ]) as never;
+
+    const result = await getSeoKeywordClusters(db, 1);
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      id: 101,
+      siteId: 1,
+      title: "China KOL & Influencer Marketing",
+      mattersForKfd: "High",
+      whyThisMatters: "Directly tied to China brand growth.",
+      howThisCanHelp: "Can generate leads for growth services.",
+      representativeKeyword: "china influencers",
+      keywords: ["china influencers", "kol marketing china"],
+      keywordCount: 2,
+    });
+    expect(result.rows[0]?.reviewedAt).toBeInstanceOf(Date);
   });
 });

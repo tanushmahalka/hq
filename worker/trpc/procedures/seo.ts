@@ -4,6 +4,7 @@ import {
   captureBacklinkFootprints,
   getAnalyticsSummary,
   getBacklinksData,
+  getSeoKeywordClusters,
   getBacklinksByDomain,
   getKeywordsData,
   getSeoOverview,
@@ -61,6 +62,15 @@ export const seoRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return getKeywordsData(ctx.db, input);
+    }),
+  keywordClusters: orgProcedure
+    .input(
+      z.object({
+        siteId: z.number(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return getSeoKeywordClusters(ctx.db, input.siteId);
     }),
   geoOverview: orgProcedure
     .input(

@@ -235,14 +235,6 @@ The app reads `.env` and `.dev.vars` locally. A safe template lives in `.env.exa
 - `DATAFORSEO_LOGIN`
 - `DATAFORSEO_PASSWORD`
 
-### Database Tuning
-
-- `HQ_DB_FORCE_IPV4`
-- `HQ_DB_POOL_MAX`
-- `HQ_DB_POOL_MIN`
-- `HQ_DB_CONNECT_TIMEOUT_MS`
-- `HQ_DB_IDLE_TIMEOUT_MS`
-
 ## Useful Scripts
 
 ```bash

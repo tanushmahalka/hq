@@ -24,6 +24,7 @@ import { AnalyticsTab } from "@/features/seo/analytics-tab";
 import { BacklinksTab } from "@/features/seo/backlinks-tab";
 import { CompetitorsTab } from "@/features/seo/competitors-tab";
 import { GeoTab } from "@/features/seo/geo-tab";
+import { KeywordClustersTab } from "@/features/seo/keyword-clusters-tab";
 import { KeywordsTab } from "@/features/seo/keywords-tab";
 import { OverviewTab, PageDetailCard, getPageAuditSummary } from "@/features/seo/overview-tab";
 import {
@@ -198,6 +199,12 @@ export default function Seo() {
             onClick={() => setActiveTab("keywords")}
           />
           <SeoTabButton
+            active={activeTab === "keyword-clusters"}
+            label="Keyword Clusters"
+            description=""
+            onClick={() => setActiveTab("keyword-clusters")}
+          />
+          <SeoTabButton
             active={activeTab === "geo"}
             label="GEO"
             description=""
@@ -217,7 +224,7 @@ export default function Seo() {
           />
         </div>
 
-        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && activeTab !== "backlinks" && activeTab !== "keywords" && activeTab !== "geo" && (
+        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && activeTab !== "backlinks" && activeTab !== "keywords" && activeTab !== "keyword-clusters" && activeTab !== "geo" && (
           <div className="flex items-center gap-8 pb-2.5">
             {activeTab === "overview" ? (
               <>
@@ -254,6 +261,10 @@ export default function Seo() {
       ) : activeTab === "keywords" ? (
         effectiveSelectedSiteId ? (
           <KeywordsTab siteId={effectiveSelectedSiteId} />
+        ) : null
+      ) : activeTab === "keyword-clusters" ? (
+        effectiveSelectedSiteId ? (
+          <KeywordClustersTab siteId={effectiveSelectedSiteId} />
         ) : null
       ) : activeTab === "geo" ? (
         effectiveSelectedSiteId ? (

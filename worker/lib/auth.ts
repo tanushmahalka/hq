@@ -15,6 +15,10 @@ interface AuthConfig {
   allowedOrigins?: string;
 }
 
+const PERSISTENT_SESSION_DURATION_SECONDS = 60 * 60 * 24 * 400; // Browser-safe max cookie lifetime
+const SESSION_REFRESH_INTERVAL_SECONDS = 60 * 60 * 24; // 1 day
+const SESSION_COOKIE_CACHE_MAX_AGE_SECONDS = 60 * 5; // 5 minutes
+
 export function createAuth(db: Database, config: AuthConfig) {
   const superAdminEmailList = config.superAdminEmails
     ? config.superAdminEmails.split(",").map((e) => e.trim().toLowerCase())
@@ -34,11 +38,12 @@ export function createAuth(db: Database, config: AuthConfig) {
     trustedOrigins,
     emailAndPassword: { enabled: true },
     session: {
-      expiresIn: 60 * 60 * 24 * 30, // 30 days
-      updateAge: 60 * 60 * 24, // refresh session cookie daily
+      // Keep sessions effectively persistent until explicit logout.
+      expiresIn: PERSISTENT_SESSION_DURATION_SECONDS,
+      updateAge: SESSION_REFRESH_INTERVAL_SECONDS,
       cookieCache: {
         enabled: true,
-        maxAge: 60 * 5, // 5 min cache to reduce DB lookups
+        maxAge: SESSION_COOKIE_CACHE_MAX_AGE_SECONDS,
       },
     },
     plugins: [
@@ -91,3 +96,8 @@ export function createAuth(db: Database, config: AuthConfig) {
 }
 
 export type Auth = ReturnType<typeof createAuth>;
+export {
+  PERSISTENT_SESSION_DURATION_SECONDS,
+  SESSION_COOKIE_CACHE_MAX_AGE_SECONDS,
+  SESSION_REFRESH_INTERVAL_SECONDS,
+};

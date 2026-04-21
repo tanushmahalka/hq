@@ -6,6 +6,7 @@ import {
   competitorBacklinkSources,
   competitorBacklinkFootprints,
   competitorDomainFootprints,
+  keywordClusters,
   linkOpportunities,
   outreachProspects,
   pageClusterTargets,
@@ -146,6 +147,21 @@ export type SeoOverview = {
     primaryKeyword: string | null;
     keywords: string[];
     pageUrls: string[];
+  }>;
+};
+
+export type SeoKeywordClustersData = {
+  rows: Array<{
+    id: number;
+    siteId: number;
+    title: string;
+    mattersForKfd: string | null;
+    whyThisMatters: string | null;
+    howThisCanHelp: string | null;
+    representativeKeyword: string | null;
+    keywords: string[];
+    keywordCount: number;
+    reviewedAt: Date | null;
   }>;
 };
 
@@ -659,6 +675,45 @@ export async function getSeoOverview(db: Database): Promise<SeoOverview> {
     competitors: competitorsResult,
     pages: pagesResult,
     clusters: clustersResult,
+  };
+}
+
+export async function getSeoKeywordClusters(
+  db: Database,
+  siteId: number,
+): Promise<SeoKeywordClustersData> {
+  const rows = await db
+    .select({
+      id: keywordClusters.id,
+      siteId: keywordClusters.siteId,
+      title: keywordClusters.title,
+      mattersForKfd: keywordClusters.mattersForKfd,
+      whyThisMatters: keywordClusters.whyThisMatters,
+      howThisCanHelp: keywordClusters.howThisCanHelp,
+      representativeKeyword: keywordClusters.representativeKeyword,
+      keywords: keywordClusters.keywords,
+      keywordCount: keywordClusters.keywordCount,
+      reviewedAt: keywordClusters.reviewedAt,
+    })
+    .from(keywordClusters)
+    .where(
+      and(
+        eq(keywordClusters.siteId, siteId),
+        eq(keywordClusters.isNoise, false),
+      ),
+    )
+    .orderBy(asc(keywordClusters.title));
+
+  return {
+    rows: rows.map((row) => ({
+      ...row,
+      mattersForKfd: row.mattersForKfd ?? null,
+      whyThisMatters: row.whyThisMatters ?? null,
+      howThisCanHelp: row.howThisCanHelp ?? null,
+      representativeKeyword: row.representativeKeyword ?? null,
+      keywords: row.keywords ?? [],
+      reviewedAt: parseOptionalDate(row.reviewedAt, "keyword cluster reviewedAt"),
+    })),
   };
 }
 

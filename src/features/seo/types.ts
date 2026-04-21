@@ -1,5 +1,5 @@
 export type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
-export type SeoViewTab = "overview" | "competitors" | "keywords" | "geo" | "analytics" | "backlinks";
+export type SeoViewTab = "overview" | "competitors" | "keywords" | "keyword-clusters" | "geo" | "analytics" | "backlinks";
 
 export type SeoSite = {
   id: number;
@@ -537,6 +537,23 @@ export type KeywordsData = {
     sharedKeywords: number;
     competitorOnlyKeywords: number;
   };
+};
+
+export type SeoKeywordCluster = {
+  id: number;
+  siteId: number;
+  title: string;
+  mattersForKfd: string | null;
+  whyThisMatters: string | null;
+  howThisCanHelp: string | null;
+  representativeKeyword: string | null;
+  keywords: string[];
+  keywordCount: number;
+  reviewedAt: Date | null;
+};
+
+export type SeoKeywordClustersData = {
+  rows: SeoKeywordCluster[];
 };
 
 export type SeoOverviewData = {

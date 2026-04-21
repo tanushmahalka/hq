@@ -10,6 +10,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  vector,
 } from "drizzle-orm/pg-core";
 
 export const sites = pgTable(
@@ -183,6 +184,120 @@ export const queryClusters = pgTable(
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "query_clusters_site_id_sites_id_fk",
+    }),
+  ],
+);
+
+export const keywordClusters = pgTable(
+  "keyword_clusters",
+  {
+    sourceClusterKey: text("source_cluster_key"),
+    title: text().notNull(),
+    representativeKeyword: text("representative_keyword"),
+    keywords: text("keywords").array(),
+    mattersForKfd: text("matters_for_kfd"),
+    whyThisMatters: text("why_this_matters"),
+    howThisCanHelp: text("how_this_can_help"),
+    clusteringMethod: text("clustering_method"),
+    reviewModel: text("review_model"),
+    isNoise: boolean("is_noise").default(false).notNull(),
+    keywordCount: integer("keyword_count").default(0).notNull(),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
+    reviewedAt: timestamp("reviewed_at", { mode: "string" }),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "keyword_clusters_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    siteId: integer("site_id").notNull(),
+  },
+  (table) => [
+    index("idx_keyword_clusters_site_id").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_keyword_clusters_source_cluster_key").using(
+      "btree",
+      table.sourceClusterKey.asc().nullsLast().op("text_ops"),
+    ),
+    index("idx_keyword_clusters_matters_for_kfd").using(
+      "btree",
+      table.mattersForKfd.asc().nullsLast().op("text_ops"),
+    ),
+    index("idx_keyword_clusters_is_noise").using("btree", table.isNoise.asc().nullsLast().op("bool_ops")),
+    foreignKey({
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "keyword_clusters_site_id_sites_id_fk",
+    }),
+  ],
+);
+
+export const siteKeywords = pgTable(
+  "site_keywords",
+  {
+    keyword: text().notNull(),
+    normalizedKeyword: text("normalized_keyword").notNull(),
+    keywordSource: text("keyword_source").default("competitor").notNull(),
+    isRelevant: boolean("is_relevant"),
+    searchVolume: integer("search_volume"),
+    bestRank: integer("best_rank"),
+    keywordDifficulty: numeric("keyword_difficulty", { precision: 5, scale: 2 }),
+    searchIntent: text("search_intent"),
+    sourceCount: integer("source_count").default(1).notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }),
+    embeddingModel: text("embedding_model"),
+    embeddedAt: timestamp("embedded_at", { mode: "string" }),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
+    id: integer()
+      .primaryKey()
+      .generatedByDefaultAsIdentity({
+        name: "site_keywords_id_seq",
+        startWith: 1,
+        increment: 1,
+        minValue: 1,
+        maxValue: 2147483647,
+        cache: 1,
+      }),
+    siteId: integer("site_id").notNull(),
+    clusterId: integer("cluster_id"),
+    keywordClusterId: integer("keyword_cluster_id"),
+  },
+  (table) => [
+    index("idx_site_keywords_site_id").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_site_keywords_cluster_id").using("btree", table.clusterId.asc().nullsLast().op("int4_ops")),
+    index("idx_site_keywords_keyword_cluster_id").using(
+      "btree",
+      table.keywordClusterId.asc().nullsLast().op("int4_ops"),
+    ),
+    index("idx_site_keywords_relevance").using("btree", table.isRelevant.asc().nullsLast().op("bool_ops")),
+    index("idx_site_keywords_embedded_at").using(
+      "btree",
+      table.embeddedAt.asc().nullsLast().op("timestamp_ops"),
+    ),
+    uniqueIndex("site_keywords_site_normalized_keyword_unique").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops"),
+      table.normalizedKeyword.asc().nullsLast().op("text_ops"),
+    ),
+    foreignKey({
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "site_keywords_site_id_sites_id_fk",
+    }),
+    foreignKey({
+      columns: [table.clusterId],
+      foreignColumns: [queryClusters.id],
+      name: "site_keywords_cluster_id_query_clusters_id_fk",
+    }),
+    foreignKey({
+      columns: [table.keywordClusterId],
+      foreignColumns: [keywordClusters.id],
+      name: "site_keywords_keyword_cluster_id_keyword_clusters_id_fk",
     }),
   ],
 );

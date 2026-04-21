@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, competitorBacklinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachProspects, linkOpportunities, outreachContacts, outreachThreads, outreachMessages, queryClusters, pageClusterTargets, queries, reviews, searchConsoleDaily, siteDomainFootprints, siteBacklinkFootprints, competitorBacklinkFootprints } from "./schema";
+import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, competitorBacklinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachProspects, linkOpportunities, outreachContacts, outreachThreads, outreachMessages, queryClusters, keywordClusters, pageClusterTargets, queries, reviews, searchConsoleDaily, siteDomainFootprints, siteBacklinkFootprints, competitorBacklinkFootprints, siteKeywords } from "./schema";
 
 export const accountRelations = relations(account, ({one}) => ({
 	user: one(user, {
@@ -157,6 +157,7 @@ export const sitesRelations = relations(sites, ({many}) => ({
 	outreachThreads: many(outreachThreads),
 	pages: many(pages),
 	queryClusters: many(queryClusters),
+	keywordClusters: many(keywordClusters),
 	reviews: many(reviews),
 	searchConsoleDailies: many(searchConsoleDaily),
 	siteBacklinkFootprints: many(siteBacklinkFootprints),
@@ -433,12 +434,35 @@ export const queryClustersRelations = relations(queryClusters, ({one, many}) => 
 	}),
 }));
 
+export const keywordClustersRelations = relations(keywordClusters, ({one, many}) => ({
+	site: one(sites, {
+		fields: [keywordClusters.siteId],
+		references: [sites.id]
+	}),
+	siteKeywords: many(siteKeywords),
+}));
+
 export const queriesRelations = relations(queries, ({one, many}) => ({
 	queryCluster: one(queryClusters, {
 		fields: [queries.clusterId],
 		references: [queryClusters.id]
 	}),
 	searchConsoleDailies: many(searchConsoleDaily),
+}));
+
+export const siteKeywordsRelations = relations(siteKeywords, ({one}) => ({
+	site: one(sites, {
+		fields: [siteKeywords.siteId],
+		references: [sites.id]
+	}),
+	queryCluster: one(queryClusters, {
+		fields: [siteKeywords.clusterId],
+		references: [queryClusters.id]
+	}),
+	keywordCluster: one(keywordClusters, {
+		fields: [siteKeywords.keywordClusterId],
+		references: [keywordClusters.id]
+	}),
 }));
 
 export const reviewsRelations = relations(reviews, ({one}) => ({

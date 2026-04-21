@@ -25,6 +25,7 @@ export default function Login() {
     const { error: err } = await authClient.signIn.email({
       email,
       password,
+      rememberMe: true,
     });
 
     if (err) {

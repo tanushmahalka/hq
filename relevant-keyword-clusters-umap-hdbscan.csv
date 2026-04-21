@@ -1,0 +1,2342 @@
+keyword_id,keyword,search_volume,cluster_id,is_noise,cluster_size,representative_keyword,cluster_total_volume,membership_probability,cluster_avg_probability
+2,wechat pay,3600,25,false,13,wechat pay,11850,1.0,0.980474
+5,news wechat,170,28,false,182,hylink,55540,1.0,0.981933
+6,how to get a chinese phone number for douyin,40,37,false,12,what is douyin,2840,1.0,1.0
+7,weibo what is it,480,24,false,55,weidian,12300,1.0,0.896853
+9,little red book chinese app,140,17,false,48,what is little red book,8520,1.0,0.937275
+10,top apps china,50,35,false,107,chinese social media,16720,1.0,0.976552
+13,redbook chinese,480,17,false,48,what is little red book,8520,1.0,0.937275
+15,wechat mini programs,480,27,false,22,wechat mini programs,2410,1.0,0.832545
+16,jd china website,70,51,false,51,jing dong,19110,0.578718,0.639117
+17,alibaba and singles day,50,19,false,25,single day 2025,7500,0.781728,0.885399
+18,jd com online shopping,260,51,false,51,jing dong,19110,0.706587,0.639117
+19,jd e-commerce,50,51,false,51,jing dong,19110,0.298189,0.639117
+20,singles day alibaba sales,40,19,false,25,single day 2025,7500,0.781728,0.885399
+21,jd china company,30,51,false,51,jing dong,19110,0.44698,0.639117
+22,taobao and tmall,90,12,false,47,taobao mall,19270,0.173092,0.622651
+25,top china apps,90,35,false,107,chinese social media,16720,1.0,0.976552
+26,jingdong china,170,51,false,51,jing dong,19110,0.65404,0.639117
+37,jd ecommerce,50,-1,true,239,sogou,43770,0.0,0.0
+43,wecom,2400,24,false,55,weidian,12300,0.407203,0.896853
+49,market entry strategies for china,90,56,false,29,marketing kol,4290,1.0,0.70558
+50,market entry strategy in china,90,56,false,29,marketing kol,4290,1.0,0.70558
+51,chinese kols,30,55,false,25,wofe,3350,0.55229,0.756131
+52,china entry strategy,70,56,false,29,marketing kol,4290,1.0,0.70558
+53,triboo,70,12,false,47,taobao mall,19270,0.136135,0.622651
+55,search wechat,50,28,false,182,hylink,55540,1.0,0.981933
+56,cdn for china,90,-1,true,239,sogou,43770,0.0,0.0
+58,wechat service accounts,50,28,false,182,hylink,55540,1.0,0.981933
+59,wechat search engine,30,5,false,52,chinese search engine,18000,0.663979,0.908227
+63,wechat search,50,28,false,182,hylink,55540,0.819717,0.981933
+64,webuy china,40,59,false,21,chinese online shopping,12160,1.0,0.891961
+66,wechat artificial intelligence,70,28,false,182,hylink,55540,1.0,0.981933
+68,chinese e-commerce market,50,52,false,76,china cross,12460,0.985856,0.704906
+73,what is wecom,210,24,false,55,weidian,12300,0.443566,0.896853
+74,douyin streaming,30,38,false,39,douyin,119660,0.48794,0.714357
+75,cdn in china,90,-1,true,239,sogou,43770,0.0,0.0
+79,akamai china,50,62,false,57,china market,39670,0.902869,0.935614
+81,average china income,5400,9,false,24,average wage china,29410,0.575899,0.800411
+90,skincare in china,50,49,false,61,chinese beauty brands,7930,1.0,0.873949
+97,china tmall,390,11,false,36,tmall site,21260,0.666497,0.781541
+98,vip shop,480,45,false,16,vipshop,3150,1.0,0.998396
+99,tmall china,390,11,false,36,tmall site,21260,0.655377,0.781541
+100,dewu shoes,40,21,false,14,dewu,1660,0.90556,0.983396
+101,market entry strategy china,70,56,false,29,marketing kol,4290,1.0,0.70558
+103,market entry strategies china,90,56,false,29,marketing kol,4290,1.0,0.70558
+104,entry strategy china,90,56,false,29,marketing kol,4290,1.0,0.70558
+105,kwai china,40,62,false,57,china market,39670,0.867804,0.935614
+107,home appliances in china,40,44,false,16,ikea china,1420,1.0,0.938969
+108,market entry in china,90,56,false,29,marketing kol,4290,1.0,0.70558
+109,market entry strategy for china,90,56,false,29,marketing kol,4290,1.0,0.70558
+111,home appliances china,40,44,false,16,ikea china,1420,1.0,0.938969
+112,taobao marketplace,140,12,false,47,taobao mall,19270,0.396278,0.622651
+113,china home appliances,40,44,false,16,ikea china,1420,1.0,0.938969
+115,what is kwai,260,62,false,57,china market,39670,0.713605,0.935614
+116,china kwai,40,62,false,57,china market,39670,0.714733,0.935614
+118,middle class china,260,9,false,24,average wage china,29410,1.0,0.800411
+120,china most popular social media,70,35,false,107,chinese social media,16720,1.0,0.976552
+122,social medias banned in china,90,35,false,107,chinese social media,16720,1.0,0.976552
+127,etoc,480,55,false,25,wofe,3350,1.0,0.756131
+136,apps like taobao,40,12,false,47,taobao mall,19270,1.0,0.622651
+137,tmall stores,30,11,false,36,tmall site,21260,0.66102,0.781541
+138,china mobile advertising,30,63,false,15,chinese advertising,1490,1.0,0.968289
+140,social media marketing china,110,35,false,107,chinese social media,16720,1.0,0.976552
+141,tmall english,260,11,false,36,tmall site,21260,0.601535,0.781541
+142,chinese consumer behaviour,20,50,false,29,what is 996 culture,1920,1.0,0.582862
+143,social media agency china,50,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+144,tmall shopping,30,11,false,36,tmall site,21260,0.89209,0.781541
+145,douyin definition,590,38,false,39,douyin,119660,1.0,0.714357
+146,douyin ecommerce,70,-1,true,239,sogou,43770,0.0,0.0
+147,tmall vs taobao,70,12,false,47,taobao mall,19270,0.126734,0.622651
+148,best social media in china,40,35,false,107,chinese social media,16720,1.0,0.976552
+149,china search engine marketing,50,5,false,52,chinese search engine,18000,1.0,0.908227
+151,chinese marketplace app,320,54,false,15,chinese marketplace app,2030,0.613836,0.939107
+154,pet food market in china,30,57,false,38,china market food,4690,0.736743,0.848422
+155,social media platform china,70,35,false,107,chinese social media,16720,1.0,0.976552
+159,wechat agent,40,28,false,182,hylink,55540,1.0,0.981933
+160,china ecommerce agency,50,52,false,76,china cross,12460,0.467051,0.704906
+163,taobao popmart,40,8,false,17,popmart chinese,9430,0.51354,0.882817
+178,tmall online store,70,11,false,36,tmall site,21260,1.0,0.781541
+181,yunji app,70,51,false,51,jing dong,19110,0.27896,0.639117
+182,weibo ads,50,24,false,55,weidian,12300,1.0,0.896853
+185,taobao live,90,12,false,47,taobao mall,19270,0.537509,0.622651
+188,tmall site,4400,11,false,36,tmall site,21260,1.0,0.781541
+199,consulting in china,30,30,false,33,guanxi,4300,1.0,0.657557
+203,does china still require animal testing,30,-1,true,239,sogou,43770,0.0,0.0
+209,china and animal testing,110,-1,true,239,sogou,43770,0.0,0.0
+210,wechat marketing strategy,40,28,false,182,hylink,55540,1.0,0.981933
+211,does china require animal testing,40,-1,true,239,sogou,43770,0.0,0.0
+212,china 618,70,62,false,57,china market,39670,0.866018,0.935614
+213,china cosmetic industry,70,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+214,1688/2,50,45,false,16,vipshop,3150,0.97434,0.998396
+215,wechat marketing china,30,28,false,182,hylink,55540,1.0,0.981933
+216,douyin influencers,110,38,false,39,douyin,119660,0.559855,0.714357
+221,china live streaming apps,90,42,false,35,chinese streaming platforms,3380,0.380008,0.741336
+222,internet advertising in china,20,-1,true,239,sogou,43770,0.0,0.0
+226,electronic shopping in china,70,59,false,21,chinese online shopping,12160,1.0,0.891961
+230,baozun inc,30,46,false,18,baozun,1760,1.0,1.0
+237,nasdaq: bzun,90,46,false,18,baozun,1760,1.0,1.0
+239,nasdaq:bzun,90,46,false,18,baozun,1760,1.0,1.0
+243,baozun,390,46,false,18,baozun,1760,1.0,1.0
+251,bzun,320,46,false,18,baozun,1760,1.0,1.0
+255,baozun asia,30,46,false,18,baozun,1760,1.0,1.0
+268,lululemon china stores,70,-1,true,239,sogou,43770,0.0,0.0
+273,digital marketing agencies china,170,64,false,23,digital marketing agency in china,2240,0.942605,0.882914
+277,livestream china,50,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+278,chinese marketing agencies,70,65,false,23,china marketing agency,1450,0.710933,0.90367
+280,china marketing agency,110,65,false,23,china marketing agency,1450,0.937469,0.90367
+282,chinese live streaming platform,30,42,false,35,chinese streaming platforms,3380,0.56811,0.741336
+283,marketing company china,30,-1,true,239,sogou,43770,0.0,0.0
+284,china marketing companies,20,-1,true,239,sogou,43770,0.0,0.0
+285,live streaming china,40,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+286,marketing companies in china,30,-1,true,239,sogou,43770,0.0,0.0
+287,marketing agencies in china,110,65,false,23,china marketing agency,1450,0.937469,0.90367
+288,live stream chinese,50,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+289,marketing agency china,110,65,false,23,china marketing agency,1450,0.767899,0.90367
+290,marketing company in china,30,-1,true,239,sogou,43770,0.0,0.0
+291,chinese digital marketing agencies,40,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+292,china ad agency,70,65,false,23,china marketing agency,1450,1.0,0.90367
+293,china live streaming app,110,42,false,35,chinese streaming platforms,3380,0.656402,0.741336
+294,agency marketing china,110,-1,true,239,sogou,43770,0.0,0.0
+295,digital agency in china,70,64,false,23,digital marketing agency in china,2240,0.886207,0.882914
+296,social marketing agency china,50,64,false,23,digital marketing agency in china,2240,0.878749,0.882914
+298,china marketing agencies,110,65,false,23,china marketing agency,1450,0.655617,0.90367
+305,chinese influencers,480,3,false,22,chinese influencers,2450,1.0,0.810303
+309,is douyin tiktok,70,29,false,14,douyin/tiktok,3150,1.0,0.945894
+312,toys market in china,30,61,false,22,barbie china,2320,0.827019,0.910778
+326,china's luxury market,720,68,false,26,luxury goods china,9540,0.660692,0.759174
+329,luxury goods market in china,140,68,false,26,luxury goods china,9540,1.0,0.759174
+335,luxury goods market china,140,68,false,26,luxury goods china,9540,1.0,0.759174
+337,hylink,22200,28,false,182,hylink,55540,1.0,0.981933
+343,costco in china,1900,34,false,26,costco china,14700,0.973352,0.692672
+349,chinese social media,1300,35,false,107,chinese social media,16720,1.0,0.976552
+351,kol market,30,62,false,57,china market,39670,0.659535,0.935614
+354,can you use social media in china,30,35,false,107,chinese social media,16720,1.0,0.976552
+356,wechat channel,170,28,false,182,hylink,55540,1.0,0.981933
+360,search engine market share china,50,5,false,52,chinese search engine,18000,1.0,0.908227
+361,china market entry strategy,90,56,false,29,marketing kol,4290,1.0,0.70558
+363,chinese online marketplace,260,54,false,15,chinese marketplace app,2030,1.0,0.939107
+364,what apps are allowed in china,30,35,false,107,chinese social media,16720,1.0,0.976552
+367,china payment system,90,26,false,34,payment in china,2240,1.0,0.786265
+368,alibaba singles day sales,40,19,false,25,single day 2025,7500,0.781728,0.885399
+370,www jd com china,30,51,false,51,jing dong,19110,0.560208,0.639117
+372,key opinion leader in chinese,30,3,false,22,chinese influencers,2450,0.54293,0.810303
+373,jd chinese company,50,51,false,51,jing dong,19110,0.44772,0.639117
+375,most used app in china,30,35,false,107,chinese social media,16720,1.0,0.976552
+376,jing dong,5400,51,false,51,jing dong,19110,0.65404,0.639117
+377,singles day sales alibaba,40,19,false,25,single day 2025,7500,0.781728,0.885399
+378,china jd,590,51,false,51,jing dong,19110,0.578718,0.639117
+380,jingdong shopping,40,51,false,51,jing dong,19110,0.65404,0.639117
+383,taobao best sellers,30,12,false,47,taobao mall,19270,0.508278,0.622651
+388,alibaba singles day,50,19,false,25,single day 2025,7500,0.781728,0.885399
+393,does china require animal testing for cosmetics,30,-1,true,239,sogou,43770,0.0,0.0
+409,qihoo search engine,30,5,false,52,chinese search engine,18000,0.382874,0.908227
+410,social media app in china,140,35,false,107,chinese social media,16720,1.0,0.976552
+411,douyin meaning,2400,38,false,39,douyin,119660,1.0,0.714357
+412,wechat company,50,28,false,182,hylink,55540,1.0,0.981933
+413,chinese social media platform,260,35,false,107,chinese social media,16720,1.0,0.976552
+414,b2b marketing china,30,-1,true,239,sogou,43770,0.0,0.0
+415,tmall inc,70,11,false,36,tmall site,21260,0.647661,0.781541
+416,b2b marketing in china,30,-1,true,239,sogou,43770,0.0,0.0
+417,chinese genz,40,46,false,18,baozun,1760,1.0,1.0
+418,chinese consumer behavior,20,50,false,29,what is 996 culture,1920,1.0,0.582862
+420,china e commerce platforms,50,52,false,76,china cross,12460,0.797857,0.704906
+421,douyin create account,30,-1,true,239,sogou,43770,0.0,0.0
+422,china social media agency,50,64,false,23,digital marketing agency in china,2240,0.59912,0.882914
+424,chinese e-commerce websites,320,52,false,76,china cross,12460,0.71651,0.704906
+425,chinese consumer habits,20,50,false,29,what is 996 culture,1920,0.955784,0.582862
+426,china social media apps,140,35,false,107,chinese social media,16720,1.0,0.976552
+428,gucci in china,590,69,false,13,gucci in china,2590,1.0,0.975403
+430,taobao market,140,12,false,47,taobao mall,19270,1.0,0.622651
+431,vip.com china,260,45,false,16,vipshop,3150,1.0,0.998396
+432,what is taobao,880,12,false,47,taobao mall,19270,1.0,0.622651
+436,miranda qu,40,51,false,51,jing dong,19110,0.496927,0.639117
+472,wechat channels,170,28,false,182,hylink,55540,1.0,0.981933
+476,china e commerce company,90,52,false,76,china cross,12460,1.0,0.704906
+477,koc stands for,20,55,false,25,wofe,3350,1.0,0.756131
+479,food delivery app china,70,43,false,15,china food delivery app,2550,1.0,0.997569
+480,e commerce company china,90,52,false,76,china cross,12460,1.0,0.704906
+482,kol in chinese,30,55,false,25,wofe,3350,0.55229,0.756131
+483,wechat business account,50,28,false,182,hylink,55540,1.0,0.981933
+485,official accounts wechat,210,28,false,182,hylink,55540,1.0,0.981933
+486,china online retailers,70,60,false,15,china retail,4860,1.0,0.998199
+487,shopify of china,40,52,false,76,china cross,12460,0.467338,0.704906
+489,china live stream,50,42,false,35,chinese streaming platforms,3380,0.908855,0.741336
+490,wechat chinese,90,-1,true,239,sogou,43770,0.0,0.0
+492,ad agency in china,70,65,false,23,china marketing agency,1450,1.0,0.90367
+493,marketing china,210,62,false,57,china market,39670,1.0,0.935614
+495,china online marketing,50,-1,true,239,sogou,43770,0.0,0.0
+496,chinese streaming platforms,320,42,false,35,chinese streaming platforms,3380,0.2993,0.741336
+498,marketing en china,210,-1,true,239,sogou,43770,0.0,0.0
+499,what is zhihu,50,32,false,45,xiaohongshu,78650,0.294473,0.660984
+500,china streaming,170,42,false,35,chinese streaming platforms,3380,0.656402,0.741336
+501,kols china,70,55,false,25,wofe,3350,0.55229,0.756131
+502,weibo in china,210,24,false,55,weidian,12300,1.0,0.896853
+503,icp license china,170,23,false,22,fliggy,6960,1.0,0.603641
+504,advertising agency in china,50,65,false,23,china marketing agency,1450,0.784773,0.90367
+505,advertising agencies in china,70,65,false,23,china marketing agency,1450,0.790312,0.90367
+507,douyin mall,210,-1,true,239,sogou,43770,0.0,0.0
+509,online marketing in china,50,-1,true,239,sogou,43770,0.0,0.0
+510,chinese digital marketing agency,40,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+511,china agencies,30,65,false,23,china marketing agency,1450,1.0,0.90367
+512,china live streamer,40,42,false,35,chinese streaming platforms,3380,0.924622,0.741336
+513,chinese live stream,170,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+515,advertising company in china,70,-1,true,239,sogou,43770,0.0,0.0
+516,china market entry,70,56,false,29,marketing kol,4290,1.0,0.70558
+519,market entry china,70,56,false,29,marketing kol,4290,1.0,0.70558
+520,douyin shop,50,-1,true,239,sogou,43770,0.0,0.0
+523,taobao ecommerce,140,12,false,47,taobao mall,19270,1.0,0.622651
+525,mini program in wechat,480,28,false,182,hylink,55540,1.0,0.981933
+526,superordinary co,30,-1,true,239,sogou,43770,0.0,0.0
+528,superordinary usa,70,-1,true,239,sogou,43770,0.0,0.0
+529,wechat mini app,70,27,false,22,wechat mini programs,2410,1.0,0.832545
+535,superordinary,1000,-1,true,239,sogou,43770,0.0,0.0
+542,mid autumn festival gift,210,7,false,34,chinese new year by sales,4430,0.913792,0.62116
+547,rednote ads,30,16,false,28,rednote chinese name,5400,1.0,0.63899
+548,china b2b market,30,-1,true,239,sogou,43770,0.0,0.0
+549,chinese instagram,390,35,false,107,chinese social media,16720,0.963744,0.976552
+550,wechat ads,210,28,false,182,hylink,55540,1.0,0.981933
+553,douyin influencer,110,38,false,39,douyin,119660,0.634777,0.714357
+555,china equivalent of youtube,70,36,false,28,youtube of china,4150,0.859911,0.773399
+557,xiaohongshu ads,70,32,false,45,xiaohongshu,78650,0.47656,0.660984
+558,app live stream china,50,42,false,35,chinese streaming platforms,3380,0.550983,0.741336
+561,xiao hong shu advertising,40,31,false,17,xiao hong shu,112970,1.0,0.931252
+562,streaming service in china,50,42,false,35,chinese streaming platforms,3380,0.656402,0.741336
+563,xiaohongshu ad,40,32,false,45,xiaohongshu,78650,1.0,0.660984
+564,what is the chinese version of youtube,50,36,false,28,youtube of china,4150,0.815211,0.773399
+565,jd worldwide website,50,51,false,51,jing dong,19110,1.0,0.639117
+568,china e commerce companies,140,52,false,76,china cross,12460,0.998796,0.704906
+571,jingdong mall,590,51,false,51,jing dong,19110,0.65404,0.639117
+576,j d com english,50,51,false,51,jing dong,19110,1.0,0.639117
+577,alibaba singles day sale,40,19,false,25,single day 2025,7500,0.781728,0.885399
+579,jingdong,5400,51,false,51,jing dong,19110,0.65404,0.639117
+580,jd.com english,50,51,false,51,jing dong,19110,1.0,0.639117
+581,most used apps in china,30,35,false,107,chinese social media,16720,1.0,0.976552
+583,jd cn,30,51,false,51,jing dong,19110,1.0,0.639117
+586,alibaba single day sales,40,19,false,25,single day 2025,7500,0.781728,0.885399
+587,jd mall china,30,11,false,36,tmall site,21260,0.3418,0.781541
+588,jd com english,50,51,false,51,jing dong,19110,1.0,0.639117
+589,what does jd.com do,140,51,false,51,jing dong,19110,1.0,0.639117
+596,create douyin account,20,37,false,12,what is douyin,2840,1.0,1.0
+600,social media platforms china,70,35,false,107,chinese social media,16720,1.0,0.976552
+601,top social media china,30,35,false,107,chinese social media,16720,1.0,0.976552
+602,social media platforms in china,70,35,false,107,chinese social media,16720,1.0,0.976552
+604,search engine optimization in china,260,4,false,13,search engine optimization china,2590,0.817871,0.98599
+605,douyin interface,90,38,false,39,douyin,119660,0.404729,0.714357
+606,baidu serp,40,10,false,17,baidu seo optimization,4080,0.585427,0.824796
+607,little red book marketing,30,17,false,48,what is little red book,8520,1.0,0.937275
+608,top social media in china,30,35,false,107,chinese social media,16720,1.0,0.976552
+609,china red app,70,17,false,48,what is little red book,8520,0.545372,0.937275
+610,social media app china,140,35,false,107,chinese social media,16720,1.0,0.976552
+611,chinese gen z,40,46,false,18,baozun,1760,1.0,1.0
+612,wechat seller,30,28,false,182,hylink,55540,1.0,0.981933
+615,xiaohongshu red,50,-1,true,239,sogou,43770,0.0,0.0
+616,china e-commerce market,50,52,false,76,china cross,12460,0.985856,0.704906
+617,popular social media china,30,35,false,107,chinese social media,16720,1.0,0.976552
+618,little red book app in english,50,17,false,48,what is little red book,8520,1.0,0.937275
+620,search engine optimization china,260,4,false,13,search engine optimization china,2590,1.0,0.98599
+622,off-white in china,30,1,false,26,what does the color red symbolize in china,2640,0.764019,0.894708
+628,e commerce china,320,52,false,76,china cross,12460,1.0,0.704906
+629,wechat social media marketing,40,35,false,107,chinese social media,16720,0.793854,0.976552
+631,cross border ecommerce in china,50,52,false,76,china cross,12460,0.460765,0.704906
+632,wechat marketing in china,30,28,false,182,hylink,55540,1.0,0.981933
+635,how to sell into china,50,39,false,14,what do we sell to china,1000,1.0,0.916743
+636,e commerce companies china,90,52,false,76,china cross,12460,0.911112,0.704906
+638,seo china,260,62,false,57,china market,39670,1.0,0.935614
+641,jd com e commerce,70,51,false,51,jing dong,19110,0.666348,0.639117
+642,selling into china,70,39,false,14,what do we sell to china,1000,1.0,0.916743
+644,sell to china,90,39,false,14,what do we sell to china,1000,1.0,0.916743
+645,chinese gift giving culture,90,7,false,34,chinese new year by sales,4430,1.0,0.62116
+646,what is sina weibo,50,24,false,55,weidian,12300,1.0,0.896853
+647,chinese social,90,35,false,107,chinese social media,16720,1.0,0.976552
+648,business wechat,140,28,false,182,hylink,55540,1.0,0.981933
+652,xiaohongshu customer service,30,32,false,45,xiaohongshu,78650,1.0,0.660984
+656,nihub,30,46,false,18,baozun,1760,1.0,1.0
+664,enterprise wechat,50,28,false,182,hylink,55540,1.0,0.981933
+665,official accounts on wechat,210,28,false,182,hylink,55540,1.0,0.981933
+669,alipay mini program,70,27,false,22,wechat mini programs,2410,1.0,0.832545
+673,bob kang tiktok,40,15,false,39,china's tiktok,12770,0.404699,0.717361
+678,bob kang,50,51,false,51,jing dong,19110,0.320123,0.639117
+683,internet marketing in china,50,-1,true,239,sogou,43770,0.0,0.0
+686,zhihu in english,30,32,false,45,xiaohongshu,78650,0.352309,0.660984
+688,china cross-border e-commerce,40,52,false,76,china cross,12460,0.460765,0.704906
+689,icp in china,170,23,false,22,fliggy,6960,1.0,0.603641
+691,china live streaming shopping,50,42,false,35,chinese streaming platforms,3380,0.324117,0.741336
+693,icp licence china,170,23,false,22,fliggy,6960,1.0,0.603641
+694,digital marketing agency in china,170,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+695,wechat advertisement,210,28,false,182,hylink,55540,1.0,0.981933
+696,cross border e commerce china,50,52,false,76,china cross,12460,0.460765,0.704906
+697,wechat shops,50,28,false,182,hylink,55540,1.0,0.981933
+698,wechat works,70,28,false,182,hylink,55540,1.0,0.981933
+699,wechat advertising,210,28,false,182,hylink,55540,1.0,0.981933
+700,china cross border e commerce,40,52,false,76,china cross,12460,0.460765,0.704906
+702,china icp license,170,23,false,22,fliggy,6960,1.0,0.603641
+703,chinese digital agency,70,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+704,wechat china,590,62,false,57,china market,39670,0.911658,0.935614
+706,negotiation with chinese,70,-1,true,239,sogou,43770,0.0,0.0
+708,mobile advertising china,30,63,false,15,chinese advertising,1490,0.842173,0.968289
+709,douyin registration,30,38,false,39,douyin,119660,0.726263,0.714357
+714,is bilibili chinese youtube,50,33,false,14,what is bilibili,2260,0.503518,0.909239
+715,chinese streaming apps,50,42,false,35,chinese streaming platforms,3380,0.587596,0.741336
+716,what is heytea,70,53,false,61,imported spirits,18360,0.418021,0.9118
+717,china social media platforms,70,35,false,107,chinese social media,16720,1.0,0.976552
+719,bilibili vs youtube,50,33,false,14,what is bilibili,2260,1.0,0.909239
+721,chinese video platforms,50,41,false,12,chinese video sites,1000,1.0,1.0
+723,chinese youtube equivalent,170,36,false,28,youtube of china,4150,1.0,0.773399
+724,china social commerce,20,35,false,107,chinese social media,16720,0.646756,0.976552
+725,rednote advertising,110,16,false,28,rednote chinese name,5400,1.0,0.63899
+728,weibo meaning,320,24,false,55,weidian,12300,1.0,0.896853
+729,china social network,50,35,false,107,chinese social media,16720,1.0,0.976552
+731,streaming services in china,50,42,false,35,chinese streaming platforms,3380,0.656402,0.741336
+732,popular chinese social media apps,40,35,false,107,chinese social media,16720,1.0,0.976552
+733,what is the chinese youtube,90,36,false,28,youtube of china,4150,0.552068,0.773399
+735,popular social media apps in china,30,35,false,107,chinese social media,16720,1.0,0.976552
+736,chinese social media network,40,35,false,107,chinese social media,16720,1.0,0.976552
+737,chinese social media networks,40,35,false,107,chinese social media,16720,1.0,0.976552
+740,sites like taobao,110,12,false,47,taobao mall,19270,0.469963,0.622651
+741,how to sell online in china,50,39,false,14,what do we sell to china,1000,0.663921,0.916743
+744,top 10 china social media,30,35,false,107,chinese social media,16720,1.0,0.976552
+745,wechat sellers,30,28,false,182,hylink,55540,1.0,0.981933
+746,famous social media in china,40,35,false,107,chinese social media,16720,1.0,0.976552
+748,chinese social websites,110,35,false,107,chinese social media,16720,1.0,0.976552
+750,chinese generation z,40,46,false,18,baozun,1760,1.0,1.0
+751,china's e commerce market,50,52,false,76,china cross,12460,0.985856,0.704906
+752,chinese social media company,20,35,false,107,chinese social media,16720,1.0,0.976552
+754,chinese social media apps,480,35,false,107,chinese social media,16720,1.0,0.976552
+755,china top social media,30,35,false,107,chinese social media,16720,1.0,0.976552
+757,wechat agency,40,28,false,182,hylink,55540,1.0,0.981933
+758,social app in china,110,35,false,107,chinese social media,16720,1.0,0.976552
+765,e commerce company in china,90,52,false,76,china cross,12460,1.0,0.704906
+767,chinese e-commerce,320,52,false,76,china cross,12460,0.861161,0.704906
+768,chinese e-commerce companies,140,52,false,76,china cross,12460,0.861161,0.704906
+770,china e-commerce companies,140,52,false,76,china cross,12460,1.0,0.704906
+771,chinese e commerce company,140,52,false,76,china cross,12460,0.861161,0.704906
+772,e commerce chinese,320,52,false,76,china cross,12460,1.0,0.704906
+775,chinese ecommerce,320,52,false,76,china cross,12460,0.861161,0.704906
+778,chinese marketplaces,110,54,false,15,chinese marketplace app,2030,1.0,0.939107
+784,tmo group,40,11,false,36,tmall site,21260,0.657016,0.781541
+785,chinese e commerce platforms,50,52,false,76,china cross,12460,0.524158,0.704906
+790,mobile advertising in china,30,63,false,15,chinese advertising,1490,0.826612,0.968289
+792,culture of food in china,210,-1,true,239,sogou,43770,0.0,0.0
+797,baidu seo optimization,480,10,false,17,baidu seo optimization,4080,1.0,0.824796
+799,web agency china,30,64,false,23,digital marketing agency in china,2240,0.414972,0.882914
+801,selling in china,90,39,false,14,what do we sell to china,1000,1.0,0.916743
+805,chinese seo,90,4,false,13,search engine optimization china,2590,1.0,0.98599
+807,digital marketing in china,140,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+808,china distributors,140,-1,true,239,sogou,43770,0.0,0.0
+810,douyin search,140,38,false,39,douyin,119660,0.788173,0.714357
+812,baidu account,90,6,false,15,baidu registration,1050,1.0,0.901863
+815,what does the color green mean in china,50,1,false,26,what does the color red symbolize in china,2640,0.964542,0.894708
+816,china alcohol consumption,30,53,false,61,imported spirits,18360,1.0,0.9118
+817,does tiktok exist in china,20,15,false,39,china's tiktok,12770,1.0,0.717361
+819,tmall international,50,11,false,36,tmall site,21260,1.0,0.781541
+824,wechat agency china,40,28,false,182,hylink,55540,1.0,0.981933
+825,how to advertise on baidu,20,14,false,21,baidu tieba,3970,1.0,0.998668
+826,douyin trends,30,38,false,39,douyin,119660,1.0,0.714357
+827,tmall international website,50,11,false,36,tmall site,21260,0.842603,0.781541
+828,chinese consumers behavior,20,50,false,29,what is 996 culture,1920,1.0,0.582862
+830,wechat live stream,320,28,false,182,hylink,55540,0.912318,0.981933
+834,china stream,110,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+836,wechat enterprise,50,28,false,182,hylink,55540,1.0,0.981933
+837,xiaohongshu terms of service,10,32,false,45,xiaohongshu,78650,1.0,0.660984
+839,wechat profiles,50,28,false,182,hylink,55540,1.0,0.981933
+840,data protection china,30,22,false,17,chinese data privacy laws,990,1.0,0.895423
+841,china pipl,210,23,false,22,fliggy,6960,0.185125,0.603641
+843,chinese e-commerce market share,30,52,false,76,china cross,12460,0.746484,0.704906
+845,group chat on wechat,50,28,false,182,hylink,55540,1.0,0.981933
+848,consulting china,30,30,false,33,guanxi,4300,1.0,0.657557
+850,wechat for company,50,28,false,182,hylink,55540,1.0,0.981933
+852,alipay mini apps,50,27,false,22,wechat mini programs,2410,0.991609,0.832545
+855,china data protection,30,22,false,17,chinese data privacy laws,990,1.0,0.895423
+861,taobao live streaming,30,12,false,47,taobao mall,19270,0.368781,0.622651
+865,sales 11/11,320,20,false,28,11-11 day,4080,1.0,0.726205
+866,live streaming in chinese,50,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+885,what is wechat official account,30,28,false,182,hylink,55540,1.0,0.981933
+888,douyin social media,70,38,false,39,douyin,119660,0.866854,0.714357
+892,chinese marketplace online,260,54,false,15,chinese marketplace app,2030,1.0,0.939107
+893,koc meaning business,30,55,false,25,wofe,3350,1.0,0.756131
+896,xiao hong shu marketing,50,31,false,17,xiao hong shu,112970,0.96571,0.931252
+897,douyin pay,140,38,false,39,douyin,119660,1.0,0.714357
+898,wechat id examples,90,28,false,182,hylink,55540,1.0,0.981933
+899,wechat stores,50,28,false,182,hylink,55540,1.0,0.981933
+903,how to get china tiktok,90,15,false,39,china's tiktok,12770,0.704887,0.717361
+904,wechat news,170,28,false,182,hylink,55540,1.0,0.981933
+906,taobao food,40,12,false,47,taobao mall,19270,0.645473,0.622651
+910,douyin profile,50,38,false,39,douyin,119660,1.0,0.714357
+913,wechat food,30,28,false,182,hylink,55540,0.685498,0.981933
+915,bilibili chinese youtube,70,33,false,14,what is bilibili,2260,1.0,0.909239
+916,billy billy chinese youtube,70,36,false,28,youtube of china,4150,0.723541,0.773399
+918,wechat applet,110,27,false,22,wechat mini programs,2410,0.617977,0.832545
+920,chinese influencer,480,3,false,22,chinese influencers,2450,1.0,0.810303
+924,china online advertising,20,63,false,15,chinese advertising,1490,1.0,0.968289
+926,social media in china,590,35,false,107,chinese social media,16720,1.0,0.976552
+927,little red book restaurant,70,17,false,48,what is little red book,8520,1.0,0.937275
+928,what social media does china use,90,35,false,107,chinese social media,16720,1.0,0.976552
+930,how to use weibo,30,24,false,55,weidian,12300,0.788949,0.896853
+931,what is fliggy,260,23,false,22,fliggy,6960,0.074564,0.603641
+933,social media chinese,1000,35,false,107,chinese social media,16720,1.0,0.976552
+937,baidu ads,390,14,false,21,baidu tieba,3970,1.0,0.998668
+938,how to sell in china,50,39,false,14,what do we sell to china,1000,1.0,0.916743
+939,baidu advertising,390,14,false,21,baidu tieba,3970,1.0,0.998668
+941,china influencer,140,3,false,22,chinese influencers,2450,1.0,0.810303
+945,china consumerism,40,50,false,29,what is 996 culture,1920,1.0,0.582862
+947,taobao best seller,30,12,false,47,taobao mall,19270,0.316461,0.622651
+954,china e commerce,320,52,false,76,china cross,12460,1.0,0.704906
+957,china cosmetics industry,70,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+958,what is wechat used for,320,28,false,182,hylink,55540,1.0,0.981933
+959,top social media app in china,20,35,false,107,chinese social media,16720,1.0,0.976552
+960,how to sell in china online,50,39,false,14,what do we sell to china,1000,1.0,0.916743
+961,what is pinduoduo,110,21,false,14,dewu,1660,1.0,0.983396
+962,taobao chinese website,40,12,false,47,taobao mall,19270,0.755473,0.622651
+969,chinese online marketplaces,260,54,false,15,chinese marketplace app,2030,1.0,0.939107
+973,top 10 online shopping in china,30,59,false,21,chinese online shopping,12160,1.0,0.891961
+977,china e-commerce website,320,52,false,76,china cross,12460,0.861161,0.704906
+979,china ebay alternative,20,48,false,27,chinese amazon equivalent,2520,0.302968,0.782227
+987,top chinese shopping sites,70,59,false,21,chinese online shopping,12160,0.623173,0.891961
+996,organic food in china,20,57,false,38,china market food,4690,1.0,0.848422
+1000,chinese markets online,260,54,false,15,chinese marketplace app,2030,1.0,0.939107
+1012,barbie china,880,61,false,22,barbie china,2320,0.950376,0.910778
+1017,shampoo china,20,49,false,61,chinese beauty brands,7930,1.0,0.873949
+1047,is popmart chinese,590,8,false,17,popmart chinese,9430,1.0,0.882817
+1052,china data privacy,30,22,false,17,chinese data privacy laws,990,1.0,0.895423
+1053,data privacy china,30,22,false,17,chinese data privacy laws,990,0.75848,0.895423
+1054,douyin e-commerce,70,-1,true,239,sogou,43770,0.0,0.0
+1055,tmall global,390,11,false,36,tmall site,21260,0.90377,0.781541
+1057,douyin store,260,-1,true,239,sogou,43770,0.0,0.0
+1058,wechat moments advertising,40,28,false,182,hylink,55540,1.0,0.981933
+1062,data privacy in china,30,22,false,17,chinese data privacy laws,990,1.0,0.895423
+1075,popmart chinese,1900,8,false,17,popmart chinese,9430,1.0,0.882817
+1076,counterfeiting in china,140,-1,true,239,sogou,43770,0.0,0.0
+1082,tmall chinese,390,11,false,36,tmall site,21260,1.0,0.781541
+1083,baidu seo tools,210,10,false,17,baidu seo optimization,4080,1.0,0.824796
+1084,tmall shopping online,70,11,false,36,tmall site,21260,1.0,0.781541
+1089,digital marketing companies in china,170,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+1090,china ppc,50,63,false,15,chinese advertising,1490,1.0,0.968289
+1093,seo baidu,480,10,false,17,baidu seo optimization,4080,1.0,0.824796
+1094,chinese sns,40,35,false,107,chinese social media,16720,1.0,0.976552
+1095,is facebook illegal in china,70,35,false,107,chinese social media,16720,1.0,0.976552
+1096,china 3pl,90,43,false,15,china food delivery app,2550,1.0,0.997569
+1097,baidu seo tool,260,10,false,17,baidu seo optimization,4080,1.0,0.824796
+1112,wechat store,50,28,false,182,hylink,55540,1.0,0.981933
+1113,douyin accounts,1300,38,false,39,douyin,119660,0.900828,0.714357
+1114,weidian,3600,24,false,55,weidian,12300,0.702005,0.896853
+1118,tmall adidas,40,11,false,36,tmall site,21260,0.703178,0.781541
+1124,how to get chinese tiktok,50,15,false,39,china's tiktok,12770,0.704669,0.717361
+1137,china payment systems,90,26,false,34,payment in china,2240,0.964533,0.786265
+1138,chinese social media websites,110,35,false,107,chinese social media,16720,1.0,0.976552
+1139,china e-commerce site,320,52,false,76,china cross,12460,0.829057,0.704906
+1140,douyin official website,30,38,false,39,douyin,119660,0.989728,0.714357
+1142,best time to post on xiaohongshu,10,32,false,45,xiaohongshu,78650,0.492472,0.660984
+1147,china fragrance market,30,49,false,61,chinese beauty brands,7930,0.601706,0.873949
+1149,fliggy review,50,23,false,22,fliggy,6960,0.074964,0.603641
+1153,china influencer marketing,30,3,false,22,chinese influencers,2450,0.938056,0.810303
+1156,china youtube equivalent,70,36,false,28,youtube of china,4150,1.0,0.773399
+1157,youtube china alternative,140,36,false,28,youtube of china,4150,1.0,0.773399
+1158,china youtube alternative,140,36,false,28,youtube of china,4150,1.0,0.773399
+1160,most popular social media china,70,35,false,107,chinese social media,16720,1.0,0.976552
+1161,douyin kol,30,38,false,39,douyin,119660,1.0,0.714357
+1162,most popular social networks in china,70,35,false,107,chinese social media,16720,1.0,0.976552
+1163,youtube for china,260,36,false,28,youtube of china,4150,1.0,0.773399
+1166,youtube alternative china,140,36,false,28,youtube of china,4150,1.0,0.773399
+1167,social media china,720,35,false,107,chinese social media,16720,1.0,0.976552
+1168,youtube alternative for china,110,36,false,28,youtube of china,4150,1.0,0.773399
+1169,china mobile pay,70,26,false,34,payment in china,2240,0.682798,0.786265
+1171,china influencers,140,3,false,22,chinese influencers,2450,0.685271,0.810303
+1178,is xiaohongshu rednote,70,-1,true,239,sogou,43770,0.0,0.0
+1182,mlb china,110,-1,true,239,sogou,43770,0.0,0.0
+1183,e-commerce company in china,70,52,false,76,china cross,12460,1.0,0.704906
+1184,kol china,70,62,false,57,china market,39670,1.0,0.935614
+1206,china marketplace online,70,54,false,15,chinese marketplace app,2030,0.669843,0.939107
+1208,websites like taobao,110,12,false,47,taobao mall,19270,0.634763,0.622651
+1209,chinese e commerce market,50,52,false,76,china cross,12460,0.985856,0.704906
+1210,chinese company similar to amazon,70,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+1211,chinese website like amazon,90,48,false,27,chinese amazon equivalent,2520,0.850086,0.782227
+1212,ebay equivalent in china,110,48,false,27,chinese amazon equivalent,2520,0.342177,0.782227
+1213,china e-commerce,320,52,false,76,china cross,12460,0.950749,0.704906
+1217,chinese site like amazon,90,48,false,27,chinese amazon equivalent,2520,0.749775,0.782227
+1218,chinese sites like amazon,90,48,false,27,chinese amazon equivalent,2520,0.646906,0.782227
+1221,chinese e-commerce giants,320,52,false,76,china cross,12460,0.819252,0.704906
+1226,marketplace china online,70,54,false,15,chinese marketplace app,2030,1.0,0.939107
+1228,china payment methods,70,26,false,34,payment in china,2240,0.580764,0.786265
+1229,red book app china,40,17,false,48,what is little red book,8520,1.0,0.937275
+1231,mobile payment china,70,26,false,34,payment in china,2240,0.432873,0.786265
+1233,kol in china,70,55,false,25,wofe,3350,0.55229,0.756131
+1235,single day sales alibaba,40,19,false,25,single day 2025,7500,0.781728,0.885399
+1239,china internet advertising,20,63,false,15,chinese advertising,1490,1.0,0.968289
+1240,advertising companies in china,70,-1,true,239,sogou,43770,0.0,0.0
+1241,advertising agency china,70,65,false,23,china marketing agency,1450,0.812405,0.90367
+1242,digital marketing china,140,64,false,23,digital marketing agency in china,2240,0.965062,0.882914
+1243,chinese live streamer,40,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+1244,icp license,140,23,false,22,fliggy,6960,1.0,0.603641
+1246,how to advertise in wechat,30,28,false,182,hylink,55540,1.0,0.981933
+1248,icp registration,1300,23,false,22,fliggy,6960,1.0,0.603641
+1253,china agency,30,65,false,23,china marketing agency,1450,1.0,0.90367
+1255,tmall shops,30,11,false,36,tmall site,21260,0.859101,0.781541
+1256,seo in china,260,4,false,13,search engine optimization china,2590,1.0,0.98599
+1258,baidu sem,30,10,false,17,baidu seo optimization,4080,0.248287,0.824796
+1260,seo company china,210,4,false,13,search engine optimization china,2590,1.0,0.98599
+1261,ppc china,50,63,false,15,chinese advertising,1490,0.855545,0.968289
+1262,seo company in china,210,4,false,13,search engine optimization china,2590,1.0,0.98599
+1271,douyin live,320,38,false,39,douyin,119660,0.525193,0.714357
+1272,what is douyin app,40,37,false,12,what is douyin,2840,1.0,1.0
+1273,xiaohongshu characters,10,32,false,45,xiaohongshu,78650,1.0,0.660984
+1275,bilibili what is it,90,33,false,14,what is bilibili,2260,1.0,0.909239
+1278,program mini,210,27,false,22,wechat mini programs,2410,1.0,0.832545
+1279,miniprogram,210,27,false,22,wechat mini programs,2410,1.0,0.832545
+1280,weidian sign up,30,24,false,55,weidian,12300,0.788949,0.896853
+1283,bilibili online,30,33,false,14,what is bilibili,2260,1.0,0.909239
+1284,pharma companies china,390,-1,true,239,sogou,43770,0.0,0.0
+1288,douyin app store,170,38,false,39,douyin,119660,0.373321,0.714357
+1289,wechat mini-games,40,27,false,22,wechat mini programs,2410,1.0,0.832545
+1292,what is tmall,90,11,false,36,tmall site,21260,0.865049,0.781541
+1293,mini program wechat,480,28,false,182,hylink,55540,1.0,0.981933
+1294,little red book app,720,17,false,48,what is little red book,8520,1.0,0.937275
+1295,what does koc stand for,50,55,false,25,wofe,3350,1.0,0.756131
+1296,chinese e-commerce platforms,50,52,false,76,china cross,12460,0.556262,0.704906
+1300,xiaohongshu china,20,32,false,45,xiaohongshu,78650,1.0,0.660984
+1302,social commerce china,20,35,false,107,chinese social media,16720,0.879583,0.976552
+1304,chinese kol,30,55,false,25,wofe,3350,0.55229,0.756131
+1306,chinese e commerce giant,320,52,false,76,china cross,12460,0.861161,0.704906
+1308,online marketplace in china,40,54,false,15,chinese marketplace app,2030,1.0,0.939107
+1311,chinese e-commerce giant,320,52,false,76,china cross,12460,0.861161,0.704906
+1312,kol koc,90,55,false,25,wofe,3350,1.0,0.756131
+1320,dianping,1300,2,false,14,dianping,3560,1.0,0.989164
+1323,baidu ppc advertising,50,14,false,21,baidu tieba,3970,1.0,0.998668
+1324,branding companies in china,30,-1,true,239,sogou,43770,0.0,0.0
+1325,chinese social networks,50,35,false,107,chinese social media,16720,1.0,0.976552
+1326,ecommerce china,320,52,false,76,china cross,12460,0.597416,0.704906
+1327,alternative of youtube in china,140,36,false,28,youtube of china,4150,0.711466,0.773399
+1328,weibo search engine,140,24,false,55,weidian,12300,1.0,0.896853
+1329,advertise on baidu,110,14,false,21,baidu tieba,3970,1.0,0.998668
+1330,youtube of china,590,36,false,28,youtube of china,4150,1.0,0.773399
+1333,weibo social media,50,24,false,55,weidian,12300,1.0,0.896853
+1347,bonded warehouse china,40,43,false,15,china food delivery app,2550,1.0,0.997569
+1349,marketplace china,50,54,false,15,chinese marketplace app,2030,1.0,0.939107
+1350,chinese ebay alternative,20,48,false,27,chinese amazon equivalent,2520,0.246762,0.782227
+1353,china bonded warehouse,40,43,false,15,china food delivery app,2550,0.99494,0.997569
+1363,chinese seo company,110,4,false,13,search engine optimization china,2590,1.0,0.98599
+1364,tmall shop,30,11,false,36,tmall site,21260,1.0,0.781541
+1365,baidu seo services,140,10,false,17,baidu seo optimization,4080,1.0,0.824796
+1366,baidu seo service,140,10,false,17,baidu seo optimization,4080,1.0,0.824796
+1368,china seo service,210,4,false,13,search engine optimization china,2590,1.0,0.98599
+1373,dewu app,50,21,false,14,dewu,1660,0.861985,0.983396
+1377,official account wechat,210,28,false,182,hylink,55540,1.0,0.981933
+1378,whats bilibili,70,33,false,14,what is bilibili,2260,1.0,0.909239
+1379,xiaohongshu shop,40,32,false,45,xiaohongshu,78650,1.0,0.660984
+1380,set up wechat pay,40,28,false,182,hylink,55540,1.0,0.981933
+1381,wechat live streaming,320,28,false,182,hylink,55540,0.869439,0.981933
+1382,fashion trend china,50,66,false,24,china fashion,3380,1.0,0.783484
+1384,douyin account,720,38,false,39,douyin,119660,0.475478,0.714357
+1386,rednote shop,90,16,false,28,rednote chinese name,5400,1.0,0.63899
+1395,rednote xiaohongshu,590,-1,true,239,sogou,43770,0.0,0.0
+1397,online shopping in china,70,59,false,21,chinese online shopping,12160,1.0,0.891961
+1405,chinese retail online,50,60,false,15,china retail,4860,0.996848,0.998199
+1407,wechat upgrade,140,28,false,182,hylink,55540,1.0,0.981933
+1408,wechat keywords,70,28,false,182,hylink,55540,1.0,0.981933
+1410,wecom hk,10,24,false,55,weidian,12300,0.374444,0.896853
+1412,wechat work,70,28,false,182,hylink,55540,1.0,0.981933
+1414,energy drink in china,50,53,false,61,imported spirits,18360,1.0,0.9118
+1420,amazon chinese competitor,50,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+1421,bonded warehouse in china,40,43,false,15,china food delivery app,2550,0.974105,0.997569
+1423,china amazon alternative,50,48,false,27,chinese amazon equivalent,2520,0.545231,0.782227
+1426,china icp,170,23,false,22,fliggy,6960,1.0,0.603641
+1429,icp licence,140,23,false,22,fliggy,6960,1.0,0.603641
+1439,wechat active users,30,28,false,182,hylink,55540,1.0,0.981933
+1441,chinese social media app,320,35,false,107,chinese social media,16720,1.0,0.976552
+1443,influencer china,30,3,false,22,chinese influencers,2450,0.721053,0.810303
+1444,fliggy,1600,23,false,22,fliggy,6960,0.075286,0.603641
+1445,weibo chinese,210,24,false,55,weidian,12300,1.0,0.896853
+1446,key opinion consumer,40,3,false,22,chinese influencers,2450,0.326584,0.810303
+1447,what is pin duo duo,110,21,false,14,dewu,1660,1.0,0.983396
+1448,weibo accounts,90,24,false,55,weidian,12300,1.0,0.896853
+1449,youtube equivalent in china,70,36,false,28,youtube of china,4150,0.702293,0.773399
+1450,influencers in china,140,3,false,22,chinese influencers,2450,1.0,0.810303
+1451,social media for china,590,35,false,107,chinese social media,16720,1.0,0.976552
+1454,china pay system,10,26,false,34,payment in china,2240,1.0,0.786265
+1457,influencer in china,140,3,false,22,chinese influencers,2450,1.0,0.810303
+1465,tmall usa,70,11,false,36,tmall site,21260,1.0,0.781541
+1466,what is douyin,1600,37,false,12,what is douyin,2840,1.0,1.0
+1467,china sustainability,70,50,false,29,what is 996 culture,1920,0.148923,0.582862
+1472,tmall luxury pavilion,70,11,false,36,tmall site,21260,0.694139,0.781541
+1482,jd china,590,51,false,51,jing dong,19110,0.565896,0.639117
+1483,china's beauty,1600,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+1484,wechat salesforce,50,28,false,182,hylink,55540,1.0,0.981933
+1486,china pr agency,50,65,false,23,china marketing agency,1450,1.0,0.90367
+1488,mobile payments china,70,26,false,34,payment in china,2240,0.565746,0.786265
+1496,red xiao hong shu,50,31,false,17,xiao hong shu,112970,1.0,0.931252
+1497,redbook china,480,17,false,48,what is little red book,8520,0.887641,0.937275
+1498,how to use xiao hong shu,20,31,false,17,xiao hong shu,112970,1.0,0.931252
+1500,subculture in china,30,50,false,29,what is 996 culture,1920,0.118097,0.582862
+1502,china tiktok douyin,110,29,false,14,douyin/tiktok,3150,1.0,0.945894
+1504,wechat live,110,28,false,182,hylink,55540,1.0,0.981933
+1506,wechat official accounts,210,28,false,182,hylink,55540,1.0,0.981933
+1508,douyin,110000,38,false,39,douyin,119660,1.0,0.714357
+1510,wechat videos,110,28,false,182,hylink,55540,1.0,0.981933
+1512,website hosted in china,210,-1,true,239,sogou,43770,0.0,0.0
+1521,china pet food market,30,57,false,38,china market food,4690,0.736743,0.848422
+1522,seo for baidu,480,10,false,17,baidu seo optimization,4080,1.0,0.824796
+1527,host website in china,170,-1,true,239,sogou,43770,0.0,0.0
+1528,hosting in china,170,-1,true,239,sogou,43770,0.0,0.0
+1531,chinese amazon competitor,210,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+1539,tmall in english,260,11,false,36,tmall site,21260,0.605127,0.781541
+1541,jd seller,30,51,false,51,jing dong,19110,0.814071,0.639117
+1546,food supplements china,20,57,false,38,china market food,4690,1.0,0.848422
+1554,china website shopping,320,59,false,21,chinese online shopping,12160,1.0,0.891961
+1555,chinese ebay equivalent,110,48,false,27,chinese amazon equivalent,2520,0.308171,0.782227
+1556,b2b china,90,-1,true,239,sogou,43770,0.0,0.0
+1559,wechat business group,50,28,false,182,hylink,55540,1.0,0.981933
+1560,official wechat account,210,28,false,182,hylink,55540,1.0,0.981933
+1562,tmall store,30,11,false,36,tmall site,21260,1.0,0.781541
+1566,marketing kol,590,56,false,29,marketing kol,4290,0.460005,0.70558
+1572,what's on weibo,70,24,false,55,weidian,12300,1.0,0.896853
+1573,china birth rate 2023,40,9,false,24,average wage china,29410,0.800163,0.800411
+1574,taobao chinese websites,30,12,false,47,taobao mall,19270,0.942203,0.622651
+1579,digital payments in china,30,26,false,34,payment in china,2240,0.855379,0.786265
+1581,douyin online,40,38,false,39,douyin,119660,0.386155,0.714357
+1582,tiktok shop china,30,15,false,39,china's tiktok,12770,0.978696,0.717361
+1583,facebook alternative china,30,35,false,107,chinese social media,16720,1.0,0.976552
+1584,chinese social media weibo,20,24,false,55,weidian,12300,1.0,0.896853
+1586,china and social media,720,35,false,107,chinese social media,16720,1.0,0.976552
+1587,mobile payment in china,70,26,false,34,payment in china,2240,0.735609,0.786265
+1588,china video platform,70,41,false,12,chinese video sites,1000,1.0,1.0
+1589,what social media do chinese use,90,35,false,107,chinese social media,16720,1.0,0.976552
+1590,chinese social media like facebook,30,35,false,107,chinese social media,16720,1.0,0.976552
+1592,influencers in chinese,140,3,false,22,chinese influencers,2450,1.0,0.810303
+1593,chinese streamers,210,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+1594,chinese bloggers,170,35,false,107,chinese social media,16720,0.632657,0.976552
+1601,rednote stickers,50,16,false,28,rednote chinese name,5400,1.0,0.63899
+1615,618 china,50,62,false,57,china market,39670,1.0,0.935614
+1617,most popular sports in china,590,-1,true,239,sogou,43770,0.0,0.0
+1620,china social media,590,35,false,107,chinese social media,16720,1.0,0.976552
+1625,how many costcos in china,40,34,false,26,costco china,14700,1.0,0.692672
+1629,china trends,50,66,false,24,china fashion,3380,0.755914,0.783484
+1632,china m&a,30,62,false,57,china market,39670,0.867332,0.935614
+1636,daxue consulting,70,30,false,33,guanxi,4300,0.422521,0.657557
+1637,lunar new year marketing,30,7,false,34,chinese new year by sales,4430,0.380189,0.62116
+1639,jissbon,260,51,false,51,jing dong,19110,0.507267,0.639117
+1641,market share china smartphone,140,-1,true,239,sogou,43770,0.0,0.0
+1649,sam's club in china,140,34,false,26,costco china,14700,0.207735,0.692672
+1658,little red book website,70,17,false,48,what is little red book,8520,1.0,0.937275
+1660,what is c beauty,40,47,false,17,chinese beauty ideal,6270,0.830602,0.915839
+1663,xiaohongshu little red book,50,-1,true,239,sogou,43770,0.0,0.0
+1664,how to register alipay,40,27,false,22,wechat mini programs,2410,0.588302,0.832545
+1665,tmall 618,40,11,false,36,tmall site,21260,1.0,0.781541
+1666,facebook and wechat,170,28,false,182,hylink,55540,0.822509,0.981933
+1667,little red book stock,40,17,false,48,what is little red book,8520,1.0,0.937275
+1668,wechat services,30,28,false,182,hylink,55540,1.0,0.981933
+1674,what is weibo,720,24,false,55,weidian,12300,1.0,0.896853
+1675,xiaohongshu fashion,40,32,false,45,xiaohongshu,78650,0.487891,0.660984
+1678,rednote guidelines,50,16,false,28,rednote chinese name,5400,0.578682,0.63899
+1690,fashion trend in china,50,66,false,24,china fashion,3380,0.774248,0.783484
+1692,china market china,40,62,false,57,china market,39670,1.0,0.935614
+1694,xiaohongshu community guidelines,40,32,false,45,xiaohongshu,78650,1.0,0.660984
+1695,xiaohongshu rednote,170,32,false,45,xiaohongshu,78650,0.276407,0.660984
+1696,weibo wechat,110,28,false,182,hylink,55540,0.822509,0.981933
+1701,wechat weibo,110,24,false,55,weidian,12300,0.4838,0.896853
+1702,douyin company,10,-1,true,239,sogou,43770,0.0,0.0
+1706,xiao hong shu translation,90,31,false,17,xiao hong shu,112970,1.0,0.931252
+1715,china equivalent of amazon,50,48,false,27,chinese amazon equivalent,2520,0.677269,0.782227
+1726,china retail websites,30,-1,true,239,sogou,43770,0.0,0.0
+1728,tmall hong kong,70,11,false,36,tmall site,21260,1.0,0.781541
+1731,online shopping sites in china,880,59,false,21,chinese online shopping,12160,0.922364,0.891961
+1736,koc marketing,20,55,false,25,wofe,3350,1.0,0.756131
+1738,what is koc,140,55,false,25,wofe,3350,1.0,0.756131
+1740,baidu agency,30,14,false,21,baidu tieba,3970,1.0,0.998668
+1741,china payment method,70,26,false,34,payment in china,2240,0.838292,0.786265
+1743,youtube in china,260,36,false,28,youtube of china,4150,0.696614,0.773399
+1744,payment system in china,90,26,false,34,payment in china,2240,1.0,0.786265
+1746,baidu ppc agency,20,14,false,21,baidu tieba,3970,1.0,0.998668
+1750,wechat payment,3600,25,false,13,wechat pay,11850,1.0,0.980474
+1751,what does bilibili do,30,33,false,14,what is bilibili,2260,1.0,0.909239
+1752,wechat mini apps,70,27,false,22,wechat mini programs,2410,1.0,0.832545
+1753,618 tmall,40,11,false,36,tmall site,21260,0.925407,0.781541
+1754,china's fashion trends,140,66,false,24,china fashion,3380,1.0,0.783484
+1755,little red book xiao hong shu,70,-1,true,239,sogou,43770,0.0,0.0
+1756,what is weibo used for,140,24,false,55,weidian,12300,1.0,0.896853
+1757,xiaohongshu meaning,1000,32,false,45,xiaohongshu,78650,0.886499,0.660984
+1761,celebrities on rednote,40,16,false,28,rednote chinese name,5400,0.286317,0.63899
+1765,can you get paid on rednote,20,16,false,28,rednote chinese name,5400,0.286317,0.63899
+1768,wechat post,70,28,false,182,hylink,55540,1.0,0.981933
+1772,china shopping websites,720,59,false,21,chinese online shopping,12160,0.634042,0.891961
+1782,china search engines list,40,5,false,52,chinese search engine,18000,1.0,0.908227
+1784,goofish china,40,-1,true,239,sogou,43770,0.0,0.0
+1785,what is the chinese amazon called,30,48,false,27,chinese amazon equivalent,2520,0.981915,0.782227
+1794,how to use xiaohongshu,20,32,false,45,xiaohongshu,78650,0.492472,0.660984
+1801,what is xiao hong shu,480,31,false,17,xiao hong shu,112970,1.0,0.931252
+1802,what is little red book,1000,17,false,48,what is little red book,8520,1.0,0.937275
+1804,chinese market website,40,54,false,15,chinese marketplace app,2030,1.0,0.939107
+1806,redbook app china,90,17,false,48,what is little red book,8520,1.0,0.937275
+1807,cosmetics in china,70,49,false,61,chinese beauty brands,7930,1.0,0.873949
+1815,douyin what is it,90,38,false,39,douyin,119660,0.674765,0.714357
+1816,kol chinese,20,-1,true,239,sogou,43770,0.0,0.0
+1818,ecommerce agency china,50,52,false,76,china cross,12460,0.511893,0.704906
+1819,ecommerce in china,70,52,false,76,china cross,12460,1.0,0.704906
+1820,youtube alternative in china,110,36,false,28,youtube of china,4150,0.93859,0.773399
+1821,weibo marketing,40,24,false,55,weidian,12300,1.0,0.896853
+1822,mobile pay china,70,26,false,34,payment in china,2240,0.658021,0.786265
+1823,digital payment in china,20,26,false,34,payment in china,2240,1.0,0.786265
+1824,xiaohongshu vs douyin,70,-1,true,239,sogou,43770,0.0,0.0
+1825,dianping app,110,2,false,14,dianping,3560,1.0,0.989164
+1828,china content marketing,40,64,false,23,digital marketing agency in china,2240,0.749104,0.882914
+1829,china live streamers,40,42,false,35,chinese streaming platforms,3380,0.940254,0.741336
+1831,china b2b,30,-1,true,239,sogou,43770,0.0,0.0
+1833,poizon china shop,30,-1,true,239,sogou,43770,0.0,0.0
+1834,douyin video,170,38,false,39,douyin,119660,0.718105,0.714357
+1835,china short video apps,30,-1,true,239,sogou,43770,0.0,0.0
+1837,chinese short video apps,50,41,false,12,chinese video sites,1000,1.0,1.0
+1838,little red book social media,260,17,false,48,what is little red book,8520,1.0,0.937275
+1841,wechat operating system,50,28,false,182,hylink,55540,1.0,0.981933
+1842,xiao hong shu website,480,31,false,17,xiao hong shu,112970,1.0,0.931252
+1843,how to use weidian,50,24,false,55,weidian,12300,0.762143,0.896853
+1846,chinese fashion trends 2025,50,66,false,24,china fashion,3380,1.0,0.783484
+1847,wechat links,40,28,false,182,hylink,55540,1.0,0.981933
+1849,wechat message template,50,28,false,182,hylink,55540,1.0,0.981933
+1851,douyin news,110,38,false,39,douyin,119660,0.408152,0.714357
+1852,chat en china,30,62,false,57,china market,39670,1.0,0.935614
+1853,wechat for enterprise,50,28,false,182,hylink,55540,1.0,0.981933
+1855,wechat stories,40,28,false,182,hylink,55540,1.0,0.981933
+1860,china purchase online,260,59,false,21,chinese online shopping,12160,0.95686,0.891961
+1869,online shopping stores in china,320,59,false,21,chinese online shopping,12160,1.0,0.891961
+1870,t mall,4400,11,false,36,tmall site,21260,1.0,0.781541
+1871,import food in china,480,57,false,38,china market food,4690,1.0,0.848422
+1880,kuajing pinduoduo,30,21,false,14,dewu,1660,1.0,0.983396
+1882,cosmetic industry in china,70,49,false,61,chinese beauty brands,7930,1.0,0.873949
+1885,online shopping store china,320,59,false,21,chinese online shopping,12160,1.0,0.891961
+1886,11.11 in china,50,20,false,28,11-11 day,4080,0.446221,0.726205
+1888,what does baidu do,140,14,false,21,baidu tieba,3970,1.0,0.998668
+1902,china consumers,50,50,false,29,what is 996 culture,1920,0.604751,0.582862
+1903,beauty standards in china,170,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+1904,search engine market share in china,50,5,false,52,chinese search engine,18000,0.775178,0.908227
+1905,how to create weibo account,30,24,false,55,weidian,12300,0.788949,0.896853
+1906,china website design,110,-1,true,239,sogou,43770,0.0,0.0
+1907,weibo english version,50,24,false,55,weidian,12300,1.0,0.896853
+1909,search engines in china,1300,5,false,52,chinese search engine,18000,1.0,0.908227
+1910,red book social media,170,17,false,48,what is little red book,8520,1.0,0.937275
+1912,baidu rank tracking,170,10,false,17,baidu seo optimization,4080,0.248082,0.824796
+1918,what search engine do they use in china,50,5,false,52,chinese search engine,18000,0.607534,0.908227
+1920,china advertising,210,-1,true,239,sogou,43770,0.0,0.0
+1924,google and baidu,40,13,false,13,baidu search engine,3560,1.0,0.988859
+1930,china's version of youtube,90,36,false,28,youtube of china,4150,0.690615,0.773399
+1931,is wechat social media,40,28,false,182,hylink,55540,1.0,0.981933
+1932,alibaba and tencent,50,52,false,76,china cross,12460,0.486989,0.704906
+1933,advertising on weibo,50,24,false,55,weidian,12300,0.594861,0.896853
+1934,tiktok chinese version,170,15,false,39,china's tiktok,12770,0.704887,0.717361
+1935,wechat users,110,28,false,182,hylink,55540,1.0,0.981933
+1936,wechat marketing strategies,40,28,false,182,hylink,55540,1.0,0.981933
+1937,facebook alternative in china,20,35,false,107,chinese social media,16720,1.0,0.976552
+1938,douyin china,480,38,false,39,douyin,119660,0.591296,0.714357
+1939,marketing strategies in china,50,56,false,29,marketing kol,4290,0.571338,0.70558
+1943,what is kol stand for,50,55,false,25,wofe,3350,0.422198,0.756131
+1944,payment system china,90,26,false,34,payment in china,2240,1.0,0.786265
+1946,top kol,10,55,false,25,wofe,3350,0.55229,0.756131
+1947,advertising in china,210,63,false,15,chinese advertising,1490,1.0,0.968289
+1948,social media platform in china,70,35,false,107,chinese social media,16720,1.0,0.976552
+1950,3pl china,90,43,false,15,china food delivery app,2550,1.0,0.997569
+1952,xiaohongshu emoji guide,40,32,false,45,xiaohongshu,78650,1.0,0.660984
+1953,wechat group chat,50,28,false,182,hylink,55540,1.0,0.981933
+1956,trends in china,50,66,false,24,china fashion,3380,0.522532,0.783484
+1957,wechat interface,70,28,false,182,hylink,55540,1.0,0.981933
+1959,china double eleven,50,20,false,28,11-11 day,4080,0.446221,0.726205
+1960,can you make money on rednote,880,16,false,28,rednote chinese name,5400,0.286317,0.63899
+1962,douyin videos,170,38,false,39,douyin,119660,0.734523,0.714357
+1964,what does pinduoduo do,30,21,false,14,dewu,1660,1.0,0.983396
+1965,facebook wechat,170,28,false,182,hylink,55540,0.822509,0.981933
+1966,wechat and qq,880,28,false,182,hylink,55540,0.782486,0.981933
+1967,xiaohongshu website,480,32,false,45,xiaohongshu,78650,0.643927,0.660984
+1969,wechat bot,90,28,false,182,hylink,55540,1.0,0.981933
+1972,wechat-bot,90,28,false,182,hylink,55540,1.0,0.981933
+1973,rednote user agreement,40,16,false,28,rednote chinese name,5400,1.0,0.63899
+1976,rednote meaning,140,16,false,28,rednote chinese name,5400,0.480322,0.63899
+1977,chinese mobile payment,70,26,false,34,payment in china,2240,0.761448,0.786265
+1981,icp license in china,170,23,false,22,fliggy,6960,1.0,0.603641
+1983,in china online shopping,70,59,false,21,chinese online shopping,12160,1.0,0.891961
+1985,what is a mini app,40,27,false,22,wechat mini programs,2410,1.0,0.832545
+1987,online wholesale market in china,140,54,false,15,chinese marketplace app,2030,0.802928,0.939107
+2008,what does xiaohongshu mean,480,32,false,45,xiaohongshu,78650,0.492472,0.660984
+2012,chinese online stores,2900,-1,true,239,sogou,43770,0.0,0.0
+2017,weibo vs wechat,30,28,false,182,hylink,55540,0.822509,0.981933
+2020,chinese online shopping,2900,59,false,21,chinese online shopping,12160,1.0,0.891961
+2025,dolce & gabbana china,110,69,false,13,gucci in china,2590,1.0,0.975403
+2037,chinese gift giving,30,7,false,34,chinese new year by sales,4430,1.0,0.62116
+2038,yiwu market china,320,62,false,57,china market,39670,1.0,0.935614
+2053,is douyin and tiktok the same,70,29,false,14,douyin/tiktok,3150,1.0,0.945894
+2065,lunar new year ad,30,7,false,34,chinese new year by sales,4430,0.380189,0.62116
+2073,what social media is allowed in china,40,35,false,107,chinese social media,16720,1.0,0.976552
+2075,chinese advertising,320,63,false,15,chinese advertising,1490,1.0,0.968289
+2076,redes sociales china,20,35,false,107,chinese social media,16720,1.0,0.976552
+2079,rednote algorithm,30,16,false,28,rednote chinese name,5400,1.0,0.63899
+2082,wechat social media,170,35,false,107,chinese social media,16720,0.647932,0.976552
+2087,social apps in china,140,35,false,107,chinese social media,16720,1.0,0.976552
+2089,fliggy travel,390,23,false,22,fliggy,6960,0.074868,0.603641
+2090,baidu ppc,50,14,false,21,baidu tieba,3970,1.0,0.998668
+2098,xiao hong shu,110000,31,false,17,xiao hong shu,112970,1.0,0.931252
+2101,what are mini apps,30,27,false,22,wechat mini programs,2410,1.0,0.832545
+2102,alibaba supermarket,140,19,false,25,single day 2025,7500,0.750323,0.885399
+2103,xiaohongshu,74000,32,false,45,xiaohongshu,78650,0.712761,0.660984
+2105,chinese red book app,40,17,false,48,what is little red book,8520,1.0,0.937275
+2106,what is wechat application,170,28,false,182,hylink,55540,1.0,0.981933
+2107,wechat group,110,28,false,182,hylink,55540,0.967534,0.981933
+2108,xiaohongshu review,170,32,false,45,xiaohongshu,78650,1.0,0.660984
+2109,rednote followers,50,16,false,28,rednote chinese name,5400,1.0,0.63899
+2118,popular items in china,30,-1,true,239,sogou,43770,0.0,0.0
+2119,best chinese shopping apps,50,-1,true,239,sogou,43770,0.0,0.0
+2123,icp register,1300,23,false,22,fliggy,6960,1.0,0.603641
+2127,warehousing in china,170,43,false,15,china food delivery app,2550,1.0,0.997569
+2128,cross border e-commerce platform,320,52,false,76,china cross,12460,0.460765,0.704906
+2129,whatsapp vs wechat,110,28,false,182,hylink,55540,0.822509,0.981933
+2133,chinese data privacy laws,110,22,false,17,chinese data privacy laws,990,1.0,0.895423
+2137,china tiktok trend,30,15,false,39,china's tiktok,12770,0.508049,0.717361
+2139,china online shopping,880,59,false,21,chinese online shopping,12160,1.0,0.891961
+2148,chinese amazon equivalent,590,48,false,27,chinese amazon equivalent,2520,0.850086,0.782227
+2150,skincare china,50,49,false,61,chinese beauty brands,7930,1.0,0.873949
+2160,live shopping china,30,42,false,35,chinese streaming platforms,3380,0.283642,0.741336
+2161,wechat marketing services,40,28,false,182,hylink,55540,1.0,0.981933
+2162,e commerce companies in china,70,52,false,76,china cross,12460,1.0,0.704906
+2163,how to advertise on wechat,30,28,false,182,hylink,55540,1.0,0.981933
+2164,main search engine in china,50,5,false,52,chinese search engine,18000,1.0,0.908227
+2165,livestream shopping china,30,42,false,35,chinese streaming platforms,3380,0.395051,0.741336
+2166,daigou,260,-1,true,239,sogou,43770,0.0,0.0
+2167,alcohol laws china,50,53,false,61,imported spirits,18360,1.0,0.9118
+2168,bilibili china,320,33,false,14,what is bilibili,2260,1.0,0.909239
+2169,wechat apple pay,30,25,false,13,wechat pay,11850,1.0,0.980474
+2170,wechat monthly users,30,28,false,182,hylink,55540,1.0,0.981933
+2172,chinese subcultures,90,50,false,29,what is 996 culture,1920,0.118097,0.582862
+2173,what is red book app,20,17,false,48,what is little red book,8520,1.0,0.937275
+2175,wechat vs weibo,30,28,false,182,hylink,55540,0.822509,0.981933
+2176,how to set up wechat id,40,28,false,182,hylink,55540,1.0,0.981933
+2177,bilibili live streaming,40,33,false,14,what is bilibili,2260,1.0,0.909239
+2178,shopping app in china,30,-1,true,239,sogou,43770,0.0,0.0
+2181,chinese phone number for douyin,20,37,false,12,what is douyin,2840,1.0,1.0
+2182,set up alipay,110,27,false,22,wechat mini programs,2410,0.588302,0.832545
+2185,rednote monetization,110,16,false,28,rednote chinese name,5400,1.0,0.63899
+2186,xiaohongshu chinese,50,32,false,45,xiaohongshu,78650,0.623311,0.660984
+2188,xiaohongshu in english,170,32,false,45,xiaohongshu,78650,0.859426,0.660984
+2190,china b2b marketplace,30,-1,true,239,sogou,43770,0.0,0.0
+2193,chinese ecommerce market share,30,52,false,76,china cross,12460,0.680207,0.704906
+2198,china supplement,170,-1,true,239,sogou,43770,0.0,0.0
+2203,buying online in china,260,59,false,21,chinese online shopping,12160,1.0,0.891961
+2219,rednote chinese,210,16,false,28,rednote chinese name,5400,0.515226,0.63899
+2221,china's payment system,50,26,false,34,payment in china,2240,1.0,0.786265
+2222,use of wechat,70,28,false,182,hylink,55540,1.0,0.981933
+2225,china facebook alternative,20,35,false,107,chinese social media,16720,0.898464,0.976552
+2226,how does wechat work,140,28,false,182,hylink,55540,1.0,0.981933
+2227,kols marketing,170,56,false,29,marketing kol,4290,0.460005,0.70558
+2228,social media and china,720,35,false,107,chinese social media,16720,1.0,0.976552
+2231,kwai #videos,320,62,false,57,china market,39670,0.735219,0.935614
+2236,what is douyin style,320,37,false,12,what is douyin,2840,1.0,1.0
+2238,influencers kol,140,3,false,22,chinese influencers,2450,0.600019,0.810303
+2246,china store online,880,59,false,21,chinese online shopping,12160,0.945941,0.891961
+2248,icp filing,50,23,false,22,fliggy,6960,1.0,0.603641
+2261,how to setup wechat,70,28,false,182,hylink,55540,1.0,0.981933
+2267,when is singles day,1000,19,false,25,single day 2025,7500,1.0,0.885399
+2270,toutiao news,30,2,false,14,dianping,3560,0.991171,0.989164
+2275,lululemon case study,40,-1,true,239,sogou,43770,0.0,0.0
+2276,what is xiaohongshu,480,32,false,45,xiaohongshu,78650,0.489613,0.660984
+2278,xiaohongshu company,30,32,false,45,xiaohongshu,78650,0.609444,0.660984
+2282,the red book app,20,17,false,48,what is little red book,8520,1.0,0.937275
+2283,chinese social media marketing,30,35,false,107,chinese social media,16720,0.909213,0.976552
+2286,chinese 3pl,40,43,false,15,china food delivery app,2550,1.0,0.997569
+2287,xiao hong shu meaning,1000,31,false,17,xiao hong shu,112970,1.0,0.931252
+2294,lancome china,50,49,false,61,chinese beauty brands,7930,1.0,0.873949
+2300,xi hong shu,30,31,false,17,xiao hong shu,112970,1.0,0.931252
+2302,does facebook messenger work in china,30,35,false,107,chinese social media,16720,1.0,0.976552
+2304,is there a middle class in china,50,9,false,24,average wage china,29410,1.0,0.800411
+2309,red book app,1000,17,false,48,what is little red book,8520,1.0,0.937275
+2311,wechat users number,30,28,false,182,hylink,55540,1.0,0.981933
+2312,weimob,110,24,false,55,weidian,12300,0.669425,0.896853
+2313,xiaohongshu rules,40,32,false,45,xiaohongshu,78650,1.0,0.660984
+2318,wechat features,140,28,false,182,hylink,55540,1.0,0.981933
+2323,alipay setup,110,27,false,22,wechat mini programs,2410,0.588302,0.832545
+2324,qq social media,110,35,false,107,chinese social media,16720,1.0,0.976552
+2325,taobao china site,40,12,false,47,taobao mall,19270,0.459917,0.622651
+2326,kol influencer marketing,40,3,false,22,chinese influencers,2450,1.0,0.810303
+2333,smartphone market china,40,-1,true,239,sogou,43770,0.0,0.0
+2340,cross border e commerce platforms,320,52,false,76,china cross,12460,0.460765,0.704906
+2349,china data protection law,110,22,false,17,chinese data privacy laws,990,1.0,0.895423
+2360,internet use in china,70,-1,true,239,sogou,43770,0.0,0.0
+2367,china cosmetic brand,30,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+2368,average wage china,6600,9,false,24,average wage china,29410,0.575899,0.800411
+2370,idle fish alibaba,30,-1,true,239,sogou,43770,0.0,0.0
+2374,monster energy in china,40,53,false,61,imported spirits,18360,1.0,0.9118
+2388,china gift giving,50,7,false,34,chinese new year by sales,4430,0.723369,0.62116
+2390,market entry services,30,56,false,29,marketing kol,4290,1.0,0.70558
+2393,dianping english,90,2,false,14,dianping,3560,1.0,0.989164
+2401,internet laws china,20,-1,true,239,sogou,43770,0.0,0.0
+2409,costco china,1900,34,false,26,costco china,14700,1.0,0.692672
+2411,blue ocean china,2400,58,false,15,blue ocean china,3550,0.968701,0.991995
+2416,chinese consulting firms,40,30,false,33,guanxi,4300,1.0,0.657557
+2420,consumer electronics in china,70,44,false,16,ikea china,1420,1.0,0.938969
+2422,que es douyin,40,37,false,12,what is douyin,2840,1.0,1.0
+2424,kol influencers,140,3,false,22,chinese influencers,2450,1.0,0.810303
+2426,influencer marketing luxury brands,30,68,false,26,luxury goods china,9540,0.48528,0.759174
+2431,11 11 singles day,210,20,false,28,11-11 day,4080,1.0,0.726205
+2432,singles day sales 2025,70,19,false,25,single day 2025,7500,1.0,0.885399
+2437,rednote chinese name,1600,16,false,28,rednote chinese name,5400,0.422015,0.63899
+2438,skin care in china,50,49,false,61,chinese beauty brands,7930,1.0,0.873949
+2445,china online retail,70,60,false,15,china retail,4860,1.0,0.998199
+2450,shopping apps china,30,-1,true,239,sogou,43770,0.0,0.0
+2472,taobao what is,880,12,false,47,taobao mall,19270,1.0,0.622651
+2473,tmo company,70,11,false,36,tmall site,21260,0.448387,0.781541
+2476,little red note app,170,17,false,48,what is little red book,8520,0.870088,0.937275
+2478,advertising chinese,40,-1,true,239,sogou,43770,0.0,0.0
+2480,china most popular apps,70,35,false,107,chinese social media,16720,1.0,0.976552
+2482,wechat search id,40,28,false,182,hylink,55540,0.961098,0.981933
+2484,how to verify wechat account,70,28,false,182,hylink,55540,1.0,0.981933
+2486,tencent search engine,30,5,false,52,chinese search engine,18000,1.0,0.908227
+2488,songmont brand,90,70,false,13,china luxury brands,2920,1.0,0.999888
+2489,group buy platform,50,-1,true,239,sogou,43770,0.0,0.0
+2490,wechat ownership,170,28,false,182,hylink,55540,1.0,0.981933
+2491,wechat with facebook,170,28,false,182,hylink,55540,1.0,0.981933
+2493,rednote rules,10,16,false,28,rednote chinese name,5400,1.0,0.63899
+2494,weixin payment,320,25,false,13,wechat pay,11850,1.0,0.980474
+2495,sportswear in china,480,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+2496,how to post in wechat,30,28,false,182,hylink,55540,1.0,0.981933
+2498,wechat function,50,28,false,182,hylink,55540,1.0,0.981933
+2500,wechat revenue,30,28,false,182,hylink,55540,1.0,0.981933
+2502,how to set up alipay,210,27,false,22,wechat mini programs,2410,0.588302,0.832545
+2509,618 shopping festival,40,20,false,28,11-11 day,4080,0.304424,0.726205
+2510,singles day nov 11,170,20,false,28,11-11 day,4080,0.581406,0.726205
+2512,fashion china,50,66,false,24,china fashion,3380,0.756607,0.783484
+2518,singles day chinese,90,19,false,25,single day 2025,7500,1.0,0.885399
+2520,pinduoduo subsidiaries,50,21,false,14,dewu,1660,1.0,0.983396
+2522,singles day 11 11,210,20,false,28,11-11 day,4080,1.0,0.726205
+2525,china animal testing,110,-1,true,239,sogou,43770,0.0,0.0
+2527,pipl law,30,23,false,22,fliggy,6960,0.18074,0.603641
+2529,china supplements,170,-1,true,239,sogou,43770,0.0,0.0
+2535,vertical e-commerce,50,-1,true,239,sogou,43770,0.0,0.0
+2547,chinese app red book,20,17,false,48,what is little red book,8520,1.0,0.937275
+2551,lyfen china,30,62,false,57,china market,39670,1.0,0.935614
+2552,what do we sell to china,170,39,false,14,what do we sell to china,1000,1.0,0.916743
+2558,set up company china,70,40,false,26,register company in china,2240,0.819252,0.823878
+2560,wechat articles,30,28,false,182,hylink,55540,1.0,0.981933
+2563,ecommerce sales data,30,52,false,76,china cross,12460,0.403907,0.704906
+2568,douyin chinese,480,38,false,39,douyin,119660,0.558414,0.714357
+2573,color meaning in china,140,1,false,26,what does the color red symbolize in china,2640,0.887847,0.894708
+2577,what is chinese tik tok,40,15,false,39,china's tiktok,12770,0.704887,0.717361
+2580,wechat business,170,28,false,182,hylink,55540,1.0,0.981933
+2582,alibaba's singles day,50,19,false,25,single day 2025,7500,0.781728,0.885399
+2583,digital marketing agencies in china,170,64,false,23,digital marketing agency in china,2240,0.622037,0.882914
+2584,chinese shopping sites,2900,59,false,21,chinese online shopping,12160,0.565956,0.891961
+2585,red china app,170,17,false,48,what is little red book,8520,0.718069,0.937275
+2586,subcultures in china,40,50,false,29,what is 996 culture,1920,0.118097,0.582862
+2587,how to set up a wechat group,170,28,false,182,hylink,55540,1.0,0.981933
+2599,baidu what is it,40,14,false,21,baidu tieba,3970,1.0,0.998668
+2603,animal testing china,110,-1,true,239,sogou,43770,0.0,0.0
+2604,weibo and wechat,110,28,false,182,hylink,55540,0.822509,0.981933
+2608,starbucks competition in china,90,53,false,61,imported spirits,18360,0.859468,0.9118
+2611,baidu meaning,110,14,false,21,baidu tieba,3970,1.0,0.998668
+2641,996 china meaning,50,62,false,57,china market,39670,1.0,0.935614
+2650,littlered tiktok,30,15,false,39,china's tiktok,12770,0.309657,0.717361
+2679,pipl china,170,23,false,22,fliggy,6960,0.174396,0.603641
+2686,wechat or whatsapp,30,28,false,182,hylink,55540,0.767092,0.981933
+2687,chinese data privacy law,70,22,false,17,chinese data privacy laws,990,1.0,0.895423
+2692,adidas and china,140,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+2703,wechat functionality,50,28,false,182,hylink,55540,1.0,0.981933
+2704,meituan china,70,2,false,14,dianping,3560,1.0,0.989164
+2712,middle class in china percentage,50,9,false,24,average wage china,29410,1.0,0.800411
+2714,e-commerce in china,70,52,false,76,china cross,12460,1.0,0.704906
+2717,chinese payment apps,140,26,false,34,payment in china,2240,0.711649,0.786265
+2718,singles day november 11,170,20,false,28,11-11 day,4080,1.0,0.726205
+2719,china 11.11,50,20,false,28,11-11 day,4080,0.446221,0.726205
+2722,singles day sale 2025,70,19,false,25,single day 2025,7500,1.0,0.885399
+2723,b2b sites in china,30,-1,true,239,sogou,43770,0.0,0.0
+2726,what is the chinese version of amazon,50,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+2727,what is 11/11 day,50,20,false,28,11-11 day,4080,1.0,0.726205
+2732,most popular apps china,70,35,false,107,chinese social media,16720,1.0,0.976552
+2734,11/11 china,390,20,false,28,11-11 day,4080,0.446221,0.726205
+2739,is judydoll chinese,70,51,false,51,jing dong,19110,0.406462,0.639117
+2741,ideal beauty in china,170,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+2747,china cross,720,52,false,76,china cross,12460,0.460765,0.704906
+2772,wechat chinese apps,90,35,false,107,chinese social media,16720,1.0,0.976552
+2780,online store alibaba,260,-1,true,239,sogou,43770,0.0,0.0
+2781,wechat user number,30,28,false,182,hylink,55540,1.0,0.981933
+2782,middle class population in china,30,9,false,24,average wage china,29410,1.0,0.800411
+2783,bullet chat,30,28,false,182,hylink,55540,1.0,0.981933
+2789,chinese video sites,170,41,false,12,chinese video sites,1000,1.0,1.0
+2798,xiaohongshu.com,210,32,false,45,xiaohongshu,78650,1.0,0.660984
+2807,baidu china search engine,20,13,false,13,baidu search engine,3560,1.0,0.988859
+2809,what is the red app,90,17,false,48,what is little red book,8520,0.889406,0.937275
+2810,fitness industry in china,40,-1,true,239,sogou,43770,0.0,0.0
+2816,baidu create account,90,6,false,15,baidu registration,1050,1.0,0.901863
+2819,china retail,1600,60,false,15,china retail,4860,1.0,0.998199
+2839,little red tiktok,30,15,false,39,china's tiktok,12770,0.254347,0.717361
+2844,kol in marketing,480,56,false,29,marketing kol,4290,0.460005,0.70558
+2851,what is baidu used for,40,14,false,21,baidu tieba,3970,1.0,0.998668
+2856,wechat public account,70,28,false,182,hylink,55540,1.0,0.981933
+2857,wechat subscription account,70,28,false,182,hylink,55540,1.0,0.981933
+2858,what can you do on wechat,30,28,false,182,hylink,55540,1.0,0.981933
+2861,walmart in china,1300,34,false,26,costco china,14700,0.207735,0.692672
+2875,breakfast foods in china,320,57,false,38,china market food,4690,1.0,0.848422
+2878,china luxury items,480,-1,true,239,sogou,43770,0.0,0.0
+2882,electronics stores china,70,44,false,16,ikea china,1420,0.841249,0.938969
+2883,omni channel solution,320,52,false,76,china cross,12460,0.396718,0.704906
+2891,chinese data protection law,110,22,false,17,chinese data privacy laws,990,1.0,0.895423
+2902,sam's club china,590,34,false,26,costco china,14700,0.207735,0.692672
+2907,coffee market in china,40,53,false,61,imported spirits,18360,1.0,0.9118
+2910,gucci chinese,90,69,false,13,gucci in china,2590,1.0,0.975403
+2914,china mobile payment,70,26,false,34,payment in china,2240,0.769918,0.786265
+2915,wechat what is,40,28,false,182,hylink,55540,1.0,0.981933
+2917,china middle class percentage,50,9,false,24,average wage china,29410,0.591665,0.800411
+2920,wechat accounts,390,28,false,182,hylink,55540,1.0,0.981933
+2922,weibo chinese social media,30,24,false,55,weidian,12300,1.0,0.896853
+2924,wechat multiple account,30,28,false,182,hylink,55540,1.0,0.981933
+2932,chinese luxury,720,68,false,26,luxury goods china,9540,1.0,0.759174
+2938,console games in china,90,-1,true,239,sogou,43770,0.0,0.0
+2950,taobao online store,1000,12,false,47,taobao mall,19270,1.0,0.622651
+2965,kol marketing strategy,30,56,false,29,marketing kol,4290,0.460005,0.70558
+2977,china video websites,170,41,false,12,chinese video sites,1000,1.0,1.0
+2991,china under armour,90,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+2992,chinese instant coffee,70,53,false,61,imported spirits,18360,1.0,0.9118
+3005,is pop mart chinese,590,8,false,17,popmart chinese,9430,1.0,0.882817
+3018,data security law china,30,22,false,17,chinese data privacy laws,990,1.0,0.895423
+3022,social commerce solutions,20,35,false,107,chinese social media,16720,0.514691,0.976552
+3027,how does wechat payment work,50,28,false,182,hylink,55540,0.907933,0.981933
+3030,products popular in china,30,-1,true,239,sogou,43770,0.0,0.0
+3036,wechat platform,30,28,false,182,hylink,55540,1.0,0.981933
+3038,wechat means,40,28,false,182,hylink,55540,1.0,0.981933
+3041,china wepay,40,26,false,34,payment in china,2240,0.613923,0.786265
+3043,integrate wechat on website,30,28,false,182,hylink,55540,1.0,0.981933
+3047,wechat register,320,28,false,182,hylink,55540,1.0,0.981933
+3048,wechat and weibo,110,28,false,182,hylink,55540,0.822509,0.981933
+3049,xiao red,30,-1,true,239,sogou,43770,0.0,0.0
+3052,wechat value,30,28,false,182,hylink,55540,1.0,0.981933
+3053,china middle class population,30,9,false,24,average wage china,29410,1.0,0.800411
+3054,seo in baidu,480,10,false,17,baidu seo optimization,4080,1.0,0.824796
+3055,china marketing company,20,-1,true,239,sogou,43770,0.0,0.0
+3056,top search engines in china,210,5,false,52,chinese search engine,18000,1.0,0.908227
+3060,seo for china,260,4,false,13,search engine optimization china,2590,1.0,0.98599
+3061,international singles day 2025,30,19,false,25,single day 2025,7500,1.0,0.885399
+3063,china beauty trends,40,66,false,24,china fashion,3380,1.0,0.783484
+3070,consumer confidence china,140,50,false,29,what is 996 culture,1920,1.0,0.582862
+3081,china privacy laws,40,22,false,17,chinese data privacy laws,990,0.348669,0.895423
+3085,chinese luxury goods market,720,68,false,26,luxury goods china,9540,1.0,0.759174
+3086,chinese competitor to amazon,170,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+3088,china privacy law,70,22,false,17,chinese data privacy laws,990,1.0,0.895423
+3090,online mobile shopping in china,40,-1,true,239,sogou,43770,0.0,0.0
+3091,popular product in china,30,-1,true,239,sogou,43770,0.0,0.0
+3095,toutiao search,260,2,false,14,dianping,3560,0.857127,0.989164
+3098,tiktok china food,30,15,false,39,china's tiktok,12770,0.704887,0.717361
+3106,baidu tieba,720,14,false,21,baidu tieba,3970,1.0,0.998668
+3109,jd com company,70,51,false,51,jing dong,19110,1.0,0.639117
+3110,china cosmetics,70,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+3112,search engine in china,1300,5,false,52,chinese search engine,18000,1.0,0.908227
+3114,luxury market in china,140,68,false,26,luxury goods china,9540,1.0,0.759174
+3118,weibo china app,30,24,false,55,weidian,12300,1.0,0.896853
+3122,tik tok in china vs us,70,15,false,39,china's tiktok,12770,1.0,0.717361
+3124,taobao.com online shopping,50,12,false,47,taobao mall,19270,1.0,0.622651
+3129,single day 11/11,210,20,false,28,11-11 day,4080,1.0,0.726205
+3133,china toys expo,50,61,false,22,barbie china,2320,1.0,0.910778
+3135,single day sales 2025,70,19,false,25,single day 2025,7500,1.0,0.885399
+3136,pet food china,40,57,false,38,china market food,4690,0.736743,0.848422
+3137,luxury market china,140,68,false,26,luxury goods china,9540,1.0,0.759174
+3138,single day 2025,2900,19,false,25,single day 2025,7500,1.0,0.885399
+3146,11-11 day,390,20,false,28,11-11 day,4080,1.0,0.726205
+3162,do chinese companies have to share data with government,20,22,false,17,chinese data privacy laws,990,1.0,0.895423
+3171,how to get followers on rednote,30,16,false,28,rednote chinese name,5400,0.286317,0.63899
+3188,black friday in china,40,20,false,28,11-11 day,4080,0.446221,0.726205
+3197,generation z china,40,46,false,18,baozun,1760,1.0,1.0
+3199,shein e-commerce platform,20,-1,true,239,sogou,43770,0.0,0.0
+3212,costco advertising strategy,110,34,false,26,costco china,14700,1.0,0.692672
+3216,china pet products,70,57,false,38,china market food,4690,0.736743,0.848422
+3238,consultants in china,30,30,false,33,guanxi,4300,1.0,0.657557
+3240,la mer china,40,62,false,57,china market,39670,1.0,0.935614
+3243,content marketing in china,40,64,false,23,digital marketing agency in china,2240,0.716878,0.882914
+3246,single day november 11,170,20,false,28,11-11 day,4080,0.896548,0.726205
+3248,china consumer confidence,140,50,false,29,what is 996 culture,1920,1.0,0.582862
+3251,china video apps,140,35,false,107,chinese social media,16720,1.0,0.976552
+3264,luxury brand pyramid,1900,68,false,26,luxury goods china,9540,0.39703,0.759174
+3265,branding china,1300,-1,true,239,sogou,43770,0.0,0.0
+3268,chanel chinese,70,-1,true,239,sogou,43770,0.0,0.0
+3287,bonded zone,30,43,false,15,china food delivery app,2550,1.0,0.997569
+3290,omnichannel ecommerce solutions,320,52,false,76,china cross,12460,0.396718,0.704906
+3297,ecommerce customs clearance,40,52,false,76,china cross,12460,0.460765,0.704906
+3315,chinese skincare,880,49,false,61,chinese beauty brands,7930,1.0,0.873949
+3318,taobao official site,50,12,false,47,taobao mall,19270,0.951821,0.622651
+3320,suning commerce group,30,-1,true,239,sogou,43770,0.0,0.0
+3324,china tiktok,1300,15,false,39,china's tiktok,12770,0.45535,0.717361
+3326,how to start business in china,90,40,false,26,register company in china,2240,1.0,0.823878
+3328,home decoration in china,30,44,false,16,ikea china,1420,1.0,0.938969
+3338,e commerce asia,40,52,false,76,china cross,12460,0.689323,0.704906
+3342,omni channel ecommerce solutions,320,52,false,76,china cross,12460,0.396718,0.704906
+3347,china vitamins,140,-1,true,239,sogou,43770,0.0,0.0
+3348,ecommerce omnichannel solution,320,52,false,76,china cross,12460,0.396718,0.704906
+3352,o2o strategies,30,-1,true,239,sogou,43770,0.0,0.0
+3359,tmall loreal,50,49,false,61,chinese beauty brands,7930,1.0,0.873949
+3362,coffee market china,40,53,false,61,imported spirits,18360,1.0,0.9118
+3382,bytedance douyin,30,37,false,12,what is douyin,2840,1.0,1.0
+3396,tea companies in china,30,53,false,61,imported spirits,18360,0.738377,0.9118
+3405,red book news,10,17,false,48,what is little red book,8520,1.0,0.937275
+3423,chinese business consultants,40,30,false,33,guanxi,4300,0.783896,0.657557
+3424,tiktok in china name,40,15,false,39,china's tiktok,12770,1.0,0.717361
+3429,sustainability china,70,50,false,29,what is 996 culture,1920,0.150017,0.582862
+3442,she-economy,30,-1,true,239,sogou,43770,0.0,0.0
+3452,mid autumn festival gifts,210,7,false,34,chinese new year by sales,4430,1.0,0.62116
+3459,b2b chinese website,30,-1,true,239,sogou,43770,0.0,0.0
+3462,whatsapp and wechat,30,28,false,182,hylink,55540,0.822509,0.981933
+3465,pipl compliance,30,23,false,22,fliggy,6960,0.205533,0.603641
+3470,omni-channel ecommerce platform,170,52,false,76,china cross,12460,0.396718,0.704906
+3474,wechat uses,70,28,false,182,hylink,55540,1.0,0.981933
+3477,makeup brands in china,30,49,false,61,chinese beauty brands,7930,1.0,0.873949
+3483,cosmetics industry china,70,49,false,61,chinese beauty brands,7930,1.0,0.873949
+3485,food import china,590,57,false,38,china market food,4690,0.889697,0.848422
+3486,food importers china,590,57,false,38,china market food,4690,1.0,0.848422
+3494,most popular search engines in china,140,5,false,52,chinese search engine,18000,1.0,0.908227
+3497,what does the color yellow mean in china,110,1,false,26,what does the color red symbolize in china,2640,0.412401,0.894708
+3501,l'oréal travel retail,20,49,false,61,chinese beauty brands,7930,1.0,0.873949
+3502,xiao hong shu sign up,50,31,false,17,xiao hong shu,112970,1.0,0.931252
+3503,pinduoduo vs temu,140,21,false,14,dewu,1660,1.0,0.983396
+3504,key opinion leader china,70,3,false,22,chinese influencers,2450,0.348738,0.810303
+3510,baidu trends,30,14,false,21,baidu tieba,3970,1.0,0.998668
+3511,what is tiktok like in china,10,15,false,39,china's tiktok,12770,1.0,0.717361
+3512,baidu search engine,1300,13,false,13,baidu search engine,3560,1.0,0.988859
+3516,taobao what is it,30,12,false,47,taobao mall,19270,0.695911,0.622651
+3518,consumer behaviour and culture,30,50,false,29,what is 996 culture,1920,1.0,0.582862
+3522,payment with wechat,3600,25,false,13,wechat pay,11850,0.746168,0.980474
+3529,lego distribution channel,30,61,false,22,barbie china,2320,0.881507,0.910778
+3533,chinese beauty ideal,1900,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+3556,starbucks competitor in china,90,53,false,61,imported spirits,18360,0.859468,0.9118
+3573,new toys china,30,61,false,22,barbie china,2320,1.0,0.910778
+3574,costco ownership china,50,34,false,26,costco china,14700,1.0,0.692672
+3591,chinese consulting companies,40,30,false,33,guanxi,4300,0.90953,0.657557
+3609,china second tier cities,30,0,false,14,china cities tier,1870,1.0,0.919594
+3623,what is tiktok called in china,210,15,false,39,china's tiktok,12770,1.0,0.717361
+3633,beauty standard china,170,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+3645,shenma search engine,30,5,false,52,chinese search engine,18000,1.0,0.908227
+3647,alibaba vs taobao,90,12,false,47,taobao mall,19270,0.159453,0.622651
+3650,china tiktok version,50,15,false,39,china's tiktok,12770,0.53177,0.717361
+3655,redbook china app,260,17,false,48,what is little red book,8520,1.0,0.937275
+3658,singles day 11th november,170,20,false,28,11-11 day,4080,1.0,0.726205
+3663,china online marketplace,40,54,false,15,chinese marketplace app,2030,1.0,0.939107
+3665,red book website,50,17,false,48,what is little red book,8520,0.86258,0.937275
+3667,china version of amazon,70,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+3671,chinese e commerce sites,320,52,false,76,china cross,12460,0.861161,0.704906
+3672,wechat group scan code,4400,28,false,182,hylink,55540,0.952093,0.981933
+3679,china online store,320,59,false,21,chinese online shopping,12160,0.541797,0.891961
+3680,omni channel ecommerce solution,40,52,false,76,china cross,12460,0.396718,0.704906
+3682,cross border e commerce platform,320,52,false,76,china cross,12460,0.460765,0.704906
+3685,wechat service,30,28,false,182,hylink,55540,1.0,0.981933
+3692,taobao livestream,30,12,false,47,taobao mall,19270,0.260707,0.622651
+3693,red book xiaohongshu,30,32,false,45,xiaohongshu,78650,0.292782,0.660984
+3694,subscription account wechat,70,28,false,182,hylink,55540,1.0,0.981933
+3696,what does xiao hong shu mean,480,31,false,17,xiao hong shu,112970,0.636406,0.931252
+3698,what does wechat do,30,28,false,182,hylink,55540,1.0,0.981933
+3699,group chat wechat,50,28,false,182,hylink,55540,1.0,0.981933
+3701,wechat wallet foreigners,40,25,false,13,wechat pay,11850,1.0,0.980474
+3702,what can you do with wechat,30,28,false,182,hylink,55540,1.0,0.981933
+3703,social media red,50,17,false,48,what is little red book,8520,1.0,0.937275
+3704,the little red book app,170,17,false,48,what is little red book,8520,1.0,0.937275
+3706,luxury fashion market in china post pandemic,210,68,false,26,luxury goods china,9540,1.0,0.759174
+3707,how many users does wechat have,30,28,false,182,hylink,55540,1.0,0.981933
+3712,kol marketing,590,56,false,29,marketing kol,4290,0.460005,0.70558
+3715,china fashion trends,50,66,false,24,china fashion,3380,1.0,0.783484
+3747,payment systems in china,90,26,false,34,payment in china,2240,1.0,0.786265
+3749,brand name clothing in china,40,70,false,13,china luxury brands,2920,1.0,0.999888
+3752,online marketplace china,40,54,false,15,chinese marketplace app,2030,1.0,0.939107
+3757,luxury goods consulting,90,68,false,26,luxury goods china,9540,1.0,0.759174
+3762,china toys market,30,61,false,22,barbie china,2320,1.0,0.910778
+3781,china medical device market,30,18,false,14,medical device regulation china,760,1.0,0.94841
+3783,china costco,1900,34,false,26,costco china,14700,1.0,0.692672
+3785,sephora cn,170,49,false,61,chinese beauty brands,7930,1.0,0.873949
+3786,rednote little red book,30,17,false,48,what is little red book,8520,1.0,0.937275
+3793,pet food market china,30,57,false,38,china market food,4690,0.736743,0.848422
+3799,aldi in china,40,62,false,57,china market,39670,1.0,0.935614
+3806,china cosmetic,70,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+3809,localization in china,30,-1,true,239,sogou,43770,0.0,0.0
+3818,online advertising in china,20,63,false,15,chinese advertising,1490,1.0,0.968289
+3825,search engines of china,1300,5,false,52,chinese search engine,18000,1.0,0.908227
+3828,branding agency china,30,-1,true,239,sogou,43770,0.0,0.0
+3829,china digital marketing,140,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+3830,marketing strategy in china,50,56,false,29,marketing kol,4290,0.632639,0.70558
+3831,pin duo duo china,20,21,false,14,dewu,1660,1.0,0.983396
+3833,chinese live streaming,170,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+3834,chinese video platform,70,41,false,12,chinese video sites,1000,1.0,1.0
+3836,china social app,140,35,false,107,chinese social media,16720,1.0,0.976552
+3837,wechat marketing agency,30,28,false,182,hylink,55540,1.0,0.981933
+3838,chinese live-streaming,170,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+3839,youtube china equivalent,70,36,false,28,youtube of china,4150,1.0,0.773399
+3841,koc stand for,30,55,false,25,wofe,3350,1.0,0.756131
+3842,taobao vs tmall,70,12,false,47,taobao mall,19270,0.173092,0.622651
+3843,behaviour of chinese,90,50,false,29,what is 996 culture,1920,0.269318,0.582862
+3845,douyin id,880,38,false,39,douyin,119660,0.876675,0.714357
+3852,digital marketing agency china,170,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+3853,barbie in china,210,61,false,22,barbie china,2320,0.790058,0.910778
+3856,distributor chinese,70,-1,true,239,sogou,43770,0.0,0.0
+3859,sina weibo what is it,140,24,false,55,weidian,12300,1.0,0.896853
+3862,how to make baidu account,70,6,false,15,baidu registration,1050,1.0,0.901863
+3863,seo on baidu,480,10,false,17,baidu seo optimization,4080,1.0,0.824796
+3869,xiaohongshu red note,30,32,false,45,xiaohongshu,78650,0.292782,0.660984
+3870,china skincare,880,49,false,61,chinese beauty brands,7930,1.0,0.873949
+3872,ad agency china,70,65,false,23,china marketing agency,1450,1.0,0.90367
+3874,group-buying platforms,50,-1,true,239,sogou,43770,0.0,0.0
+3876,china seo,260,4,false,13,search engine optimization china,2590,1.0,0.98599
+3877,china's social media,590,35,false,107,chinese social media,16720,1.0,0.976552
+3879,china version of tiktok,1000,15,false,39,china's tiktok,12770,0.704887,0.717361
+3883,cross border e commerce in china,50,52,false,76,china cross,12460,0.460765,0.704906
+3885,taobao e commerce,140,12,false,47,taobao mall,19270,1.0,0.622651
+3886,what does black symbolize in china,50,1,false,26,what does the color red symbolize in china,2640,0.887847,0.894708
+3893,redes sociales chinas,30,35,false,107,chinese social media,16720,1.0,0.976552
+3895,wechat palmpay,50,25,false,13,wechat pay,11850,1.0,0.980474
+3896,china top apps,40,35,false,107,chinese social media,16720,1.0,0.976552
+3897,pr agency china,50,65,false,23,china marketing agency,1450,1.0,0.90367
+3903,chinese e commerce market share,30,52,false,76,china cross,12460,0.985856,0.704906
+3908,chinese amazon alternative,70,48,false,27,chinese amazon equivalent,2520,0.88636,0.782227
+3909,china e commerce industry,320,52,false,76,china cross,12460,0.985856,0.704906
+3914,chinese online store like amazon,50,48,false,27,chinese amazon equivalent,2520,0.458313,0.782227
+3919,what is a douyin,90,37,false,12,what is douyin,2840,1.0,1.0
+3920,wechat story,40,28,false,182,hylink,55540,1.0,0.981933
+3922,youku tudou,590,36,false,28,youtube of china,4150,0.337638,0.773399
+3926,wechat public accounts,70,28,false,182,hylink,55540,1.0,0.981933
+3930,tim hortons china,110,53,false,61,imported spirits,18360,0.859468,0.9118
+3943,alcohol china,390,53,false,61,imported spirits,18360,1.0,0.9118
+3944,food industry in china,20,57,false,38,china market food,4690,1.0,0.848422
+3947,xiaohongshu users,30,32,false,45,xiaohongshu,78650,0.969365,0.660984
+3948,protein in china,30,57,false,38,china market food,4690,1.0,0.848422
+3952,china coffee market,30,53,false,61,imported spirits,18360,0.873579,0.9118
+3953,fashion trends in china,50,66,false,24,china fashion,3380,1.0,0.783484
+3958,baidu search engine marketing,30,10,false,17,baidu seo optimization,4080,1.0,0.824796
+3962,china cross border ecommerce,40,52,false,76,china cross,12460,0.460765,0.704906
+3964,lululemon china online,40,-1,true,239,sogou,43770,0.0,0.0
+3980,costco hangzhou,30,34,false,26,costco china,14700,0.850151,0.692672
+3985,what is 618,50,-1,true,239,sogou,43770,0.0,0.0
+3987,luxury shopping china,40,68,false,26,luxury goods china,9540,0.636271,0.759174
+3989,chinese consumers,90,50,false,29,what is 996 culture,1920,1.0,0.582862
+3992,baidu webmasters,30,10,false,17,baidu seo optimization,4080,0.64895,0.824796
+4006,shein expansion,170,-1,true,239,sogou,43770,0.0,0.0
+4008,what does little red book mean,10,17,false,48,what is little red book,8520,1.0,0.937275
+4013,branding in china,110,-1,true,239,sogou,43770,0.0,0.0
+4020,pop mart chinese,1900,8,false,17,popmart chinese,9430,1.0,0.882817
+4022,11/11 sales,320,20,false,28,11-11 day,4080,0.879431,0.726205
+4028,automotive market china,70,62,false,57,china market,39670,1.0,0.935614
+4037,market research industry in china,90,56,false,29,marketing kol,4290,0.45129,0.70558
+4042,market sizing example,320,56,false,29,marketing kol,4290,0.460005,0.70558
+4044,tmall,4400,11,false,36,tmall site,21260,0.864222,0.781541
+4045,douyin advertising,70,38,false,39,douyin,119660,0.534351,0.714357
+4051,tmall online shopping,70,11,false,36,tmall site,21260,0.732216,0.781541
+4053,taobao worldwide,110,12,false,47,taobao mall,19270,1.0,0.622651
+4054,china engine search,1300,5,false,52,chinese search engine,18000,0.719453,0.908227
+4056,jd e commerce,50,51,false,51,jing dong,19110,0.303759,0.639117
+4057,china brand cosmetics,30,49,false,61,chinese beauty brands,7930,0.98403,0.873949
+4060,search engines china,1300,5,false,52,chinese search engine,18000,1.0,0.908227
+4061,ads in china,210,63,false,15,chinese advertising,1490,1.0,0.968289
+4062,victoria's secret in china,90,-1,true,239,sogou,43770,0.0,0.0
+4063,what does douyin mean,480,37,false,12,what is douyin,2840,1.0,1.0
+4069,social media apps china,140,35,false,107,chinese social media,16720,1.0,0.976552
+4070,esports in china,90,-1,true,239,sogou,43770,0.0,0.0
+4075,chinese shopping apps,590,-1,true,239,sogou,43770,0.0,0.0
+4076,shanghai marketing agency,50,65,false,23,china marketing agency,1450,0.835368,0.90367
+4077,china's version of tiktok,1000,15,false,39,china's tiktok,12770,0.704887,0.717361
+4078,chinese top search engine,50,5,false,52,chinese search engine,18000,1.0,0.908227
+4080,how to use douyin,90,37,false,12,what is douyin,2840,1.0,1.0
+4081,weibo advertising,50,24,false,55,weidian,12300,1.0,0.896853
+4083,china social medias,720,35,false,107,chinese social media,16720,1.0,0.976552
+4085,pr in chinese,20,-1,true,239,sogou,43770,0.0,0.0
+4089,tmall app,90,11,false,36,tmall site,21260,0.708413,0.781541
+4090,what is china's version of youtube,30,36,false,28,youtube of china,4150,0.790813,0.773399
+4091,ecommerce calendar 2025,30,52,false,76,china cross,12460,0.403907,0.704906
+4092,china kol,70,55,false,25,wofe,3350,0.55229,0.756131
+4093,chinese online retailers,210,60,false,15,china retail,4860,1.0,0.998199
+4094,mlb in china,110,-1,true,239,sogou,43770,0.0,0.0
+4095,chinese e-commerce sites,320,52,false,76,china cross,12460,0.561935,0.704906
+4096,market online china,70,54,false,15,chinese marketplace app,2030,1.0,0.939107
+4097,shopping website in china,720,59,false,21,chinese online shopping,12160,0.640383,0.891961
+4098,online shopping china,40,59,false,21,chinese online shopping,12160,1.0,0.891961
+4100,icp china,170,23,false,22,fliggy,6960,1.0,0.603641
+4105,chinese payment systems,50,26,false,34,payment in china,2240,1.0,0.786265
+4107,jd worldwide,720,51,false,51,jing dong,19110,1.0,0.639117
+4108,douyin live streaming,210,-1,true,239,sogou,43770,0.0,0.0
+4109,xiaohongshu in chinese characters,10,32,false,45,xiaohongshu,78650,0.919863,0.660984
+4111,how to invest in rednote,140,16,false,28,rednote chinese name,5400,0.286317,0.63899
+4112,redbook social media,170,17,false,48,what is little red book,8520,1.0,0.937275
+4137,china sephora,90,49,false,61,chinese beauty brands,7930,1.0,0.873949
+4147,international women's day china,50,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+4156,luxury items in china,480,68,false,26,luxury goods china,9540,0.854699,0.759174
+4158,xiaohongshu owner,10,32,false,45,xiaohongshu,78650,0.856695,0.660984
+4161,shein marketing,40,-1,true,239,sogou,43770,0.0,0.0
+4163,top chinese brands,70,70,false,13,china luxury brands,2920,1.0,0.999888
+4167,advertisements in china,210,63,false,15,chinese advertising,1490,1.0,0.968289
+4178,china marketing strategies,50,56,false,29,marketing kol,4290,0.565971,0.70558
+4179,legal drinking age china,3600,53,false,61,imported spirits,18360,1.0,0.9118
+4184,gmv 1.1,260,51,false,51,jing dong,19110,0.423766,0.639117
+4194,ecommerce companies in china,90,52,false,76,china cross,12460,1.0,0.704906
+4200,daxue,90,-1,true,239,sogou,43770,0.0,0.0
+4213,china counterfeiting,30,-1,true,239,sogou,43770,0.0,0.0
+4216,imported spirits,6600,53,false,61,imported spirits,18360,1.0,0.9118
+4217,wechat moments ad,30,28,false,182,hylink,55540,1.0,0.981933
+4221,taobao e-commerce,140,12,false,47,taobao mall,19270,0.532987,0.622651
+4224,chinese e commerce companies,140,52,false,76,china cross,12460,0.816073,0.704906
+4225,wechat moment ad,40,28,false,182,hylink,55540,1.0,0.981933
+4227,what is weibo in china,50,24,false,55,weidian,12300,1.0,0.896853
+4228,how to sell to china online,50,39,false,14,what do we sell to china,1000,1.0,0.916743
+4233,marketing firms in china,110,-1,true,239,sogou,43770,0.0,0.0
+4235,fitness-china,40,-1,true,239,sogou,43770,0.0,0.0
+4237,china seo agency,210,4,false,13,search engine optimization china,2590,1.0,0.98599
+4238,how to create xiaohongshu account,40,32,false,45,xiaohongshu,78650,0.383706,0.660984
+4239,chinese search engines baidu,170,13,false,13,baidu search engine,3560,1.0,0.988859
+4244,chinese generations,20,46,false,18,baozun,1760,1.0,1.0
+4247,wechat moment advertising,40,28,false,182,hylink,55540,1.0,0.981933
+4248,facebook in china alternative,30,35,false,107,chinese social media,16720,1.0,0.976552
+4250,tmall global english,30,11,false,36,tmall site,21260,0.514046,0.781541
+4252,sell in china,70,39,false,14,what do we sell to china,1000,1.0,0.916743
+4255,chinese consumer,70,50,false,29,what is 996 culture,1920,1.0,0.582862
+4256,baidu and google,40,13,false,13,baidu search engine,3560,1.0,0.988859
+4257,chinese live streaming app,110,42,false,35,chinese streaming platforms,3380,0.656402,0.741336
+4260,what is china search engine,70,5,false,52,chinese search engine,18000,1.0,0.908227
+4263,what sports are popular in china,590,-1,true,239,sogou,43770,0.0,0.0
+4264,china cosmetics brand,30,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+4265,new chinese social media app,50,35,false,107,chinese social media,16720,1.0,0.976552
+4267,wechat advertising agency,30,28,false,182,hylink,55540,1.0,0.981933
+4268,pin duo duo temu,40,21,false,14,dewu,1660,1.0,0.983396
+4272,xiaohongshu hashtags,40,32,false,45,xiaohongshu,78650,0.81086,0.660984
+4273,kaola website,20,55,false,25,wofe,3350,1.0,0.756131
+4277,food delivery apps china,70,43,false,15,china food delivery app,2550,1.0,0.997569
+4278,qr codes in china,110,-1,true,239,sogou,43770,0.0,0.0
+4280,what is chinese tiktok called,110,15,false,39,china's tiktok,12770,0.704887,0.717361
+4283,vips shop,480,45,false,16,vipshop,3150,1.0,0.998396
+4284,chinese live streaming platforms,30,42,false,35,chinese streaming platforms,3380,0.656402,0.741336
+4289,livestream in chinese,50,42,false,35,chinese streaming platforms,3380,0.991671,0.741336
+4290,streaming china,170,42,false,35,chinese streaming platforms,3380,0.656402,0.741336
+4291,chinese ecommerce giant,320,52,false,76,china cross,12460,0.861161,0.704906
+4292,china e commerce website,320,52,false,76,china cross,12460,0.749474,0.704906
+4296,internet content provider china,170,-1,true,239,sogou,43770,0.0,0.0
+4297,wechat mini program development,50,27,false,22,wechat mini programs,2410,1.0,0.832545
+4304,xiaohongshu marketing,70,32,false,45,xiaohongshu,78650,0.413838,0.660984
+4305,douyin e commerce,70,-1,true,239,sogou,43770,0.0,0.0
+4308,dewu,720,21,false,14,dewu,1660,1.0,0.983396
+4309,wechat top stories,40,28,false,182,hylink,55540,1.0,0.981933
+4310,newrank,390,16,false,28,rednote chinese name,5400,0.857815,0.63899
+4311,wechat post video,30,28,false,182,hylink,55540,1.0,0.981933
+4314,wechat marketing,140,28,false,182,hylink,55540,1.0,0.981933
+4316,what is bilibili in china,30,33,false,14,what is bilibili,2260,0.225828,0.909239
+4322,china fragrance,170,49,false,61,chinese beauty brands,7930,0.618535,0.873949
+4326,household savings rate china,30,9,false,24,average wage china,29410,0.576904,0.800411
+4327,9-9-6 china,140,62,false,57,china market,39670,0.88409,0.935614
+4340,fitness in china,40,-1,true,239,sogou,43770,0.0,0.0
+4344,influencer marketing in china,30,3,false,22,chinese influencers,2450,1.0,0.810303
+4346,carrefour china,70,60,false,15,china retail,4860,0.979292,0.998199
+4354,coca cola and china,210,53,false,61,imported spirits,18360,1.0,0.9118
+4361,judydoll china,40,51,false,51,jing dong,19110,0.299183,0.639117
+4372,gift giving in chinese culture,90,7,false,34,chinese new year by sales,4430,1.0,0.62116
+4377,9-9-6 culture,70,50,false,29,what is 996 culture,1920,0.118097,0.582862
+4382,china cities tier,590,0,false,14,china cities tier,1870,1.0,0.919594
+4383,wechat china payment,110,26,false,34,payment in china,2240,0.570443,0.786265
+4390,chinese android app stores,40,-1,true,239,sogou,43770,0.0,0.0
+4395,lululemon chinese,390,-1,true,239,sogou,43770,0.0,0.0
+4397,popular pets in china,30,-1,true,239,sogou,43770,0.0,0.0
+4400,social media marketing in china,90,35,false,107,chinese social media,16720,1.0,0.976552
+4401,animal testing in china,110,-1,true,239,sogou,43770,0.0,0.0
+4402,what is a koc,40,55,false,25,wofe,3350,1.0,0.756131
+4403,tmall website in english,260,11,false,36,tmall site,21260,0.457538,0.781541
+4404,china marketing,210,62,false,57,china market,39670,0.72786,0.935614
+4405,tmall and taobao,90,12,false,47,taobao mall,19270,0.126118,0.622651
+4406,douyin def,20,38,false,39,douyin,119660,1.0,0.714357
+4407,china social media marketing,90,35,false,107,chinese social media,16720,1.0,0.976552
+4408,chinese livestream,170,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+4409,what does china use instead of youtube,40,36,false,28,youtube of china,4150,1.0,0.773399
+4410,xiaohongshu create account,10,32,false,45,xiaohongshu,78650,0.538534,0.660984
+4411,kuaishou china,30,-1,true,239,sogou,43770,0.0,0.0
+4414,baijiahao,50,6,false,15,baidu registration,1050,0.442872,0.901863
+4423,qr code in china,110,-1,true,239,sogou,43770,0.0,0.0
+4424,vip com in english,70,45,false,16,vipshop,3150,1.0,0.998396
+4428,china fragrances,170,49,false,61,chinese beauty brands,7930,0.670642,0.873949
+4433,what is kuaishou,70,-1,true,239,sogou,43770,0.0,0.0
+4437,alcohol consumption china,30,53,false,61,imported spirits,18360,1.0,0.9118
+4441,kols in china,70,55,false,25,wofe,3350,0.55229,0.756131
+4442,second-tier city china,30,0,false,14,china cities tier,1870,1.0,0.919594
+4443,china b2b marketing,30,-1,true,239,sogou,43770,0.0,0.0
+4445,taobao china,1600,12,false,47,taobao mall,19270,0.713438,0.622651
+4447,is douyin rednote,50,29,false,14,douyin/tiktok,3150,0.370835,0.945894
+4450,chinese social media sites,110,35,false,107,chinese social media,16720,1.0,0.976552
+4451,youzan,90,46,false,18,baozun,1760,1.0,1.0
+4452,douyin tiktok china,30,29,false,14,douyin/tiktok,3150,1.0,0.945894
+4453,chinese digital marketing,140,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+4454,distribution in china,140,-1,true,239,sogou,43770,0.0,0.0
+4456,most popular social network in china,70,35,false,107,chinese social media,16720,1.0,0.976552
+4457,search engine which is most popular in china is,30,5,false,52,chinese search engine,18000,1.0,0.908227
+4463,chinese payment methods,30,26,false,34,payment in china,2240,0.700474,0.786265
+4464,red note vs tiktok,20,15,false,39,china's tiktok,12770,0.109438,0.717361
+4469,little red book app china,20,17,false,48,what is little red book,8520,1.0,0.937275
+4470,vipshop china,50,45,false,16,vipshop,3150,1.0,0.998396
+4471,cosmetics industry in china,70,49,false,61,chinese beauty brands,7930,1.0,0.873949
+4472,cross border e-commerce china,40,52,false,76,china cross,12460,0.460765,0.704906
+4475,chinese ecommerce website,320,52,false,76,china cross,12460,0.694414,0.704906
+4479,chinese live streamers,170,42,false,35,chinese streaming platforms,3380,1.0,0.741336
+4481,china ecommerce,320,52,false,76,china cross,12460,0.635467,0.704906
+4482,social commerce in china,20,35,false,107,chinese social media,16720,0.911815,0.976552
+4483,fashion trends china,50,66,false,24,china fashion,3380,1.0,0.783484
+4484,chinese companies like amazon,70,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+4485,top china search engines,210,5,false,52,chinese search engine,18000,1.0,0.908227
+4486,jd chinese website,70,51,false,51,jing dong,19110,0.510388,0.639117
+4487,chinese retailers online,50,60,false,15,china retail,4860,1.0,0.998199
+4488,what is the wechat app,170,28,false,182,hylink,55540,1.0,0.981933
+4489,wechat mini,30,27,false,22,wechat mini programs,2410,1.0,0.832545
+4491,wechat newsletter,170,28,false,182,hylink,55540,1.0,0.981933
+4495,what is bilibili,1300,33,false,14,what is bilibili,2260,1.0,0.909239
+4496,little red book china app,70,17,false,48,what is little red book,8520,1.0,0.937275
+4497,douyin ads,70,38,false,39,douyin,119660,0.428172,0.714357
+4498,china double 11,50,20,false,28,11-11 day,4080,0.446221,0.726205
+4499,little red book chinese,720,17,false,48,what is little red book,8520,0.819361,0.937275
+4500,wechat ai,70,28,false,182,hylink,55540,1.0,0.981933
+4501,social apps china,140,35,false,107,chinese social media,16720,1.0,0.976552
+4502,wechat official account,210,28,false,182,hylink,55540,1.0,0.981933
+4504,cosmetic brands china,30,49,false,61,chinese beauty brands,7930,1.0,0.873949
+4505,supplements in china,20,57,false,38,china market food,4690,0.574698,0.848422
+4507,key opinion leaders china,70,3,false,22,chinese influencers,2450,0.414916,0.810303
+4510,china's e-commerce market,50,52,false,76,china cross,12460,0.985856,0.704906
+4511,marketing strategy china,50,56,false,29,marketing kol,4290,0.548488,0.70558
+4513,paid search in china,30,5,false,52,chinese search engine,18000,1.0,0.908227
+4514,chinese marketing agency,70,65,false,23,china marketing agency,1450,0.70193,0.90367
+4515,baidu search engine optimization,480,10,false,17,baidu seo optimization,4080,1.0,0.824796
+4516,china digital agency,70,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+4517,china streamers,210,42,false,35,chinese streaming platforms,3380,0.524032,0.741336
+4518,chinese douyin,320,-1,true,239,sogou,43770,0.0,0.0
+4519,chinese live streams,170,42,false,35,chinese streaming platforms,3380,0.859052,0.741336
+4521,chinese social network,50,35,false,107,chinese social media,16720,1.0,0.976552
+4522,douyin meaning fashion,210,38,false,39,douyin,119660,0.450334,0.714357
+4523,xiaohongshu advertising,70,32,false,45,xiaohongshu,78650,0.467835,0.660984
+4525,china's search engine,90,5,false,52,chinese search engine,18000,1.0,0.908227
+4527,watches in china market,40,62,false,57,china market,39670,1.0,0.935614
+4528,taobao mall,4400,12,false,47,taobao mall,19270,0.954563,0.622651
+4529,china marketing strategy,50,56,false,29,marketing kol,4290,0.66533,0.70558
+4532,jd.com online shopping,260,51,false,51,jing dong,19110,1.0,0.639117
+4533,jing dong china,170,51,false,51,jing dong,19110,0.624585,0.639117
+4534,tik tok in china name,40,15,false,39,china's tiktok,12770,1.0,0.717361
+4535,jd.com china,210,51,false,51,jing dong,19110,0.662785,0.639117
+4541,retail stores in china,1600,60,false,15,china retail,4860,1.0,0.998199
+4543,alibaba sales singles day,40,19,false,25,single day 2025,7500,0.781728,0.885399
+4544,jd shopping,90,51,false,51,jing dong,19110,0.716529,0.639117
+4546,julian reis superordinary,30,51,false,51,jing dong,19110,0.291873,0.639117
+4548,chat apps for china,30,35,false,107,chinese social media,16720,1.0,0.976552
+4551,customer data platform consulting,30,30,false,33,guanxi,4300,0.791818,0.657557
+4556,wechat what is it,50,28,false,182,hylink,55540,1.0,0.981933
+4557,wechat functions,50,28,false,182,hylink,55540,1.0,0.981933
+4558,wepay china,40,26,false,34,payment in china,2240,0.711924,0.786265
+4559,double 11 shopping festival,30,20,false,28,11-11 day,4080,0.544741,0.726205
+4561,wechat moment,260,28,false,182,hylink,55540,1.0,0.981933
+4563,weibo ad,50,24,false,55,weidian,12300,1.0,0.896853
+4571,calvin klein china,110,69,false,13,gucci in china,2590,1.0,0.975403
+4589,cosmetic industry china,70,49,false,61,chinese beauty brands,7930,0.79051,0.873949
+4596,11/11 singles day,210,20,false,28,11-11 day,4080,1.0,0.726205
+4597,pet food in china,40,57,false,38,china market food,4690,0.736743,0.848422
+4598,is rednote xiaohongshu,110,32,false,45,xiaohongshu,78650,0.289494,0.660984
+4603,beauty trends in asia,30,47,false,17,chinese beauty ideal,6270,0.427772,0.915839
+4611,how to get douyin,260,-1,true,239,sogou,43770,0.0,0.0
+4612,what is weidian,50,24,false,55,weidian,12300,0.788949,0.896853
+4620,xiao hong shu fashion,40,31,false,17,xiao hong shu,112970,0.941088,0.931252
+4625,sustainable china,70,50,false,29,what is 996 culture,1920,0.153979,0.582862
+4636,fast fashion in china,40,66,false,24,china fashion,3380,1.0,0.783484
+4639,medical device classification in china,50,18,false,14,medical device regulation china,760,1.0,0.94841
+4671,translate xiaohongshu,10,32,false,45,xiaohongshu,78650,0.492472,0.660984
+4674,china kols,70,55,false,25,wofe,3350,0.55229,0.756131
+4681,rednote name in chinese,140,16,false,28,rednote chinese name,5400,0.537979,0.63899
+4683,kols in marketing,480,56,false,29,marketing kol,4290,0.460005,0.70558
+4688,subcultures of china,30,50,false,29,what is 996 culture,1920,0.118097,0.582862
+4694,smart home in china,30,44,false,16,ikea china,1420,1.0,0.938969
+4712,is douyin the same as tiktok,110,29,false,14,douyin/tiktok,3150,1.0,0.945894
+4718,china spirits,590,-1,true,239,sogou,43770,0.0,0.0
+4726,beer market china,30,53,false,61,imported spirits,18360,1.0,0.9118
+4728,search engine in china english,90,5,false,52,chinese search engine,18000,1.0,0.908227
+4730,china food habits,40,-1,true,239,sogou,43770,0.0,0.0
+4731,weibo english,320,24,false,55,weidian,12300,1.0,0.896853
+4733,little red book in chinese,480,17,false,48,what is little red book,8520,0.741982,0.937275
+4735,toy market in china,30,61,false,22,barbie china,2320,0.459132,0.910778
+4738,water purifiers in china,50,-1,true,239,sogou,43770,0.0,0.0
+4743,second tier city china,30,0,false,14,china cities tier,1870,1.0,0.919594
+4747,china e commerce market,50,52,false,76,china cross,12460,0.985856,0.704906
+4748,douyin vs xiaohongshu,40,-1,true,239,sogou,43770,0.0,0.0
+4751,alipay account,140,27,false,22,wechat mini programs,2410,0.588302,0.832545
+4752,what does the color red symbolize in china,210,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+4753,water filter in china,50,-1,true,239,sogou,43770,0.0,0.0
+4754,social media of china,720,35,false,107,chinese social media,16720,1.0,0.976552
+4755,negotiation in china,1300,-1,true,239,sogou,43770,0.0,0.0
+4759,rednote vs tiktok,70,15,false,39,china's tiktok,12770,0.093011,0.717361
+4761,sina weibo english,30,24,false,55,weidian,12300,1.0,0.896853
+4765,how to create alipay account,30,27,false,22,wechat mini programs,2410,0.588302,0.832545
+4766,does rednote pay creators,480,16,false,28,rednote chinese name,5400,0.286317,0.63899
+4769,how to advertise in baidu,20,14,false,21,baidu tieba,3970,0.972029,0.998668
+4771,asian amazon equivalent,40,48,false,27,chinese amazon equivalent,2520,0.384142,0.782227
+4774,chinese company like amazon,70,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+4777,china website taobao,1600,12,false,47,taobao mall,19270,0.656155,0.622651
+4780,what is redbook social media,20,17,false,48,what is little red book,8520,0.78067,0.937275
+4783,little red app,30,17,false,48,what is little red book,8520,0.924105,0.937275
+4785,xiao hong shu online,30,31,false,17,xiao hong shu,112970,1.0,0.931252
+4786,douyin data,30,38,false,39,douyin,119660,0.373929,0.714357
+4787,douyin register,30,38,false,39,douyin,119660,1.0,0.714357
+4789,upload video to wechat,30,28,false,182,hylink,55540,1.0,0.981933
+4790,how to set up wechat,70,28,false,182,hylink,55540,1.0,0.981933
+4793,wechat number of users,30,28,false,182,hylink,55540,1.0,0.981933
+4795,da zhong dian ping,50,2,false,14,dianping,3560,1.0,0.989164
+4800,wechat user numbers,30,28,false,182,hylink,55540,1.0,0.981933
+4802,is tiktok shop from china,50,15,false,39,china's tiktok,12770,0.978784,0.717361
+4803,the china market,50,62,false,57,china market,39670,1.0,0.935614
+4809,what is red book social media,20,17,false,48,what is little red book,8520,1.0,0.937275
+4816,singles day when,1000,19,false,25,single day 2025,7500,1.0,0.885399
+4822,wechat article,30,28,false,182,hylink,55540,1.0,0.981933
+4826,chinese new year by sales,590,7,false,34,chinese new year by sales,4430,0.380189,0.62116
+4831,e commerce enabler,40,-1,true,239,sogou,43770,0.0,0.0
+4842,organic food china,20,57,false,38,china market food,4690,1.0,0.848422
+4848,china national medical product administration,30,18,false,14,medical device regulation china,760,1.0,0.94841
+4855,chinese sportswear companies,70,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+4862,brand name in chinese,90,70,false,13,china luxury brands,2920,1.0,0.999888
+4877,counterfeits in china,140,-1,true,239,sogou,43770,0.0,0.0
+4895,tommy hilfiger china,50,69,false,13,gucci in china,2590,1.0,0.975403
+4908,china sam's club,140,34,false,26,costco china,14700,0.207735,0.692672
+4911,pr agencies in china,50,65,false,23,china marketing agency,1450,1.0,0.90367
+4914,china mother's day,390,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+4915,china advertising agency,50,65,false,23,china marketing agency,1450,1.0,0.90367
+4916,baidu seo agency,110,10,false,17,baidu seo optimization,4080,1.0,0.824796
+4917,mooncake in china,40,58,false,15,blue ocean china,3550,1.0,0.991995
+4918,weibo in english,320,24,false,55,weidian,12300,1.0,0.896853
+4931,meaning of colors in china,30,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+4934,is tiktok used in china,40,15,false,39,china's tiktok,12770,0.973724,0.717361
+4947,demographics of luxury consumers,30,68,false,26,luxury goods china,9540,1.0,0.759174
+4948,costco china website,40,34,false,26,costco china,14700,1.0,0.692672
+4963,moon festival gift,210,7,false,34,chinese new year by sales,4430,1.0,0.62116
+4969,china healthcare,320,-1,true,239,sogou,43770,0.0,0.0
+4974,yogurt in china,70,58,false,15,blue ocean china,3550,1.0,0.991995
+4978,china pet food,40,57,false,38,china market food,4690,0.736743,0.848422
+4980,china on luxury brands,70,68,false,26,luxury goods china,9540,0.399107,0.759174
+5000,business practice in china,20,40,false,26,register company in china,2240,1.0,0.823878
+5013,what does redbook mean,20,17,false,48,what is little red book,8520,1.0,0.937275
+5015,major retailers in china,20,60,false,15,china retail,4860,1.0,0.998199
+5035,ralph lauren china,390,69,false,13,gucci in china,2590,1.0,0.975403
+5036,china lego brand,110,61,false,22,barbie china,2320,0.974356,0.910778
+5043,cereal market share,40,53,false,61,imported spirits,18360,0.359124,0.9118
+5044,china counterfeit laws,30,-1,true,239,sogou,43770,0.0,0.0
+5045,hong kong consumer behaviour trends,30,50,false,29,what is 996 culture,1920,1.0,0.582862
+5046,china consultants,70,30,false,33,guanxi,4300,1.0,0.657557
+5050,china fashion industry,30,66,false,24,china fashion,3380,0.489819,0.783484
+5057,judydoll in chinese,30,51,false,51,jing dong,19110,0.408308,0.639117
+5062,medical device industry in china,50,18,false,14,medical device regulation china,760,1.0,0.94841
+5068,chocolate china,90,58,false,15,blue ocean china,3550,1.0,0.991995
+5072,taobao china website,1600,12,false,47,taobao mall,19270,0.501062,0.622651
+5078,fashion industry china,30,66,false,24,china fashion,3380,1.0,0.783484
+5080,suning china,40,-1,true,239,sogou,43770,0.0,0.0
+5083,taobao international,260,12,false,47,taobao mall,19270,0.609536,0.622651
+5084,search engines in china with english,90,5,false,52,chinese search engine,18000,1.0,0.908227
+5085,registration company in china,210,40,false,26,register company in china,2240,0.676309,0.823878
+5086,what does the color black mean in china,50,1,false,26,what does the color red symbolize in china,2640,0.887847,0.894708
+5097,what are chinese beauty standards,30,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+5102,china data privacy law,90,22,false,17,chinese data privacy laws,990,0.753999,0.895423
+5103,size of china's middle class,40,9,false,24,average wage china,29410,1.0,0.800411
+5106,chinese tier cities,70,0,false,14,china cities tier,1870,1.0,0.919594
+5109,meituan company,70,2,false,14,dianping,3560,1.0,0.989164
+5111,internet laws in china,30,-1,true,239,sogou,43770,0.0,0.0
+5120,watch market in china,40,62,false,57,china market,39670,1.0,0.935614
+5125,l'oréal china,70,49,false,61,chinese beauty brands,7930,1.0,0.873949
+5131,tiktok name in china,50,15,false,39,china's tiktok,12770,1.0,0.717361
+5140,luxury goods china,1900,68,false,26,luxury goods china,9540,0.92963,0.759174
+5143,what is the little red book china,30,17,false,48,what is little red book,8520,0.927548,0.937275
+5167,china medical devices market,30,18,false,14,medical device regulation china,760,0.580058,0.94841
+5170,coach inc competitors,140,30,false,33,guanxi,4300,1.0,0.657557
+5172,nespresso in china,40,53,false,61,imported spirits,18360,0.989229,0.9118
+5174,sam's club shanghai,50,34,false,26,costco china,14700,0.207735,0.692672
+5180,china alcohol laws,50,-1,true,239,sogou,43770,0.0,0.0
+5187,country of origin effects,170,-1,true,239,sogou,43770,0.0,0.0
+5197,guochao fashion,90,-1,true,239,sogou,43770,0.0,0.0
+5201,china payment app,70,26,false,34,payment in china,2240,0.404059,0.786265
+5207,china joint ventures,70,-1,true,239,sogou,43770,0.0,0.0
+5211,perfume market in china,30,49,false,61,chinese beauty brands,7930,0.610408,0.873949
+5223,significance of red in china,50,1,false,26,what does the color red symbolize in china,2640,0.866465,0.894708
+5225,chinese tiktok douyin,140,29,false,14,douyin/tiktok,3150,1.0,0.945894
+5231,beverages in china,90,53,false,61,imported spirits,18360,1.0,0.9118
+5236,chinese beauty,1600,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+5241,taobao world,110,12,false,47,taobao mall,19270,0.453598,0.622651
+5243,what search engine to use in china,90,5,false,52,chinese search engine,18000,0.961201,0.908227
+5250,search engines for china,1300,5,false,52,chinese search engine,18000,1.0,0.908227
+5252,how to create baidu account,70,6,false,15,baidu registration,1050,1.0,0.901863
+5253,china perfume market,30,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+5256,j d china,590,51,false,51,jing dong,19110,0.621456,0.639117
+5274,coffee consumption in china,30,53,false,61,imported spirits,18360,0.91923,0.9118
+5277,chinese brand name,90,70,false,13,china luxury brands,2920,1.0,0.999888
+5288,is tiktok different in china,40,15,false,39,china's tiktok,12770,0.817986,0.717361
+5306,negotiating in china,1300,-1,true,239,sogou,43770,0.0,0.0
+5318,dolce and gabbana in china,110,69,false,13,gucci in china,2590,1.0,0.975403
+5324,medical devices china,50,18,false,14,medical device regulation china,760,1.0,0.94841
+5327,beauty standard in china,50,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+5329,china food distribution,50,57,false,38,china market food,4690,0.416136,0.848422
+5333,chinese consulting company,40,30,false,33,guanxi,4300,1.0,0.657557
+5337,china market research,90,-1,true,239,sogou,43770,0.0,0.0
+5353,is popmart from china,140,8,false,17,popmart chinese,9430,0.224289,0.882817
+5360,china food delivery app,1600,43,false,15,china food delivery app,2550,1.0,0.997569
+5361,chinese google equivalent,50,5,false,52,chinese search engine,18000,0.771979,0.908227
+5363,largest search engine in china,210,5,false,52,chinese search engine,18000,1.0,0.908227
+5370,urban chinese street fashion,50,66,false,24,china fashion,3380,0.491249,0.783484
+5374,taobao web,1600,12,false,47,taobao mall,19270,1.0,0.622651
+5376,coffee business in china,140,53,false,61,imported spirits,18360,1.0,0.9118
+5377,douyin/tiktok,880,29,false,14,douyin/tiktok,3150,1.0,0.945894
+5382,chinese new year shopping,40,7,false,34,chinese new year by sales,4430,0.380189,0.62116
+5393,guochao,260,-1,true,239,sogou,43770,0.0,0.0
+5400,under armour in china,90,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+5410,china food delivery companies,30,43,false,15,china food delivery app,2550,1.0,0.997569
+5417,china public relations,40,65,false,23,china marketing agency,1450,0.850235,0.90367
+5421,drinks in china,480,53,false,61,imported spirits,18360,0.90228,0.9118
+5426,coo effect,170,55,false,25,wofe,3350,0.545489,0.756131
+5434,pop mart in china,90,8,false,17,popmart chinese,9430,1.0,0.882817
+5449,smartphone market in china,40,-1,true,239,sogou,43770,0.0,0.0
+5465,business consulting china,10,30,false,33,guanxi,4300,0.389911,0.657557
+5481,baidu register,90,6,false,15,baidu registration,1050,0.501855,0.901863
+5482,biggest holiday in china,30,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+5492,weibo international,260,24,false,55,weidian,12300,1.0,0.896853
+5499,tiktok usage in china,30,15,false,39,china's tiktok,12770,0.942481,0.717361
+5503,can you start a business in china,30,40,false,26,register company in china,2240,1.0,0.823878
+5507,weibo app in english,40,24,false,55,weidian,12300,1.0,0.896853
+5509,sial china shanghai,40,62,false,57,china market,39670,0.881884,0.935614
+5514,packaging design china,30,-1,true,239,sogou,43770,0.0,0.0
+5517,chinese search engines,170,5,false,52,chinese search engine,18000,0.689313,0.908227
+5518,what is meituan,40,2,false,14,dianping,3560,1.0,0.989164
+5522,how to set up wechat pay,210,28,false,182,hylink,55540,1.0,0.981933
+5523,chinese single day,90,19,false,25,single day 2025,7500,1.0,0.885399
+5524,what is single day,1300,19,false,25,single day 2025,7500,1.0,0.885399
+5527,chinese new year infographic,20,7,false,34,chinese new year by sales,4430,0.380189,0.62116
+5528,omni-channel ecommerce solution,40,52,false,76,china cross,12460,0.396718,0.704906
+5532,brandy melville in china,50,70,false,13,china luxury brands,2920,1.0,0.999888
+5533,china digital marketing agency,170,64,false,23,digital marketing agency in china,2240,0.706286,0.882914
+5534,china's amazon,110,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+5536,china's equivalent to amazon,40,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+5539,wechat crm,40,28,false,182,hylink,55540,1.0,0.981933
+5547,e-commerce enabler,40,-1,true,239,sogou,43770,0.0,0.0
+5554,what is the chinese beauty standard,30,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+5556,energy drinks in china,50,53,false,61,imported spirits,18360,1.0,0.9118
+5558,consumers in china,50,50,false,29,what is 996 culture,1920,0.723718,0.582862
+5581,is costco in china,110,34,false,26,costco china,14700,1.0,0.692672
+5603,first-tier cities in china,70,0,false,14,china cities tier,1870,1.0,0.919594
+5606,under armour china,90,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+5629,china beauty makeup,50,49,false,61,chinese beauty brands,7930,1.0,0.873949
+5635,costa coffee china,30,53,false,61,imported spirits,18360,1.0,0.9118
+5637,skin care china,50,49,false,61,chinese beauty brands,7930,1.0,0.873949
+5646,shopping apps in china,30,-1,true,239,sogou,43770,0.0,0.0
+5647,luxury brand china,480,68,false,26,luxury goods china,9540,0.494431,0.759174
+5648,exporting food to china,20,57,false,38,china market food,4690,1.0,0.848422
+5651,biggest chinese holidays,50,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+5652,what is tiktok in china,50,15,false,39,china's tiktok,12770,1.0,0.717361
+5654,weibo.com english version,50,24,false,55,weidian,12300,1.0,0.896853
+5657,china luxury,480,-1,true,239,sogou,43770,0.0,0.0
+5666,business consulting in china,50,30,false,33,guanxi,4300,0.601613,0.657557
+5669,baidu account create,70,6,false,15,baidu registration,1050,1.0,0.901863
+5671,secoo,170,-1,true,239,sogou,43770,0.0,0.0
+5675,nov 11 in china,50,20,false,28,11-11 day,4080,0.446221,0.726205
+5677,how to work wechat,210,28,false,182,hylink,55540,1.0,0.981933
+5682,double 11 china,50,20,false,28,11-11 day,4080,0.446221,0.726205
+5683,yitiao,30,2,false,14,dianping,3560,1.0,0.989164
+5687,what alcohol do chinese drink,70,53,false,61,imported spirits,18360,1.0,0.9118
+5693,international women's day in china,50,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+5700,alo china,90,62,false,57,china market,39670,1.0,0.935614
+5703,popmart annual report,30,8,false,17,popmart chinese,9430,1.0,0.882817
+5734,mobile payments in china,70,26,false,34,payment in china,2240,0.580223,0.786265
+5735,blind boxes china,40,62,false,57,china market,39670,0.812703,0.935614
+5736,china fast fashion,30,66,false,24,china fashion,3380,1.0,0.783484
+5738,chinese live shopping,50,42,false,35,chinese streaming platforms,3380,0.406232,0.741336
+5742,china-china alcohol,390,53,false,61,imported spirits,18360,1.0,0.9118
+5747,china mobile payments,70,26,false,34,payment in china,2240,0.719189,0.786265
+5755,sam's club china website,20,34,false,26,costco china,14700,0.207735,0.692672
+5765,china medical device market access,30,18,false,14,medical device regulation china,760,1.0,0.94841
+5771,winona china,170,58,false,15,blue ocean china,3550,1.0,0.991995
+5777,average china wage,5400,9,false,24,average wage china,29410,0.575899,0.800411
+5780,patagonia china,50,62,false,57,china market,39670,1.0,0.935614
+5784,popular toys in china,30,61,false,22,barbie china,2320,0.547263,0.910778
+5786,china's instagram,210,35,false,107,chinese social media,16720,1.0,0.976552
+5787,chinese red app,70,17,false,48,what is little red book,8520,1.0,0.937275
+5788,qihoo 360 search engine,90,5,false,52,chinese search engine,18000,0.80267,0.908227
+5790,beverage china,720,53,false,61,imported spirits,18360,0.902996,0.9118
+5793,youku chinese,90,36,false,28,youtube of china,4150,0.371857,0.773399
+5794,china business opportunity,30,40,false,26,register company in china,2240,0.786813,0.823878
+5802,equivalent of amazon in china,50,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+5805,wechat official,30,28,false,182,hylink,55540,1.0,0.981933
+5811,suning commerce,30,-1,true,239,sogou,43770,0.0,0.0
+5812,open wechat account,140,28,false,182,hylink,55540,1.0,0.981933
+5813,home accessories in china,30,44,false,16,ikea china,1420,1.0,0.938969
+5814,toys expo china,50,61,false,22,barbie china,2320,1.0,0.910778
+5816,top social media apps in china,20,35,false,107,chinese social media,16720,1.0,0.976552
+5819,douyin livestream,210,38,false,39,douyin,119660,0.367898,0.714357
+5820,is songmont a chinese brand,30,70,false,13,china luxury brands,2920,1.0,0.999888
+5824,wechat bots,90,28,false,182,hylink,55540,1.0,0.981933
+5826,influencer marketing china,30,3,false,22,chinese influencers,2450,1.0,0.810303
+5840,china consultancy,70,30,false,33,guanxi,4300,1.0,0.657557
+5844,middle class of china,320,9,false,24,average wage china,29410,1.0,0.800411
+5851,aldi china,140,62,false,57,china market,39670,1.0,0.935614
+5856,market sizing question,70,56,false,29,marketing kol,4290,0.43534,0.70558
+5861,unilever china,30,-1,true,239,sogou,43770,0.0,0.0
+5871,chinese city tiers,590,0,false,14,china cities tier,1870,1.0,0.919594
+5876,shuigui,40,31,false,17,xiao hong shu,112970,0.386397,0.931252
+5881,china's market,260,62,false,57,china market,39670,1.0,0.935614
+5886,luxury shopping in china,40,68,false,26,luxury goods china,9540,0.648764,0.759174
+5892,netizen china,40,35,false,107,chinese social media,16720,1.0,0.976552
+5898,china watch market,40,62,false,57,china market,39670,1.0,0.935614
+5905,luxury e commerce platforms,90,52,false,76,china cross,12460,0.409179,0.704906
+5915,what search engine does china use,140,5,false,52,chinese search engine,18000,1.0,0.908227
+5917,colors meaning in china,30,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+5921,how to register baidu account outside china,30,6,false,15,baidu registration,1050,1.0,0.901863
+5922,top search engine china,210,5,false,52,chinese search engine,18000,1.0,0.908227
+5923,pinduoduo temu,40,21,false,14,dewu,1660,1.0,0.983396
+5927,get wechat account,320,28,false,182,hylink,55540,1.0,0.981933
+5934,red meaning in china,50,1,false,26,what does the color red symbolize in china,2640,0.887847,0.894708
+5935,vip com china,260,45,false,16,vipshop,3150,1.0,0.998396
+5936,wechat pay international,40,25,false,13,wechat pay,11850,1.0,0.980474
+5937,register weibo,90,24,false,55,weidian,12300,0.788949,0.896853
+5938,popular social networks in china,30,35,false,107,chinese social media,16720,1.0,0.976552
+5961,joint ventures china,70,-1,true,239,sogou,43770,0.0,0.0
+5967,inpock,30,23,false,22,fliggy,6960,0.159523,0.603641
+5996,food distributors in china,50,57,false,38,china market food,4690,0.686322,0.848422
+6006,china's starbucks,480,53,false,61,imported spirits,18360,0.859468,0.9118
+6010,oliveyoung china,30,58,false,15,blue ocean china,3550,1.0,0.991995
+6014,china consulting company,40,30,false,33,guanxi,4300,1.0,0.657557
+6030,douyin tiktok,720,29,false,14,douyin/tiktok,3150,0.87168,0.945894
+6033,xiaohongshu tiktok,90,32,false,45,xiaohongshu,78650,0.31058,0.660984
+6034,sial china,40,62,false,57,china market,39670,1.0,0.935614
+6036,taobao global,480,12,false,47,taobao mall,19270,1.0,0.622651
+6043,chinese beauty trends,40,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+6045,julian reis,170,51,false,51,jing dong,19110,0.488321,0.639117
+6047,taobao alternatives,110,12,false,47,taobao mall,19270,1.0,0.622651
+6049,chinese everything app,110,35,false,107,chinese social media,16720,1.0,0.976552
+6057,wechat official website,40,28,false,182,hylink,55540,1.0,0.981933
+6058,chinese tik tok douyin,110,29,false,14,douyin/tiktok,3150,1.0,0.945894
+6066,chinese data security law,90,22,false,17,chinese data privacy laws,990,1.0,0.895423
+6067,china middle class size,40,9,false,24,average wage china,29410,1.0,0.800411
+6068,wechat and china,260,28,false,182,hylink,55540,1.0,0.981933
+6072,capsule coffee market,30,53,false,61,imported spirits,18360,1.0,0.9118
+6089,size of luxury goods market,30,68,false,26,luxury goods china,9540,1.0,0.759174
+6100,fast fashion china,30,66,false,24,china fashion,3380,1.0,0.783484
+6111,luxury brands asia,90,68,false,26,luxury goods china,9540,0.44179,0.759174
+6115,gift giving china,70,7,false,34,chinese new year by sales,4430,1.0,0.62116
+6133,pharmacy online china,90,59,false,21,chinese online shopping,12160,0.900661,0.891961
+6137,payment in china,140,26,false,34,payment in china,2240,1.0,0.786265
+6159,china and sustainability,70,50,false,29,what is 996 culture,1920,0.150858,0.582862
+6167,alternative for youtube in china,140,36,false,28,youtube of china,4150,1.0,0.773399
+6172,chinese weibo,40,24,false,55,weidian,12300,1.0,0.896853
+6174,what search engine is used in china,90,5,false,52,chinese search engine,18000,1.0,0.908227
+6176,chinese website localization,30,-1,true,239,sogou,43770,0.0,0.0
+6177,second tier city,110,0,false,14,china cities tier,1870,1.0,0.919594
+6180,toys fair china,50,61,false,22,barbie china,2320,1.0,0.910778
+6186,pay per click china,50,63,false,15,chinese advertising,1490,1.0,0.968289
+6190,the chinese tiktok,30,15,false,39,china's tiktok,12770,0.704669,0.717361
+6194,china package design,30,-1,true,239,sogou,43770,0.0,0.0
+6197,china market food,1000,57,false,38,china market food,4690,1.0,0.848422
+6198,dian ping,1300,2,false,14,dianping,3560,1.0,0.989164
+6199,chinese social apps,170,35,false,107,chinese social media,16720,0.862166,0.976552
+6200,11.11 china,50,20,false,28,11-11 day,4080,0.446221,0.726205
+6202,chinese video websites,170,41,false,12,chinese video sites,1000,1.0,1.0
+6221,pro xiaohongshu,30,32,false,45,xiaohongshu,78650,0.376623,0.660984
+6223,wechat for website,170,28,false,182,hylink,55540,1.0,0.981933
+6227,chinese business consulting firms,40,30,false,33,guanxi,4300,0.630769,0.657557
+6236,puma in china,90,69,false,13,gucci in china,2590,0.68024,0.975403
+6253,activate wechat id,260,28,false,182,hylink,55540,1.0,0.981933
+6268,starbucks joint venture in china,30,53,false,61,imported spirits,18360,0.859468,0.9118
+6274,negotiating with china,1300,-1,true,239,sogou,43770,0.0,0.0
+6290,costco in shanghai,590,34,false,26,costco china,14700,0.821191,0.692672
+6308,zara in china,390,69,false,13,gucci in china,2590,1.0,0.975403
+6312,china sportswear,390,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+6319,wechat video,110,28,false,182,hylink,55540,1.0,0.981933
+6321,mother's day in china,390,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+6325,what is qq china,70,-1,true,239,sogou,43770,0.0,0.0
+6327,whiskey china,70,53,false,61,imported spirits,18360,1.0,0.9118
+6344,china luxury goods market,110,-1,true,239,sogou,43770,0.0,0.0
+6347,china demographic data,2400,9,false,24,average wage china,29410,0.50401,0.800411
+6349,medical device market in china,30,18,false,14,medical device regulation china,760,1.0,0.94841
+6358,weibo means,260,24,false,55,weidian,12300,1.0,0.896853
+6369,what is mz generation,70,46,false,18,baozun,1760,1.0,1.0
+6371,kol marketing term,140,56,false,29,marketing kol,4290,0.460005,0.70558
+6382,china consumer electronics,70,44,false,16,ikea china,1420,1.0,0.938969
+6395,lemon8 parent company,40,51,false,51,jing dong,19110,0.332174,0.639117
+6405,li ziqi store,30,-1,true,239,sogou,43770,0.0,0.0
+6407,chinese business consultant,40,30,false,33,guanxi,4300,0.727771,0.657557
+6408,popular brands in china,30,-1,true,239,sogou,43770,0.0,0.0
+6427,consumer electronics china,70,44,false,16,ikea china,1420,1.0,0.938969
+6428,beer in china,140,53,false,61,imported spirits,18360,1.0,0.9118
+6432,advertising company china,50,-1,true,239,sogou,43770,0.0,0.0
+6435,what is the most popular search engine in china,40,5,false,52,chinese search engine,18000,1.0,0.908227
+6437,english baidu,390,14,false,21,baidu tieba,3970,1.0,0.998668
+6438,chinese short video,50,41,false,12,chinese video sites,1000,1.0,1.0
+6451,shoes market china,50,-1,true,239,sogou,43770,0.0,0.0
+6459,11.11 singles day,170,20,false,28,11-11 day,4080,1.0,0.726205
+6460,key opinion leader agency,30,3,false,22,chinese influencers,2450,0.330379,0.810303
+6470,china netizens,40,35,false,107,chinese social media,16720,1.0,0.976552
+6471,china business consultants,50,30,false,33,guanxi,4300,0.508005,0.657557
+6477,omnichannel strategy consulting,40,52,false,76,china cross,12460,0.396718,0.704906
+6495,douyin vs tiktok,480,29,false,14,douyin/tiktok,3150,1.0,0.945894
+6503,how many costco stores in china,30,34,false,26,costco china,14700,1.0,0.692672
+6537,designer brands china,170,70,false,13,china luxury brands,2920,1.0,0.999888
+6538,olive oil china,50,58,false,15,blue ocean china,3550,1.0,0.991995
+6549,lululemon china store,70,-1,true,239,sogou,43770,0.0,0.0
+6557,baidu index,70,14,false,21,baidu tieba,3970,1.0,0.998668
+6560,group buying platform,50,-1,true,239,sogou,43770,0.0,0.0
+6566,temu pinduoduo,20,21,false,14,dewu,1660,1.0,0.983396
+6567,china resellers,70,60,false,15,china retail,4860,0.996848,0.998199
+6587,chinese tiktok trends,30,15,false,39,china's tiktok,12770,0.583393,0.717361
+6589,advanced consumer research,70,50,false,29,what is 996 culture,1920,0.765273,0.582862
+6591,selling to china,90,39,false,14,what do we sell to china,1000,1.0,0.916743
+6594,costco shanghai china,590,34,false,26,costco china,14700,0.59398,0.692672
+6608,haagen dazs china,40,58,false,15,blue ocean china,3550,1.0,0.991995
+6614,cashless in china,50,26,false,34,payment in china,2240,1.0,0.786265
+6636,online wechat,70,28,false,182,hylink,55540,1.0,0.981933
+6639,china first-tier cities,70,0,false,14,china cities tier,1870,1.0,0.919594
+6655,how to apply wechat account,320,28,false,182,hylink,55540,1.0,0.981933
+6664,chinese middle class,140,9,false,24,average wage china,29410,1.0,0.800411
+6688,shein competitor analysis,30,-1,true,239,sogou,43770,0.0,0.0
+6720,what is c-beauty,40,47,false,17,chinese beauty ideal,6270,0.62354,0.915839
+6726,brand taobao,110,12,false,47,taobao mall,19270,0.509683,0.622651
+6738,lululemon china,2400,-1,true,239,sogou,43770,0.0,0.0
+6741,xiaohongshu search,30,32,false,45,xiaohongshu,78650,0.532003,0.660984
+6746,meaning of color in china,140,1,false,26,what does the color red symbolize in china,2640,0.674844,0.894708
+6749,vips online store,50,45,false,16,vipshop,3150,1.0,0.998396
+6750,vip.com in english,50,45,false,16,vipshop,3150,1.0,0.998396
+6751,tequila in china,50,53,false,61,imported spirits,18360,1.0,0.9118
+6752,color meanings china,140,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+6755,most popular search engine in china,140,5,false,52,chinese search engine,18000,1.0,0.908227
+6758,manner coffee china,30,53,false,61,imported spirits,18360,1.0,0.9118
+6762,singles day 2024,50,19,false,25,single day 2025,7500,1.0,0.885399
+6763,china's data security law,70,22,false,17,chinese data privacy laws,990,0.970348,0.895423
+6775,starbucks joint venture china,30,53,false,61,imported spirits,18360,0.585406,0.9118
+6778,prada in china,140,69,false,13,gucci in china,2590,1.0,0.975403
+6779,smart home appliance market,30,44,false,16,ikea china,1420,1.0,0.938969
+6782,ip collaboration,50,28,false,182,hylink,55540,1.0,0.981933
+6789,patagonia in china,70,62,false,57,china market,39670,1.0,0.935614
+6790,bilibili global,70,33,false,14,what is bilibili,2260,1.0,0.909239
+6791,largest retailers in china,20,60,false,15,china retail,4860,1.0,0.998199
+6818,uniqlo in china,720,-1,true,239,sogou,43770,0.0,0.0
+6825,kellogg's china,110,-1,true,239,sogou,43770,0.0,0.0
+6835,new retailing,110,60,false,15,china retail,4860,1.0,0.998199
+6836,china sportswear brands,30,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+6838,mary kay in china,70,49,false,61,chinese beauty brands,7930,1.0,0.873949
+6839,china's middle class growth,70,9,false,24,average wage china,29410,0.70583,0.800411
+6845,lancôme china,40,49,false,61,chinese beauty brands,7930,1.0,0.873949
+6852,china makeup brand,30,49,false,61,chinese beauty brands,7930,0.865844,0.873949
+6860,lamer china,40,62,false,57,china market,39670,0.987372,0.935614
+6866,hermes in china,40,69,false,13,gucci in china,2590,1.0,0.975403
+6891,top chinese search engines,50,5,false,52,chinese search engine,18000,0.767963,0.908227
+6898,youku china,90,36,false,28,youtube of china,4150,0.397738,0.773399
+6909,lego in china,260,61,false,22,barbie china,2320,1.0,0.910778
+6913,chinese beauty brands,2400,49,false,61,chinese beauty brands,7930,0.950302,0.873949
+6918,top search engine in china,210,5,false,52,chinese search engine,18000,1.0,0.908227
+6925,walkthechat,70,28,false,182,hylink,55540,1.0,0.981933
+6930,meituan ai,30,2,false,14,dianping,3560,1.0,0.989164
+6932,carrefour cn,70,-1,true,239,sogou,43770,0.0,0.0
+6933,china growing middle class,70,9,false,24,average wage china,29410,1.0,0.800411
+6942,chinese middle class growth,70,9,false,24,average wage china,29410,1.0,0.800411
+6947,nike and china,40,67,false,13,chinese sportswear brands,2740,0.995374,0.999644
+6951,rednote apple store,10,16,false,28,rednote chinese name,5400,1.0,0.63899
+6952,lululemon direct from china,140,-1,true,239,sogou,43770,0.0,0.0
+6960,general negotiating styles in china,30,-1,true,239,sogou,43770,0.0,0.0
+6969,china subcultures,40,50,false,29,what is 996 culture,1920,0.118097,0.582862
+6976,china confectionery,140,58,false,15,blue ocean china,3550,0.97946,0.991995
+6987,starbucks selling china business,70,53,false,61,imported spirits,18360,0.859468,0.9118
+6990,vitamins in china,40,57,false,38,china market food,4690,1.0,0.848422
+6992,lego marketing strategy,90,61,false,22,barbie china,2320,0.665064,0.910778
+6997,rednote owner,30,16,false,28,rednote chinese name,5400,0.25275,0.63899
+7003,tiktok china,2400,15,false,39,china's tiktok,12770,1.0,0.717361
+7004,china's tiktok,4400,15,false,39,china's tiktok,12770,0.684078,0.717361
+7007,virtual red envelopes,30,17,false,48,what is little red book,8520,0.37473,0.937275
+7020,vip.com english,70,45,false,16,vipshop,3150,1.0,0.998396
+7022,tencent advertising,30,63,false,15,chinese advertising,1490,1.0,0.968289
+7023,china most popular search engine,140,5,false,52,chinese search engine,18000,0.98645,0.908227
+7026,top retailers in china,20,60,false,15,china retail,4860,1.0,0.998199
+7043,popmart forest,30,8,false,17,popmart chinese,9430,1.0,0.882817
+7065,chinese haircare,90,49,false,61,chinese beauty brands,7930,1.0,0.873949
+7066,alcohol consumption in china,30,53,false,61,imported spirits,18360,1.0,0.9118
+7076,alo yoga china,40,-1,true,239,sogou,43770,0.0,0.0
+7078,what is rednote called in china,30,16,false,28,rednote chinese name,5400,0.17201,0.63899
+7087,gift-giving in chinese culture,90,7,false,34,chinese new year by sales,4430,1.0,0.62116
+7100,china market electronics,70,44,false,16,ikea china,1420,1.0,0.938969
+7139,heytea ipo,30,53,false,61,imported spirits,18360,0.399895,0.9118
+7141,mid-autumn festival gifts,210,7,false,34,chinese new year by sales,4430,0.81203,0.62116
+7146,sustainability in china,70,50,false,29,what is 996 culture,1920,0.1537,0.582862
+7150,submit site to baidu,40,10,false,17,baidu seo optimization,4080,0.290786,0.824796
+7151,what is wechat in china,30,28,false,182,hylink,55540,1.0,0.981933
+7154,significance of the color red in china,50,1,false,26,what does the color red symbolize in china,2640,0.887847,0.894708
+7160,china mobile phone market share,50,-1,true,239,sogou,43770,0.0,0.0
+7163,how to start business with china,90,40,false,26,register company in china,2240,1.0,0.823878
+7166,xiaohongshu register,30,32,false,45,xiaohongshu,78650,0.551082,0.660984
+7167,youku chinese youtube,30,36,false,28,youtube of china,4150,0.327855,0.773399
+7168,alipay global,170,27,false,22,wechat mini programs,2410,0.588302,0.832545
+7170,suning holdings group,30,-1,true,239,sogou,43770,0.0,0.0
+7176,food exports to china,20,57,false,38,china market food,4690,1.0,0.848422
+7182,makeup china,260,49,false,61,chinese beauty brands,7930,1.0,0.873949
+7201,news china market,260,62,false,57,china market,39670,1.0,0.935614
+7202,chinese sportswear brands,880,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+7212,china business culture,110,40,false,26,register company in china,2240,0.816239,0.823878
+7213,mattel china,50,61,false,22,barbie china,2320,0.954635,0.910778
+7215,cosmetic regulations in china,30,49,false,61,chinese beauty brands,7930,0.585951,0.873949
+7240,shampoo in china,20,49,false,61,chinese beauty brands,7930,1.0,0.873949
+7258,counterfeit products in china,210,-1,true,239,sogou,43770,0.0,0.0
+7264,millennials in chinese,30,46,false,18,baozun,1760,1.0,1.0
+7268,uniqlo china,720,-1,true,239,sogou,43770,0.0,0.0
+7273,china cosmetics regulation,30,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+7280,china median income,2400,9,false,24,average wage china,29410,0.575899,0.800411
+7284,toys exhibition china,50,61,false,22,barbie china,2320,1.0,0.910778
+7286,sogou search engine,90,5,false,52,chinese search engine,18000,0.498554,0.908227
+7287,create baidu account,70,6,false,15,baidu registration,1050,1.0,0.901863
+7289,baidu search index,70,13,false,13,baidu search engine,3560,1.0,0.988859
+7292,tik tok in china,880,15,false,39,china's tiktok,12770,1.0,0.717361
+7295,how to invest in chinese market,30,39,false,14,what do we sell to china,1000,0.170487,0.916743
+7298,taobao registration,590,12,false,47,taobao mall,19270,0.775347,0.622651
+7305,does bing work in china,30,13,false,13,baidu search engine,3560,0.85517,0.988859
+7310,export food to china,20,57,false,38,china market food,4690,1.0,0.848422
+7315,what is guanxi,110,30,false,33,guanxi,4300,0.059739,0.657557
+7321,pr agency shanghai,40,65,false,23,china marketing agency,1450,1.0,0.90367
+7329,what is wechat app used for,30,28,false,182,hylink,55540,1.0,0.981933
+7335,china food import,90,57,false,38,china market food,4690,1.0,0.848422
+7338,poizon china,50,57,false,38,china market food,4690,0.344815,0.848422
+7339,bilibili shop,70,33,false,14,what is bilibili,2260,1.0,0.909239
+7342,xiaohongshu com,210,32,false,45,xiaohongshu,78650,1.0,0.660984
+7350,sephora china,170,49,false,61,chinese beauty brands,7930,1.0,0.873949
+7353,popmart taobao,30,8,false,17,popmart chinese,9430,1.0,0.882817
+7354,consumer behavior in hong kong,30,50,false,29,what is 996 culture,1920,1.0,0.582862
+7369,gift giving chinese culture,90,7,false,34,chinese new year by sales,4430,1.0,0.62116
+7406,market research in china,90,56,false,29,marketing kol,4290,0.451377,0.70558
+7418,paypal unionpay china,30,26,false,34,payment in china,2240,0.507717,0.786265
+7420,jellycat china,320,-1,true,239,sogou,43770,0.0,0.0
+7422,china brand makeup,30,49,false,61,chinese beauty brands,7930,1.0,0.873949
+7429,popmart china,1900,8,false,17,popmart chinese,9430,1.0,0.882817
+7430,china cosmetic regulation,30,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+7435,belleza en china,30,47,false,17,chinese beauty ideal,6270,0.896099,0.915839
+7455,china internet laws,30,22,false,17,chinese data privacy laws,990,0.390686,0.895423
+7457,giving gifts in china,50,7,false,34,chinese new year by sales,4430,1.0,0.62116
+7478,tiffany and co in china,880,-1,true,239,sogou,43770,0.0,0.0
+7480,tenpay,210,25,false,13,wechat pay,11850,1.0,0.980474
+7487,how to do business in china,30,40,false,26,register company in china,2240,1.0,0.823878
+7490,color symbolism in china,140,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+7498,xiao hong shu ads,70,31,false,17,xiao hong shu,112970,0.90169,0.931252
+7499,loreal marketing strategies,30,49,false,61,chinese beauty brands,7930,1.0,0.873949
+7504,tiktok china name,110,15,false,39,china's tiktok,12770,1.0,0.717361
+7507,digital agency china,70,64,false,23,digital marketing agency in china,2240,1.0,0.882914
+7508,alipay mini app,50,27,false,22,wechat mini programs,2410,1.0,0.832545
+7509,jingdong usa,40,51,false,51,jing dong,19110,0.65404,0.639117
+7512,influencers china,30,3,false,22,chinese influencers,2450,1.0,0.810303
+7515,xiao hong shu in chinese,20,31,false,17,xiao hong shu,112970,1.0,0.931252
+7517,qq vs wechat,50,28,false,182,hylink,55540,0.822509,0.981933
+7519,china market online,70,-1,true,239,sogou,43770,0.0,0.0
+7522,shopify for china,40,-1,true,239,sogou,43770,0.0,0.0
+7523,alibaba photography,140,-1,true,239,sogou,43770,0.0,0.0
+7531,kol stands for,260,55,false,25,wofe,3350,0.55229,0.756131
+7533,o2o meaning,110,55,false,25,wofe,3350,1.0,0.756131
+7537,pet food industry china,40,57,false,38,china market food,4690,0.736743,0.848422
+7538,ecommerce enabler,40,52,false,76,china cross,12460,0.403907,0.704906
+7541,when is singles day 2025,170,19,false,25,single day 2025,7500,1.0,0.885399
+7542,website localization strategy,40,-1,true,239,sogou,43770,0.0,0.0
+7544,bonded in chinese,140,43,false,15,china food delivery app,2550,0.994484,0.997569
+7557,medical device market china,30,18,false,14,medical device regulation china,760,1.0,0.94841
+7560,coffee chains in china,30,53,false,61,imported spirits,18360,1.0,0.9118
+7579,china international women's day,50,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+7581,due diligence china,70,40,false,26,register company in china,2240,1.0,0.823878
+7583,business consultants in china,50,30,false,33,guanxi,4300,1.0,0.657557
+7597,olive young china,30,58,false,15,blue ocean china,3550,1.0,0.991995
+7598,costco and china,1900,34,false,26,costco china,14700,1.0,0.692672
+7626,alibaba influencers,40,3,false,22,chinese influencers,2450,0.918718,0.810303
+7627,setup company in china,70,40,false,26,register company in china,2240,0.680899,0.823878
+7639,baidu chinese search engine,210,13,false,13,baidu search engine,3560,1.0,0.988859
+7642,rednote online,320,16,false,28,rednote chinese name,5400,1.0,0.63899
+7645,maimai china,70,62,false,57,china market,39670,1.0,0.935614
+7646,weibo intl,260,24,false,55,weidian,12300,1.0,0.896853
+7650,content marketing china,40,64,false,23,digital marketing agency in china,2240,0.825998,0.882914
+7651,wechat on the web,170,28,false,182,hylink,55540,1.0,0.981933
+7652,wechat open account,320,28,false,182,hylink,55540,1.0,0.981933
+7653,french china brands,140,70,false,13,china luxury brands,2920,1.0,0.999888
+7656,maimai chinese,170,62,false,57,china market,39670,0.780967,0.935614
+7684,china chic,70,62,false,57,china market,39670,1.0,0.935614
+7685,china's version of facebook,50,35,false,107,chinese social media,16720,1.0,0.976552
+7688,walmart and china,90,34,false,26,costco china,14700,0.207735,0.692672
+7693,exporting into china,480,-1,true,239,sogou,43770,0.0,0.0
+7694,business consultant in china,50,30,false,33,guanxi,4300,1.0,0.657557
+7709,chozan,40,46,false,18,baozun,1760,1.0,1.0
+7718,popular chinese makeup brands,40,49,false,61,chinese beauty brands,7930,1.0,0.873949
+7726,meituan-dianping,90,2,false,14,dianping,3560,1.0,0.989164
+7761,china luxury shopping,40,-1,true,239,sogou,43770,0.0,0.0
+7766,luxury brand positioning,70,68,false,26,luxury goods china,9540,0.347237,0.759174
+7773,boohee,30,-1,true,239,sogou,43770,0.0,0.0
+7799,counterfeit in china,140,-1,true,239,sogou,43770,0.0,0.0
+7803,haagen-dazs in china,40,58,false,15,blue ocean china,3550,1.0,0.991995
+7812,popmart market,70,8,false,17,popmart chinese,9430,1.0,0.882817
+7818,china sports apparel,390,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+7821,how to open weibo account,30,24,false,55,weidian,12300,0.788949,0.896853
+7825,create a weibo account,50,24,false,55,weidian,12300,0.788949,0.896853
+7830,youtube en china,320,36,false,28,youtube of china,4150,1.0,0.773399
+7831,vip china,30,62,false,57,china market,39670,0.812961,0.935614
+7840,payment method in china,70,26,false,34,payment in china,2240,1.0,0.786265
+7844,ikea china,720,44,false,16,ikea china,1420,0.557631,0.938969
+7860,business culture china,110,40,false,26,register company in china,2240,0.590398,0.823878
+7868,china registration,90,-1,true,239,sogou,43770,0.0,0.0
+7877,medical devices in china,50,18,false,14,medical device regulation china,760,0.697678,0.94841
+7880,yum china subsidiaries,50,51,false,51,jing dong,19110,0.352512,0.639117
+7889,walmart china,1900,34,false,26,costco china,14700,0.207735,0.692672
+7898,suning appliance,30,-1,true,239,sogou,43770,0.0,0.0
+7900,infant formula china,110,57,false,38,china market food,4690,1.0,0.848422
+7908,redes sociales en china,30,35,false,107,chinese social media,16720,1.0,0.976552
+7917,what does red symbolize in china,210,1,false,26,what does the color red symbolize in china,2640,0.887847,0.894708
+7941,facebook is banned in china,590,35,false,107,chinese social media,16720,1.0,0.976552
+7948,counterfeit goods: china,210,-1,true,239,sogou,43770,0.0,0.0
+7959,diapering in china,70,-1,true,239,sogou,43770,0.0,0.0
+7980,chinese consulting,50,30,false,33,guanxi,4300,1.0,0.657557
+8003,is amazon banned in china,40,48,false,27,chinese amazon equivalent,2520,0.889972,0.782227
+8009,china sport brand,30,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+8015,l'oreal china,70,49,false,61,chinese beauty brands,7930,1.0,0.873949
+8019,brand shoes china,50,70,false,13,china luxury brands,2920,0.998546,0.999888
+8020,chinese netizens,260,35,false,107,chinese social media,16720,0.830238,0.976552
+8038,baidu accounts,90,6,false,15,baidu registration,1050,1.0,0.901863
+8040,chinese negotiation style,30,-1,true,239,sogou,43770,0.0,0.0
+8042,taobao online,30,12,false,47,taobao mall,19270,0.481033,0.622651
+8049,create a baidu account,70,6,false,15,baidu registration,1050,1.0,0.901863
+8050,red app chinese,90,17,false,48,what is little red book,8520,1.0,0.937275
+8057,china payments,50,-1,true,239,sogou,43770,0.0,0.0
+8059,medical device regulation china,110,18,false,14,medical device regulation china,760,1.0,0.94841
+8098,is site blocked in china,30,-1,true,239,sogou,43770,0.0,0.0
+8099,watch market china,40,62,false,57,china market,39670,1.0,0.935614
+8101,shein marketing strategy,30,-1,true,239,sogou,43770,0.0,0.0
+8111,brand makeup china,30,49,false,61,chinese beauty brands,7930,1.0,0.873949
+8115,la mer branding,110,-1,true,239,sogou,43770,0.0,0.0
+8121,cashless society china,40,26,false,34,payment in china,2240,1.0,0.786265
+8124,pop mart store in china,40,8,false,17,popmart chinese,9430,1.0,0.882817
+8133,pop mart china,1900,8,false,17,popmart chinese,9430,0.648216,0.882817
+8134,women's day china,50,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+8138,corporation in china,90,40,false,26,register company in china,2240,0.743254,0.823878
+8148,china's fashion industry,30,66,false,24,china fashion,3380,1.0,0.783484
+8152,wechat on computer,90,28,false,182,hylink,55540,1.0,0.981933
+8159,china taobao,1600,12,false,47,taobao mall,19270,0.398242,0.622651
+8165,guanxi in business,30,30,false,33,guanxi,4300,0.059888,0.657557
+8167,alibaba sales on singles day,40,19,false,25,single day 2025,7500,0.781728,0.885399
+8170,qixi festival 2026,50,19,false,25,single day 2025,7500,0.785646,0.885399
+8175,what is feishu,50,-1,true,239,sogou,43770,0.0,0.0
+8179,food safety in china,90,57,false,38,china market food,4690,0.961719,0.848422
+8180,amazon of china,110,48,false,27,chinese amazon equivalent,2520,1.0,0.782227
+8183,bilibili video platform,40,33,false,14,what is bilibili,2260,1.0,0.909239
+8187,advertise in china,210,63,false,15,chinese advertising,1490,1.0,0.968289
+8190,11 11 single day,210,20,false,28,11-11 day,4080,1.0,0.726205
+8206,t-mall,4400,11,false,36,tmall site,21260,0.659309,0.781541
+8214,douyin platform,30,38,false,39,douyin,119660,1.0,0.714357
+8220,pr china,390,62,false,57,china market,39670,1.0,0.935614
+8221,business consultant china,50,30,false,33,guanxi,4300,0.916258,0.657557
+8232,top retailers china,20,60,false,15,china retail,4860,1.0,0.998199
+8244,what is rednote used for,30,16,false,28,rednote chinese name,5400,0.286317,0.63899
+8248,luxury lunar new year gifts,40,7,false,34,chinese new year by sales,4430,0.380189,0.62116
+8259,nov 11 singles day,170,20,false,28,11-11 day,4080,1.0,0.726205
+8278,3c market,170,62,false,57,china market,39670,0.830542,0.935614
+8306,byhealth,170,-1,true,239,sogou,43770,0.0,0.0
+8308,rednote community guidelines,170,16,false,28,rednote chinese name,5400,1.0,0.63899
+8310,wechat on website,170,28,false,182,hylink,55540,1.0,0.981933
+8313,redads,170,16,false,28,rednote chinese name,5400,0.070691,0.63899
+8314,live douyin,70,37,false,12,what is douyin,2840,1.0,1.0
+8317,wechat pay united states,170,25,false,13,wechat pay,11850,1.0,0.980474
+8318,douyin china app,70,-1,true,239,sogou,43770,0.0,0.0
+8326,wechat salesforce integration,70,28,false,182,hylink,55540,1.0,0.981933
+8327,how to post on wechat,30,28,false,182,hylink,55540,1.0,0.981933
+8328,we run wechat,40,28,false,182,hylink,55540,1.0,0.981933
+8329,web of wechat,170,28,false,182,hylink,55540,1.0,0.981933
+8334,china youzan,50,46,false,18,baozun,1760,1.0,1.0
+8344,l occitane competition,20,49,false,61,chinese beauty brands,7930,1.0,0.873949
+8354,pop mart competition,40,8,false,17,popmart chinese,9430,0.671414,0.882817
+8369,china business consultant,50,30,false,33,guanxi,4300,0.439093,0.657557
+8381,under armour in chinese,20,67,false,13,chinese sportswear brands,2740,1.0,0.999644
+8383,is coffee popular in china,40,53,false,61,imported spirits,18360,1.0,0.9118
+8391,heytea china,170,53,false,61,imported spirits,18360,0.441072,0.9118
+8392,starbucks in china,1000,53,false,61,imported spirits,18360,0.859468,0.9118
+8395,medical device registration in china,110,18,false,14,medical device regulation china,760,1.0,0.94841
+8405,yum brands in china,50,-1,true,239,sogou,43770,0.0,0.0
+8410,supply chain management in china,50,-1,true,239,sogou,43770,0.0,0.0
+8415,tiffany & co marketing,50,56,false,29,marketing kol,4290,0.460005,0.70558
+8420,chinese gift-giving culture,90,7,false,34,chinese new year by sales,4430,1.0,0.62116
+8426,internet restrictions in china,480,-1,true,239,sogou,43770,0.0,0.0
+8431,first tier cities in china,70,0,false,14,china cities tier,1870,1.0,0.919594
+8441,starbucks competitors in china,90,53,false,61,imported spirits,18360,0.859468,0.9118
+8560,country origin effect,170,-1,true,239,sogou,43770,0.0,0.0
+8569,first tier cities china,70,0,false,14,china cities tier,1870,1.0,0.919594
+8612,medical device registration china,110,18,false,14,medical device regulation china,760,1.0,0.94841
+8620,food industry china,20,57,false,38,china market food,4690,0.713086,0.848422
+8621,live stream shopping china,30,42,false,35,chinese streaming platforms,3380,0.408407,0.741336
+8626,china dx,70,62,false,57,china market,39670,0.688285,0.935614
+8630,chinese payments,50,26,false,34,payment in china,2240,0.769918,0.786265
+8636,middle class in china,260,9,false,24,average wage china,29410,1.0,0.800411
+8643,supplier audit china,20,-1,true,239,sogou,43770,0.0,0.0
+8649,popmart office,30,8,false,17,popmart chinese,9430,0.950426,0.882817
+8653,li-ning company,260,-1,true,239,sogou,43770,0.0,0.0
+8662,china footwear,110,66,false,24,china fashion,3380,0.69228,0.783484
+8666,lunar new year ads,20,7,false,34,chinese new year by sales,4430,0.380189,0.62116
+8670,china toy market,30,61,false,22,barbie china,2320,1.0,0.910778
+8676,street wear china,110,66,false,24,china fashion,3380,0.437383,0.783484
+8698,joint ventures in china,70,40,false,26,register company in china,2240,0.263117,0.823878
+8699,mooncake festival gift,210,7,false,34,chinese new year by sales,4430,0.595572,0.62116
+8703,top chinese luxury brands,30,-1,true,239,sogou,43770,0.0,0.0
+8704,smartphone market share china,140,-1,true,239,sogou,43770,0.0,0.0
+8712,streetwear in china,110,66,false,24,china fashion,3380,0.421805,0.783484
+8734,luxury brands positioning,70,68,false,26,luxury goods china,9540,0.365964,0.759174
+8744,smart home china,30,44,false,16,ikea china,1420,1.0,0.938969
+8761,costco shanghai,590,34,false,26,costco china,14700,1.0,0.692672
+8769,cn consulting,50,30,false,33,guanxi,4300,0.472471,0.657557
+8819,joint venture with china,50,-1,true,239,sogou,43770,0.0,0.0
+8826,delivery in china,30,43,false,15,china food delivery app,2550,1.0,0.997569
+8832,kol industry,70,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+8834,pinduoduo.com english,260,21,false,14,dewu,1660,1.0,0.983396
+8840,jv in china,70,51,false,51,jing dong,19110,0.518438,0.639117
+8843,esg in china,30,62,false,57,china market,39670,1.0,0.935614
+8860,toothpaste in china,110,49,false,61,chinese beauty brands,7930,1.0,0.873949
+8867,cell phone market share china,50,-1,true,239,sogou,43770,0.0,0.0
+8869,dog food china,170,57,false,38,china market food,4690,0.736743,0.848422
+8874,gift giving in china,50,7,false,34,chinese new year by sales,4430,1.0,0.62116
+8875,costco china locations,480,34,false,26,costco china,14700,1.0,0.692672
+8891,fitness china,40,-1,true,239,sogou,43770,0.0,0.0
+8902,china coffee consumption,30,53,false,61,imported spirits,18360,1.0,0.9118
+8921,costco chinese name,30,34,false,26,costco china,14700,1.0,0.692672
+8924,china counterfeit products,210,-1,true,239,sogou,43770,0.0,0.0
+8939,pet supplies in china,40,57,false,38,china market food,4690,0.736743,0.848422
+8958,china business consulting services,50,30,false,33,guanxi,4300,0.549957,0.657557
+8969,red bull in china,70,53,false,61,imported spirits,18360,0.911262,0.9118
+8976,sephora in china,90,49,false,61,chinese beauty brands,7930,1.0,0.873949
+8983,luxury stores in china,40,68,false,26,luxury goods china,9540,0.528407,0.759174
+8989,alcohol in china,390,53,false,61,imported spirits,18360,1.0,0.9118
+8990,tik tok douyin,210,29,false,14,douyin/tiktok,3150,1.0,0.945894
+8994,olive oil in china,40,58,false,15,blue ocean china,3550,1.0,0.991995
+8996,infant formula in china,110,57,false,38,china market food,4690,0.796462,0.848422
+9001,what is 996 culture,320,50,false,29,what is 996 culture,1920,0.118097,0.582862
+9012,negotiations in china,1300,-1,true,239,sogou,43770,0.0,0.0
+9021,coffee china,1300,53,false,61,imported spirits,18360,1.0,0.9118
+9023,street fashion in china,170,66,false,24,china fashion,3380,0.528715,0.783484
+9030,household products china,50,44,false,16,ikea china,1420,0.836315,0.938969
+9040,chinese new year promotions,20,7,false,34,chinese new year by sales,4430,0.380189,0.62116
+9041,retailers in china,880,60,false,15,china retail,4860,1.0,0.998199
+9045,redbook chinese app,260,17,false,48,what is little red book,8520,1.0,0.937275
+9047,medical device in china,50,18,false,14,medical device regulation china,760,1.0,0.94841
+9050,tim hortons positioning,40,53,false,61,imported spirits,18360,0.859468,0.9118
+9052,la mer in china,40,62,false,57,china market,39670,1.0,0.935614
+9061,luxury industry in china,480,68,false,26,luxury goods china,9540,1.0,0.759174
+9064,ralph lauren in china,390,69,false,13,gucci in china,2590,1.0,0.975403
+9074,adidas tmall,40,11,false,36,tmall site,21260,1.0,0.781541
+9075,dove chocolate china,40,58,false,15,blue ocean china,3550,1.0,0.991995
+9080,china payment,140,-1,true,239,sogou,43770,0.0,0.0
+9081,cheese china,110,58,false,15,blue ocean china,3550,0.931768,0.991995
+9083,china fashion,1900,66,false,24,china fashion,3380,0.556017,0.783484
+9095,douyin and tiktok,30,29,false,14,douyin/tiktok,3150,1.0,0.945894
+9107,business protocol in china,170,40,false,26,register company in china,2240,1.0,0.823878
+9108,energy drinks china,50,53,false,61,imported spirits,18360,1.0,0.9118
+9111,double eleven china,50,20,false,28,11-11 day,4080,0.446221,0.726205
+9116,what is redbook app,20,17,false,48,what is little red book,8520,0.971197,0.937275
+9125,average yearly income china,90,9,false,24,average wage china,29410,0.575899,0.800411
+9130,genki forest,320,46,false,18,baozun,1760,1.0,1.0
+9138,double eleven shopping festival,30,20,false,28,11-11 day,4080,0.664976,0.726205
+9149,china cosmetic regulations,30,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+9162,negotiating with chinese,70,-1,true,239,sogou,43770,0.0,0.0
+9177,gift-giving in china,50,7,false,34,chinese new year by sales,4430,1.0,0.62116
+9184,food distribution in china,50,57,false,38,china market food,4690,0.706757,0.848422
+9192,energy drink china,50,53,false,61,imported spirits,18360,1.0,0.9118
+9194,china toy,110,61,false,22,barbie china,2320,1.0,0.910778
+9195,standard of beauty in china,170,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+9222,sam's china,90,34,false,26,costco china,14700,0.207735,0.692672
+9223,china beer market,30,53,false,61,imported spirits,18360,1.0,0.9118
+9226,china market,33100,62,false,57,china market,39670,1.0,0.935614
+9252,what is the beauty standard in china,30,47,false,17,chinese beauty ideal,6270,1.0,0.915839
+9278,china business consulting,50,30,false,33,guanxi,4300,0.456257,0.657557
+9281,miu miu china,210,62,false,57,china market,39670,1.0,0.935614
+9283,designer brands in china,170,70,false,13,china luxury brands,2920,1.0,0.999888
+9284,negotiate with chinese,70,-1,true,239,sogou,43770,0.0,0.0
+9290,mattel in china,50,61,false,22,barbie china,2320,0.987695,0.910778
+9291,are supplements from china safe,30,57,false,38,china market food,4690,0.782916,0.848422
+9298,burberry china,90,69,false,13,gucci in china,2590,1.0,0.975403
+9304,chinese social media platforms,260,35,false,107,chinese social media,16720,1.0,0.976552
+9309,what is red book,320,17,false,48,what is little red book,8520,1.0,0.937275
+9310,chinese luxury market,720,68,false,26,luxury goods china,9540,1.0,0.759174
+9315,beauty standards china,170,47,false,17,chinese beauty ideal,6270,0.791248,0.915839
+9324,coffee consumption china,30,53,false,61,imported spirits,18360,1.0,0.9118
+9339,aldi shanghai,30,62,false,57,china market,39670,0.850875,0.935614
+9340,popmart in china,110,8,false,17,popmart chinese,9430,1.0,0.882817
+9344,top 10 sports in china,70,-1,true,239,sogou,43770,0.0,0.0
+9346,luxury pavilion tmall,70,11,false,36,tmall site,21260,0.229971,0.781541
+9347,how many costco in china,90,34,false,26,costco china,14700,0.901187,0.692672
+9356,ice cream in china,260,58,false,15,blue ocean china,3550,1.0,0.991995
+9361,tesla in china,590,62,false,57,china market,39670,1.0,0.935614
+9368,market research china,70,-1,true,239,sogou,43770,0.0,0.0
+9379,tampons china,40,49,false,61,chinese beauty brands,7930,0.219517,0.873949
+9380,converse china,50,62,false,57,china market,39670,1.0,0.935614
+9381,life style in china,50,-1,true,239,sogou,43770,0.0,0.0
+9399,mary kay china,70,49,false,61,chinese beauty brands,7930,1.0,0.873949
+9402,estée lauder china,90,49,false,61,chinese beauty brands,7930,1.0,0.873949
+9406,first-tier cities china,70,0,false,14,china cities tier,1870,1.0,0.919594
+9414,tesla in china market,30,62,false,57,china market,39670,1.0,0.935614
+9430,china alcohol,390,-1,true,239,sogou,43770,0.0,0.0
+9434,tim hortons in china,40,53,false,61,imported spirits,18360,0.859468,0.9118
+9437,how many luckin coffee stores in china,40,53,false,61,imported spirits,18360,1.0,0.9118
+9447,k beauty market,260,49,false,61,chinese beauty brands,7930,0.849504,0.873949
+9452,what is redbook,320,17,false,48,what is little red book,8520,1.0,0.937275
+9460,tims china,40,53,false,61,imported spirits,18360,0.584658,0.9118
+9469,nike china sales,50,-1,true,239,sogou,43770,0.0,0.0
+9475,urban areas of china,40,0,false,14,china cities tier,1870,0.57869,0.919594
+9478,business culture of china,110,40,false,26,register company in china,2240,0.74893,0.823878
+9480,l occitane wholesale,30,49,false,61,chinese beauty brands,7930,1.0,0.873949
+9497,baidu search engines china,10,13,false,13,baidu search engine,3560,1.0,0.988859
+9503,salesforce wechat,50,28,false,182,hylink,55540,0.8615,0.981933
+9508,kol agency,30,65,false,23,china marketing agency,1450,1.0,0.90367
+9509,what is fliggy travel,70,23,false,22,fliggy,6960,0.075106,0.603641
+9511,douyin vs rednote,50,-1,true,239,sogou,43770,0.0,0.0
+9515,alipay payment methods,90,27,false,22,wechat mini programs,2410,0.588302,0.832545
+9517,is there instagram in china,90,35,false,107,chinese social media,16720,1.0,0.976552
+9519,guanxi business,30,30,false,33,guanxi,4300,0.05985,0.657557
+9523,www 1688 com english version,210,45,false,16,vipshop,3150,1.0,0.998396
+9528,home decor in china,30,44,false,16,ikea china,1420,0.788307,0.938969
+9533,ashley dudarenok,90,51,false,51,jing dong,19110,0.308583,0.639117
+9539,how to make weibo account,50,24,false,55,weidian,12300,0.788949,0.896853
+9540,kocs,90,55,false,25,wofe,3350,1.0,0.756131
+9541,imported brands,30,70,false,13,china luxury brands,2920,1.0,0.999888
+9543,baidu ad,390,14,false,21,baidu tieba,3970,1.0,0.998668
+9545,douyin chinese app,50,38,false,39,douyin,119660,0.450035,0.714357
+9546,register for wechat,320,28,false,182,hylink,55540,1.0,0.981933
+9547,international weibo,260,24,false,55,weidian,12300,1.0,0.896853
+9548,how to create a weibo account,30,24,false,55,weidian,12300,0.788949,0.896853
+9558,vip online store,50,45,false,16,vipshop,3150,1.0,0.998396
+9574,wechat-need-web,70,28,false,182,hylink,55540,1.0,0.981933
+9575,pr firms china,50,30,false,33,guanxi,4300,0.740911,0.657557
+9588,color meanings in china,140,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+9599,weibo english site,320,24,false,55,weidian,12300,1.0,0.896853
+9633,china seo tool,40,4,false,13,search engine optimization china,2590,1.0,0.98599
+9635,whiskey in china,70,53,false,61,imported spirits,18360,1.0,0.9118
+9636,chinese business license,50,40,false,26,register company in china,2240,0.819252,0.823878
+9639,gamified ecommerce,70,52,false,76,china cross,12460,0.403907,0.704906
+9640,china luxury brands,1900,70,false,13,china luxury brands,2920,1.0,0.999888
+9642,weibo sina english,30,24,false,55,weidian,12300,1.0,0.896853
+9646,what is china's search engine,70,5,false,52,chinese search engine,18000,1.0,0.908227
+9651,shenma search,20,5,false,52,chinese search engine,18000,1.0,0.908227
+9657,color symbolism china,140,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+9659,what does red represent in china,210,1,false,26,what does the color red symbolize in china,2640,0.829416,0.894708
+9660,chinese tiktok version,50,15,false,39,china's tiktok,12770,0.626549,0.717361
+9661,china behavior,90,62,false,57,china market,39670,1.0,0.935614
+9669,chinese company license,50,40,false,26,register company in china,2240,0.819252,0.823878
+9673,what search engine do chinese use,140,5,false,52,chinese search engine,18000,1.0,0.908227
+9675,chinese color symbolism,140,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+9677,xiaohongshu account,40,32,false,45,xiaohongshu,78650,0.61153,0.660984
+9683,xiaohongshu vs tiktok,30,-1,true,239,sogou,43770,0.0,0.0
+9684,youku in china,90,36,false,28,youtube of china,4150,0.380164,0.773399
+9689,setting up business in china,70,40,false,26,register company in china,2240,1.0,0.823878
+9690,streetwear china,110,66,false,24,china fashion,3380,0.377047,0.783484
+9691,wechat web,6600,28,false,182,hylink,55540,1.0,0.981933
+9694,baidu vs google,110,13,false,13,baidu search engine,3560,1.0,0.988859
+9698,video production in china,50,41,false,12,chinese video sites,1000,1.0,1.0
+9700,baidu news,590,14,false,21,baidu tieba,3970,1.0,0.998668
+9702,ximalaya fm,40,62,false,57,china market,39670,0.846295,0.935614
+9704,vipshop online,10,45,false,16,vipshop,3150,1.0,0.998396
+9707,create account wechat,320,28,false,182,hylink,55540,1.0,0.981933
+9712,consumerism china,40,50,false,29,what is 996 culture,1920,1.0,0.582862
+9713,what does the color blue mean in china,50,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+9715,business opportunities in china,40,40,false,26,register company in china,2240,1.0,0.823878
+9717,best place to sell china,90,39,false,14,what do we sell to china,1000,1.0,0.916743
+9725,search engine baidu,1300,13,false,13,baidu search engine,3560,1.0,0.988859
+9728,nespresso china,40,53,false,61,imported spirits,18360,1.0,0.9118
+9730,china search engine baidu,50,13,false,13,baidu search engine,3560,1.0,0.988859
+9738,yunjis,390,51,false,51,jing dong,19110,0.359103,0.639117
+9743,mother's day china,390,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+9748,food export china,20,57,false,38,china market food,4690,1.0,0.848422
+9751,douyin trend,30,38,false,39,douyin,119660,1.0,0.714357
+9759,is rednote douyin,20,-1,true,239,sogou,43770,0.0,0.0
+9767,china luxury market,140,-1,true,239,sogou,43770,0.0,0.0
+9769,china shopping apps,480,-1,true,239,sogou,43770,0.0,0.0
+9771,what is youku,90,36,false,28,youtube of china,4150,0.358798,0.773399
+9774,mother day in china,390,7,false,34,chinese new year by sales,4430,0.303315,0.62116
+9777,h5 apps,30,35,false,107,chinese social media,16720,1.0,0.976552
+9780,china pricing,210,-1,true,239,sogou,43770,0.0,0.0
+9782,what is wechat,3600,28,false,182,hylink,55540,1.0,0.981933
+9785,biggest search engine in china,210,5,false,52,chinese search engine,18000,0.976782,0.908227
+9789,china seo company,210,4,false,13,search engine optimization china,2590,1.0,0.98599
+9790,sina weibo english site,30,24,false,55,weidian,12300,1.0,0.896853
+9791,baidu tracking,50,14,false,21,baidu tieba,3970,1.0,0.998668
+9802,video production china,50,41,false,12,chinese video sites,1000,1.0,1.0
+9805,register company in china,210,40,false,26,register company in china,2240,0.685347,0.823878
+9815,what email works in china,50,35,false,107,chinese social media,16720,1.0,0.976552
+9817,china's average income,5400,9,false,24,average wage china,29410,0.575899,0.800411
+9819,china tok,50,61,false,22,barbie china,2320,1.0,0.910778
+9823,china short video,50,41,false,12,chinese video sites,1000,1.0,1.0
+9824,what emails work in china,50,35,false,107,chinese social media,16720,1.0,0.976552
+9827,safe regulations china,30,49,false,61,chinese beauty brands,7930,0.630329,0.873949
+9830,wechat account creation,320,28,false,182,hylink,55540,1.0,0.981933
+9831,tier 2 city china,30,0,false,14,china cities tier,1870,0.295631,0.919594
+9832,baidu apps,320,14,false,21,baidu tieba,3970,1.0,0.998668
+9841,little red book in mandarin,10,17,false,48,what is little red book,8520,0.676468,0.937275
+9842,conducting business in china,140,40,false,26,register company in china,2240,1.0,0.823878
+9848,top sports in china,210,-1,true,239,sogou,43770,0.0,0.0
+9851,what is qq.com used for,20,-1,true,239,sogou,43770,0.0,0.0
+9864,wofe,1300,55,false,25,wofe,3350,0.412673,0.756131
+9867,wechat tiktok,70,15,false,39,china's tiktok,12770,0.284637,0.717361
+9870,minimum wage in china in us dollars,170,9,false,24,average wage china,29410,0.575899,0.800411
+9879,make baidu account,70,6,false,15,baidu registration,1050,1.0,0.901863
+9881,tik tok china vs us,20,15,false,39,china's tiktok,12770,1.0,0.717361
+9886,taobao store,260,12,false,47,taobao mall,19270,0.721891,0.622651
+9888,wechat foreign credit card,70,25,false,13,wechat pay,11850,1.0,0.980474
+9889,best search engine for china,40,5,false,52,chinese search engine,18000,1.0,0.908227
+9891,douyin user search,40,38,false,39,douyin,119660,0.573974,0.714357
+9904,chinese distribution companies,30,-1,true,239,sogou,43770,0.0,0.0
+9910,what do colors mean in china,170,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+9923,china search engines,1300,5,false,52,chinese search engine,18000,1.0,0.908227
+9928,what does jd com do,140,51,false,51,jing dong,19110,1.0,0.639117
+9929,app stores china,90,-1,true,239,sogou,43770,0.0,0.0
+9931,vips shop online,90,45,false,16,vipshop,3150,1.0,0.998396
+9934,guanxi,2400,30,false,33,guanxi,4300,0.059733,0.657557
+9935,china toy expo,50,61,false,22,barbie china,2320,1.0,0.910778
+9936,popular search engine in china,210,5,false,52,chinese search engine,18000,1.0,0.908227
+9937,weibo english app,40,24,false,55,weidian,12300,1.0,0.896853
+9938,palm payment china,50,26,false,34,payment in china,2240,0.598108,0.786265
+9944,best search engine china,40,5,false,52,chinese search engine,18000,0.824774,0.908227
+9948,vipshop,880,45,false,16,vipshop,3150,1.0,0.998396
+9949,register in china,70,40,false,26,register company in china,2240,0.402309,0.823878
+9953,food export to china,20,57,false,38,china market food,4690,1.0,0.848422
+9955,how to use baidu,30,6,false,15,baidu registration,1050,0.583223,0.901863
+9956,china ads,210,62,false,57,china market,39670,1.0,0.935614
+9957,jd com inc,590,51,false,51,jing dong,19110,0.986542,0.639117
+9961,j d health,210,51,false,51,jing dong,19110,0.789236,0.639117
+9962,jd company,390,51,false,51,jing dong,19110,1.0,0.639117
+9966,doing business in china,140,40,false,26,register company in china,2240,1.0,0.823878
+9970,guanxi in china,390,30,false,33,guanxi,4300,0.059784,0.657557
+9975,baidu registration,110,6,false,15,baidu registration,1050,1.0,0.901863
+9976,china short video app,50,41,false,12,chinese video sites,1000,1.0,1.0
+9979,sina weibo in english,30,24,false,55,weidian,12300,1.0,0.896853
+9980,sale taobao,30,12,false,47,taobao mall,19270,0.503143,0.622651
+9984,taobao 1688 tmall jd,50,12,false,47,taobao mall,19270,0.173092,0.622651
+9987,china luxury goods,720,-1,true,239,sogou,43770,0.0,0.0
+9990,starting a business in china as a foreigner,30,40,false,26,register company in china,2240,1.0,0.823878
+9992,search engine china,1300,5,false,52,chinese search engine,18000,1.0,0.908227
+9993,sogou search,30,5,false,52,chinese search engine,18000,0.449854,0.908227
+9995,vip shop online,90,45,false,16,vipshop,3150,1.0,0.998396
+9996,tequila china,140,53,false,61,imported spirits,18360,1.0,0.9118
+9998,luxury pavilion,50,68,false,26,luxury goods china,9540,0.549223,0.759174
+10002,weibo web version,40,24,false,55,weidian,12300,1.0,0.896853
+10005,douyin in chinese,90,38,false,39,douyin,119660,1.0,0.714357
+10009,create weibo account,50,24,false,55,weidian,12300,0.788949,0.896853
+10012,chinese search engine baidu,210,13,false,13,baidu search engine,3560,1.0,0.988859
+10014,what is jd logistics,110,51,false,51,jing dong,19110,1.0,0.639117
+10017,china color symbolism,140,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+10022,alibaba influencer,40,3,false,22,chinese influencers,2450,1.0,0.810303
+10024,chinese search engine,2400,5,false,52,chinese search engine,18000,0.684208,0.908227
+10025,public relations agency china,50,65,false,23,china marketing agency,1450,1.0,0.90367
+10028,guanxi and business,30,30,false,33,guanxi,4300,0.059606,0.657557
+10029,sogou,4400,-1,true,239,sogou,43770,0.0,0.0
+10032,color blue in chinese culture,70,1,false,26,what does the color red symbolize in china,2640,0.887847,0.894708
+10040,how to create a xiaohongshu account,30,32,false,45,xiaohongshu,78650,0.444189,0.660984
+10041,meituan dianping,90,2,false,14,dianping,3560,1.0,0.989164
+10046,wechat groups,110,28,false,182,hylink,55540,1.0,0.981933
+10060,tiktok vs rednote,40,15,false,39,china's tiktok,12770,0.096887,0.717361
+10061,china company set up,70,40,false,26,register company in china,2240,0.569466,0.823878
+10065,wofe china,50,62,false,57,china market,39670,0.987372,0.935614
+10069,how to create a baidu account,50,6,false,15,baidu registration,1050,1.0,0.901863
+10079,wechat pay foreign credit card,90,25,false,13,wechat pay,11850,1.0,0.980474
+10082,douyin chinese tiktok,140,29,false,14,douyin/tiktok,3150,1.0,0.945894
+10086,international taobao,40,12,false,47,taobao mall,19270,0.442641,0.622651
+10087,wechat palm payment,30,25,false,13,wechat pay,11850,1.0,0.980474
+10092,red color meaning in china,50,1,false,26,what does the color red symbolize in china,2640,1.0,0.894708
+10098,food products in china,260,57,false,38,china market food,4690,1.0,0.848422
+10101,what does black represent in china,50,1,false,26,what does the color red symbolize in china,2640,0.535803,0.894708
+10106,china toy fair,50,61,false,22,barbie china,2320,1.0,0.910778
+10107,food delivery apps in china,70,43,false,15,china food delivery app,2550,1.0,0.997569
+10113,how to sell to china,50,39,false,14,what do we sell to china,1000,1.0,0.916743
+10115,l oreal travel retail,30,49,false,61,chinese beauty brands,7930,1.0,0.873949
+10117,china search engine,1300,5,false,52,chinese search engine,18000,0.665051,0.908227

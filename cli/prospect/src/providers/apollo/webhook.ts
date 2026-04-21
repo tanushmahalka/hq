@@ -11,6 +11,13 @@ interface WebhookServerState {
   error?: Error;
 }
 
+interface CapturedWebhookRequest {
+  method: string;
+  path: string;
+  headers: Record<string, string | string[]>;
+  body: string;
+}
+
 export interface ApolloWebhookSession {
   webhookUrl: string;
   waitForPayload(timeoutMs: number): Promise<unknown>;
@@ -20,6 +27,7 @@ export interface ApolloWebhookSession {
 export async function createApolloWebhookSession(options: {
   spawnImpl?: typeof spawn;
   hostname?: string;
+  debug?: boolean;
 } = {}): Promise<ApolloWebhookSession> {
   const hostname = options.hostname ?? "127.0.0.1";
   const pathToken = randomBytes(12).toString("hex");
@@ -28,7 +36,7 @@ export async function createApolloWebhookSession(options: {
     resolved: false,
   };
   const server = createServer(async (request, response) => {
-    await handleWebhookRequest(request, response, requestPath, serverState);
+    await handleWebhookRequest(request, response, requestPath, serverState, options.debug === true);
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -113,15 +121,28 @@ async function handleWebhookRequest(
   response: ServerResponse,
   requestPath: string,
   state: WebhookServerState,
+  debug: boolean,
 ): Promise<void> {
+  const url = request.url ?? "/";
+  const method = request.method ?? "UNKNOWN";
+  const headers = collectHeaders(request);
+  if (debug) {
+    process.stderr.write(`[apollo wait] inbound request ${method} ${url}\n`);
+  }
+
   if (request.method !== "POST") {
+    if (debug) {
+      process.stderr.write(`[apollo wait] rejected request: expected POST, received ${method}\n`);
+    }
     response.statusCode = 405;
     response.end("Method Not Allowed");
     return;
   }
 
-  const url = request.url ?? "/";
   if (url !== requestPath) {
+    if (debug) {
+      process.stderr.write(`[apollo wait] rejected request: expected path ${requestPath}, received ${url}\n`);
+    }
     response.statusCode = 404;
     response.end("Not Found");
     return;
@@ -129,12 +150,23 @@ async function handleWebhookRequest(
 
   try {
     const body = await readRequestBody(request);
+    if (debug) {
+      process.stderr.write(`[apollo wait] accepted request body (${body.length} bytes)\n`);
+    }
     state.resolved = true;
-    state.payload = parseWebhookBody(body);
+    state.payload = {
+      method,
+      path: url,
+      headers,
+      body,
+    } satisfies CapturedWebhookRequest;
     response.statusCode = 200;
     response.setHeader("Content-Type", "application/json");
     response.end(JSON.stringify({ ok: true }));
   } catch (error) {
+    if (debug) {
+      process.stderr.write(`[apollo wait] failed to read request body: ${error instanceof Error ? error.message : String(error)}\n`);
+    }
     state.error = error instanceof Error ? error : new Error(String(error));
     response.statusCode = 400;
     response.end("Invalid webhook payload");
@@ -149,17 +181,15 @@ async function readRequestBody(request: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function parseWebhookBody(value: string): unknown {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
+function collectHeaders(request: IncomingMessage): Record<string, string | string[]> {
+  const headers: Record<string, string | string[]> = {};
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (value === undefined) {
+      continue;
+    }
+    headers[key] = value;
   }
-
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    return trimmed;
-  }
+  return headers;
 }
 
 async function startCloudflaredTunnel(options: {

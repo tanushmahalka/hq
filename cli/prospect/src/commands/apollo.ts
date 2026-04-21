@@ -236,13 +236,14 @@ export async function runApolloCommand(
     const options = parseRequestOptions(parsed);
     validateApolloEnrichPersonInput(input);
     const waitConfig = parseApolloWaitOptions(parsed);
-    const webhookSession = await maybeCreateApolloWaitSession(waitConfig, dependencies.spawnImpl);
+    const webhookSession = await maybeCreateApolloWaitSession(waitConfig, options.explain === true, dependencies.spawnImpl);
     const stopProgress = webhookSession ? startApolloWaitProgress(webhookSession.webhookUrl, waitConfig.timeoutMs) : undefined;
     try {
       options.providerOptions = parseApolloEnrichmentOptions(parsed, webhookSession?.webhookUrl);
       const result = await provider.enrichPerson(input, options);
 
       if (webhookSession) {
+        writeApolloInitialResponse(result.providerRaw);
         const webhookPayload = await webhookSession.waitForPayload(waitConfig.timeoutMs);
         stopProgress?.("Apollo webhook received.");
         outputRawApolloWaitResponse(result.providerRaw, webhookPayload);
@@ -275,7 +276,7 @@ export async function runApolloCommand(
 
     const options = parseRequestOptions(parsed);
     const waitConfig = parseApolloWaitOptions(parsed);
-    const webhookSession = await maybeCreateApolloWaitSession(waitConfig, dependencies.spawnImpl);
+    const webhookSession = await maybeCreateApolloWaitSession(waitConfig, options.explain === true, dependencies.spawnImpl);
     const stopProgress = webhookSession ? startApolloWaitProgress(webhookSession.webhookUrl, waitConfig.timeoutMs) : undefined;
     try {
       options.providerOptions = parseApolloEnrichmentOptions(parsed, webhookSession?.webhookUrl);
@@ -283,6 +284,7 @@ export async function runApolloCommand(
       const result = await provider.bulkEnrichPeople(payload, options);
 
       if (webhookSession) {
+        writeApolloInitialResponse(result.providerRaw);
         const webhookPayload = await webhookSession.waitForPayload(waitConfig.timeoutMs);
         stopProgress?.("Apollo webhook received.");
         outputRawApolloWaitResponse(result.providerRaw, webhookPayload);
@@ -698,13 +700,14 @@ function parseApolloWaitOptions(parsed: ReturnType<typeof parseArgs>): { enabled
 
 async function maybeCreateApolloWaitSession(
   waitConfig: { enabled: boolean },
+  debug: boolean,
   spawnImpl?: typeof spawn,
 ): Promise<Awaited<ReturnType<typeof createApolloWebhookSession>> | undefined> {
   if (!waitConfig.enabled) {
     return undefined;
   }
 
-  return await createApolloWebhookSession({ spawnImpl });
+  return await createApolloWebhookSession({ spawnImpl, debug });
 }
 
 async function readBulkPeopleInput(parsed: ReturnType<typeof parseArgs>): Promise<unknown> {
@@ -767,6 +770,11 @@ function outputRawApolloWaitResponse(syncPayload: unknown, webhookPayload: unkno
     sync: syncPayload ?? null,
     webhook: webhookPayload ?? null,
   });
+}
+
+function writeApolloInitialResponse(syncPayload: unknown): void {
+  process.stderr.write("Initial Apollo response:\n");
+  process.stderr.write(`${JSON.stringify(syncPayload ?? null, null, 2)}\n`);
 }
 
 function startApolloWaitProgress(webhookUrl: string, timeoutMs: number): (message?: string) => void {

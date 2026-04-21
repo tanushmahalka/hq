@@ -443,54 +443,58 @@ test("apollo enrich person requires webhook url when revealing phone numbers", a
 test("apollo enrich person --wait starts a temporary webhook tunnel and returns the callback payload", async () => {
   process.env.APOLLO_API_KEY = "test-apollo-key";
   let requestUrl = "";
+  let stderrOutput = "";
 
   const output = await captureStdout(async () => {
-    await runApolloCommand(
-      [
-        "enrich",
-        "person",
-        "--email",
-        "jane@example.com",
-        "--reveal-phone-number",
-        "--wait",
-        "--wait-timeout-ms",
-        "5000",
-        "--json",
-      ],
-      {
-        spawnImpl: createMockCloudflaredSpawn(),
-        fetchImpl: async (input) => {
-          requestUrl = String(input);
-          const url = new URL(requestUrl);
-          const webhookUrl = url.searchParams.get("webhook_url");
-          assert.ok(webhookUrl);
+    stderrOutput = await captureStderr(async () => {
+      await runApolloCommand(
+        [
+          "enrich",
+          "person",
+          "--email",
+          "jane@example.com",
+          "--reveal-phone-number",
+          "--wait",
+          "--wait-timeout-ms",
+          "5000",
+          "--json",
+          "--debug",
+        ],
+        {
+          spawnImpl: createMockCloudflaredSpawn(),
+          fetchImpl: async (input) => {
+            requestUrl = String(input);
+            const url = new URL(requestUrl);
+            const webhookUrl = url.searchParams.get("webhook_url");
+            assert.ok(webhookUrl);
 
-          queueMicrotask(async () => {
-            await fetch(webhookUrl!, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                person: {
-                  id: "p_1",
-                  phone_number: "+1 555 111 2222",
-                },
-              }),
+            queueMicrotask(async () => {
+              await fetch(webhookUrl!, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  person: {
+                    id: "p_1",
+                    phone_number: "+1 555 111 2222",
+                  },
+                }),
+              });
             });
-          });
 
-          return jsonResponse({
-            id: "p_1",
-            name: "Jane Doe",
-            waterfall_enrichment_status: "pending",
-          });
+            return jsonResponse({
+              id: "p_1",
+              name: "Jane Doe",
+              waterfall_enrichment_status: "pending",
+            });
+          },
         },
-      },
-    );
+      );
+    });
   });
 
   const parsed = parseCapturedJson(output) as {
     sync: { id: string; name: string; waterfall_enrichment_status: string };
-    webhook: { person: { phone_number: string } };
+    webhook: { method: string; path: string; headers: Record<string, string | string[]>; body: string };
   };
   const url = new URL(requestUrl);
 
@@ -498,7 +502,14 @@ test("apollo enrich person --wait starts a temporary webhook tunnel and returns 
   assert.match(url.searchParams.get("webhook_url") ?? "", /\/apollo-webhook\//);
   assert.equal(parsed.sync.id, "p_1");
   assert.equal(parsed.sync.waterfall_enrichment_status, "pending");
-  assert.equal(parsed.webhook.person.phone_number, "+1 555 111 2222");
+  assert.equal(parsed.webhook.method, "POST");
+  assert.match(parsed.webhook.path, /\/apollo-webhook\//);
+  assert.equal(parsed.webhook.headers["content-type"], "application/json");
+  assert.match(parsed.webhook.body, /"phone_number":"\+1 555 111 2222"/);
+  assert.match(stderrOutput, /Initial Apollo response:/);
+  assert.match(stderrOutput, /"name": "Jane Doe"/);
+  assert.match(stderrOutput, /\[apollo wait\] inbound request POST/);
+  assert.match(stderrOutput, /\[apollo wait\] accepted request body/);
 });
 
 test("apollo enrich person rejects --wait when no async webhook-producing flag is enabled", async () => {
@@ -776,6 +787,26 @@ async function captureStdout(run: () => Promise<void>): Promise<string> {
     return output;
   } finally {
     process.stdout.write = originalWrite;
+  }
+}
+
+async function captureStderr(run: () => Promise<void>): Promise<string> {
+  let output = "";
+  const originalWrite = process.stderr.write.bind(process.stderr);
+
+  process.stderr.write = ((chunk: string | Uint8Array, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void) => {
+    output += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+
+    const done = typeof encoding === "function" ? encoding : callback;
+    done?.(null);
+    return true;
+  }) as typeof process.stderr.write;
+
+  try {
+    await run();
+    return output;
+  } finally {
+    process.stderr.write = originalWrite;
   }
 }
 

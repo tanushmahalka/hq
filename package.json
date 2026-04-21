@@ -23,6 +23,7 @@
     "facebook:ads": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/facebook-ads-from-page-url.ts",
     "facebook:ads:from-website": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/facebook-ads-from-website-url.ts",
     "enrich:meta-ads-csv": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/enrich-meta-ads-csv.ts",
+    "seo:backfill-site-keywords": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/backfill-site-keywords.ts",
     "db:migrate:uuid-ids": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/migrate-uuid-ids-to-integers.ts",
     "db:remove-task-workflows": "node --experimental-strip-types --experimental-specifier-resolution=node ./scripts/remove-task-workflows.ts",
     "db:generate": "drizzle-kit generate",
