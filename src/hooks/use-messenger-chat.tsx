@@ -8,8 +8,8 @@ import {
 } from "ai";
 import {
   useCallback,
+  useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -226,101 +226,134 @@ function filePartToImageBlock(part: FileUIPart): Extract<ContentBlock, { type: "
 function uiMessagesToRawMessages(
   messages: UIMessage[],
   timestamps: Map<string, number>,
+  cache: Map<
+    string,
+    {
+      source: UIMessage;
+      rawMessages: RawMessage[];
+    }
+  >,
 ): RawMessage[] {
-  return messages.flatMap((message) => {
-    if (message.role === "system") {
-      return [];
+  const nextCache = new Map<
+    string,
+    {
+      source: UIMessage;
+      rawMessages: RawMessage[];
+    }
+  >();
+  const rawMessages: RawMessage[] = [];
+
+  for (const message of messages) {
+    const cached = cache.get(message.id);
+    if (cached && cached.source === message) {
+      nextCache.set(message.id, cached);
+      rawMessages.push(...cached.rawMessages);
+      continue;
     }
 
-    const timestamp = getMessageTimestamp(timestamps, message.id);
-    const role = message.role === "user" ? "user" : "assistant";
-    const blocks: ContentBlock[] = [];
-    const toolResults: RawMessage[] = [];
+    let computed: RawMessage[] = [];
 
-    for (const part of message.parts) {
-      if (part.type === "text") {
-        if (part.text) {
-          if (role === "assistant") {
-            const parsed = extractHermesInlineToolBlocks(part.text, timestamp);
-            blocks.push(...parsed.blocks);
-            toolResults.push(...parsed.toolResults);
+    if (message.role !== "system") {
+      const timestamp = getMessageTimestamp(timestamps, message.id);
+      const role = message.role === "user" ? "user" : "assistant";
+      const blocks: ContentBlock[] = [];
+      const toolResults: RawMessage[] = [];
 
-            if (parsed.remainingText) {
-              blocks.push({ type: "text", text: parsed.remainingText });
+      for (const part of message.parts) {
+        if (part.type === "text") {
+          if (part.text) {
+            if (role === "assistant") {
+              const parsed = extractHermesInlineToolBlocks(part.text, timestamp);
+              blocks.push(...parsed.blocks);
+              toolResults.push(...parsed.toolResults);
+
+              if (parsed.remainingText) {
+                blocks.push({ type: "text", text: parsed.remainingText });
+              }
+            } else {
+              blocks.push({ type: "text", text: part.text });
             }
-          } else {
-            blocks.push({ type: "text", text: part.text });
           }
+          continue;
         }
-        continue;
-      }
 
-      if (part.type === "reasoning") {
-        if (part.text) {
-          blocks.push({ type: "thinking", thinking: part.text });
+        if (part.type === "reasoning") {
+          if (part.text) {
+            blocks.push({ type: "thinking", thinking: part.text });
+          }
+          continue;
         }
-        continue;
-      }
 
-      if (part.type === "file") {
-        const imageBlock = filePartToImageBlock(part);
-        if (imageBlock) {
-          blocks.push(imageBlock);
+        if (part.type === "file") {
+          const imageBlock = filePartToImageBlock(part);
+          if (imageBlock) {
+            blocks.push(imageBlock);
+          }
+          continue;
         }
-        continue;
+
+        if (!isToolLikePart(part)) {
+          continue;
+        }
+
+        const rawToolType = String(part.type);
+        const toolName =
+          rawToolType === "dynamic-tool"
+            ? (typeof part.toolName === "string" ? part.toolName : "tool")
+            : rawToolType.slice(5);
+
+        blocks.push({
+          type: "toolCall",
+          id: part.toolCallId ?? `${toolName}-${timestamp}`,
+          name: toolName,
+          arguments: toToolArguments(part.input),
+        });
+
+        const content = toToolResultContent(part);
+        if (!content) {
+          continue;
+        }
+
+        toolResults.push({
+          role: "toolResult",
+          timestamp,
+          blocks: [
+            {
+              type: "toolResult",
+              toolName,
+              content,
+              isError:
+                part.state === "output-error" || part.state === "output-denied",
+            },
+          ],
+        });
       }
 
-      if (!isToolLikePart(part)) {
-        continue;
-      }
-
-      const rawToolType = String(part.type);
-      const toolName =
-        rawToolType === "dynamic-tool"
-          ? (typeof part.toolName === "string" ? part.toolName : "tool")
-          : rawToolType.slice(5);
-
-      blocks.push({
-        type: "toolCall",
-        id: part.toolCallId ?? `${toolName}-${timestamp}`,
-        name: toolName,
-        arguments: toToolArguments(part.input),
-      });
-
-      const content = toToolResultContent(part);
-      if (!content) {
-        continue;
-      }
-
-      toolResults.push({
-        role: "toolResult",
-        timestamp,
-        blocks: [
-          {
-            type: "toolResult",
-            toolName,
-            content,
-            isError:
-              part.state === "output-error" || part.state === "output-denied",
-          },
-        ],
-      });
+      computed =
+        blocks.length > 0
+          ? [
+              {
+                role,
+                timestamp,
+                blocks,
+                localId: message.id,
+              } satisfies RawMessage,
+              ...toolResults,
+            ]
+          : toolResults;
     }
 
-    const rawMessage =
-      blocks.length > 0
-        ? [
-            {
-              role,
-              timestamp,
-              blocks,
-              localId: message.id,
-            } satisfies RawMessage,
-          ]
-        : [];
+    const entry = { source: message, rawMessages: computed };
+    nextCache.set(message.id, entry);
+    rawMessages.push(...computed);
+  }
 
-    return [...rawMessage, ...toolResults];
-  });
+  cache.clear();
+  for (const [messageId, entry] of nextCache) {
+    cache.set(messageId, entry);
+  }
+
+  return rawMessages;
 }
 
 function getStreamingText(message: UIMessage | undefined): string | null {
@@ -385,7 +418,17 @@ export function useMessengerChat(sessionKey: string) {
     () => buildInitialMessages(parsedSession?.userName),
     [parsedSession?.userName],
   );
-  const timestampsRef = useRef(new Map<string, number>());
+  const [timestamps] = useState(() => new Map<string, number>());
+  const [rawMessageCache] = useState(
+    () =>
+      new Map<
+        string,
+        {
+          source: UIMessage;
+          rawMessages: RawMessage[];
+        }
+      >(),
+  );
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -413,9 +456,14 @@ export function useMessengerChat(sessionKey: string) {
     transport,
   });
 
+  useEffect(() => {
+    timestamps.clear();
+    rawMessageCache.clear();
+  }, [rawMessageCache, sessionKey, timestamps]);
+
   const rawMessages = useMemo(
-    () => uiMessagesToRawMessages(messages, timestampsRef.current),
-    [messages],
+    () => uiMessagesToRawMessages(messages, timestamps, rawMessageCache),
+    [messages, rawMessageCache, timestamps],
   );
   const stream = useMemo(
     () =>

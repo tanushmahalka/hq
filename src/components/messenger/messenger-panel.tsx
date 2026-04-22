@@ -1,5 +1,6 @@
 import { ApprovalCard } from "@/components/approvals/approval-card";
 import {
+  memo,
   useRef,
   useEffect,
   type ChangeEvent,
@@ -177,7 +178,7 @@ export function Session({
   );
 }
 
-export function SessionMessages({
+export const SessionMessages = memo(function SessionMessages({
   approvals,
   messages,
   stream,
@@ -272,7 +273,7 @@ export function SessionMessages({
       )}
     </div>
   );
-}
+});
 
 export function SessionInput({
   ready,

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createContextMock, fetchMock } = vi.hoisted(() => ({
+const { createContextMock, requestHermesChatCompletionMock } = vi.hoisted(() => ({
   createContextMock: vi.fn(),
-  fetchMock: vi.fn(),
+  requestHermesChatCompletionMock: vi.fn(),
 }));
 
 vi.mock("../../worker/trpc/context.ts", async () => {
@@ -13,6 +13,17 @@ vi.mock("../../worker/trpc/context.ts", async () => {
   return {
     ...actual,
     createContext: createContextMock,
+  };
+});
+
+vi.mock("../../worker/lib/hermes-chat.ts", async () => {
+  const actual = await vi.importActual<typeof import("../../worker/lib/hermes-chat.ts")>(
+    "../../worker/lib/hermes-chat.ts",
+  );
+
+  return {
+    ...actual,
+    requestHermesChatCompletion: requestHermesChatCompletionMock,
   };
 });
 
@@ -40,7 +51,7 @@ describe("chat route", () => {
       organizationId: "org-1",
       isAgent: false,
     });
-    fetchMock.mockResolvedValue(
+    requestHermesChatCompletionMock.mockResolvedValue(
       new Response('data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: [DONE]\n\n', {
         status: 200,
         headers: {
@@ -48,7 +59,6 @@ describe("chat route", () => {
         },
       }),
     );
-    vi.stubGlobal("fetch", fetchMock);
   });
 
   it("forwards the custom session key to Hermes as X-Hermes-Session-Id", async () => {
@@ -74,15 +84,14 @@ describe("chat route", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://hermes.example.com/v1/chat/completions",
+    expect(requestHermesChatCompletionMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({
-          authorization: "Bearer test-key",
-          "content-type": "application/json",
-          "X-Hermes-Session-Id": "agent:kaira:hq:webchat:user:tanush-mahalka",
-        }),
+        hermes: {
+          baseUrl: "https://hermes.example.com/v1",
+          apiKey: "test-key",
+          model: "hermes-agent",
+        },
+        sessionKey: "agent:kaira:hq:webchat:user:tanush-mahalka",
       }),
     );
   });

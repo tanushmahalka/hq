@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Code } from "lucide-react";
@@ -136,8 +136,12 @@ function parseSegments(text: string): Segment[] {
   return segments;
 }
 
-export function MessageContent({ text }: { text: string }) {
-  const segments = parseSegments(text);
+export const MessageContent = memo(function MessageContent({
+  text,
+}: {
+  text: string;
+}) {
+  const segments = useMemo(() => parseSegments(text), [text]);
 
   return (
     <div className="break-words overflow-hidden">
@@ -182,7 +186,7 @@ export function MessageContent({ text }: { text: string }) {
       })}
     </div>
   );
-}
+});
 
 function ProgressChip({ content }: { content: string }) {
   return (

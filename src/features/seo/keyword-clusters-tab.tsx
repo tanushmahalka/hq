@@ -17,8 +17,9 @@ import {
 import { EmptyState, InlineEmptyState, SummaryCard } from "./shared";
 import type { SeoKeywordCluster, SeoKeywordClustersData } from "./types";
 
-type SortMode = "importance" | "title";
-type DetailTabKey = "overview";
+type SortMode = "importance" | "title" | "pageCount";
+type DetailTabKey = "overview" | "pages";
+type SortDirection = "asc" | "desc";
 
 const IMPORTANCE_ORDER: Record<string, number> = {
   high: 0,
@@ -65,10 +66,12 @@ function ImportanceBadge({ value }: { value: string | null }) {
 function SortButton({
   active,
   label,
+  direction,
   onClick,
 }: {
   active: boolean;
   label: string;
+  direction: SortDirection;
   onClick: () => void;
 }) {
   return (
@@ -82,9 +85,13 @@ function SortButton({
           ? "border-foreground/15 bg-foreground/5 text-foreground hover:bg-foreground/5"
           : "border-border/50 text-muted-foreground hover:text-foreground",
       )}
-      onClick={onClick}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onClick();
+      }}
     >
-      <ArrowUpDown className="mr-1 size-3" />
+      <ArrowUpDown className={cn("mr-1 size-3 transition-transform", active && direction === "desc" && "rotate-180")} />
       {label}
     </Button>
   );
@@ -93,16 +100,22 @@ function SortButton({
 function DetailTabs({
   value,
   onValueChange,
+  pageCount,
 }: {
   value: DetailTabKey;
   onValueChange: (next: DetailTabKey) => void;
+  pageCount: number;
 }) {
   return (
     <div className="border-b border-border/40">
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => onValueChange("overview")}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onValueChange("overview");
+          }}
           className={cn(
             "border-b-2 px-1 pb-3 pt-1 text-sm transition-colors",
             value === "overview"
@@ -112,7 +125,23 @@ function DetailTabs({
         >
           Overview
         </button>
-        <span className="pb-3 pt-1 text-xs text-muted-foreground/50">More tabs coming soon</span>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onValueChange("pages");
+          }}
+          className={cn(
+            "border-b-2 px-1 pb-3 pt-1 text-sm transition-colors",
+            value === "pages"
+              ? "border-foreground text-foreground font-medium"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Pages
+          <span className="ml-1 text-xs text-muted-foreground/70">{pageCount}</span>
+        </button>
       </div>
     </div>
   );
@@ -130,7 +159,11 @@ function ClusterCard({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onClick();
+      }}
       data-testid="keyword-cluster-card"
       className={cn(
         "group relative w-full overflow-hidden rounded-xl border bg-card p-4 text-left transition-colors",
@@ -167,7 +200,8 @@ function ClusterCard({
 
       <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/70">
         <span>{cluster.keywordCount} keywords</span>
-          {cluster.representativeKeyword ? <span>- {cluster.representativeKeyword}</span> : null}
+        <span>- {cluster.pageCount} pages</span>
+        {cluster.representativeKeyword ? <span>- {cluster.representativeKeyword}</span> : null}
       </div>
     </button>
   );
@@ -217,6 +251,39 @@ function KeywordTable({ cluster }: { cluster: SeoKeywordCluster }) {
   );
 }
 
+function ClusterPagesTable({ cluster }: { cluster: SeoKeywordCluster }) {
+  if (cluster.pages.length === 0) {
+    return (
+      <p className="py-6 text-sm text-muted-foreground/40 text-center">
+        No pages are tagged to this cluster yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/40 bg-card/70">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>Page</TableHead>
+            <TableHead>URL</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {cluster.pages.map((page) => (
+            <TableRow key={page.id}>
+              <TableCell className="text-sm">{page.displayTitle}</TableCell>
+              <TableCell className="max-w-[18rem] truncate text-sm text-muted-foreground">
+                <span title={page.url}>{page.url}</span>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 function ClusterDetailPanel({
   cluster,
 }: {
@@ -252,12 +319,13 @@ function ClusterDetailPanel({
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           {cluster.keywordCount} tracked keywords
+          {` · ${cluster.pageCount} tagged pages`}
           {cluster.representativeKeyword ? ` · Representative keyword: ${cluster.representativeKeyword}` : ""}
         </p>
       </div>
 
       <div className="px-6 pt-4">
-        <DetailTabs value={activeTab} onValueChange={setActiveTab} />
+        <DetailTabs value={activeTab} onValueChange={setActiveTab} pageCount={cluster.pageCount} />
       </div>
 
       <div className="px-6 pb-6 pt-5">
@@ -280,6 +348,12 @@ function ClusterDetailPanel({
             </DetailSection>
           </>
         ) : null}
+
+        {activeTab === "pages" ? (
+          <DetailSection title="Pages in this cluster">
+            <ClusterPagesTable cluster={cluster} />
+          </DetailSection>
+        ) : null}
       </div>
     </div>
   );
@@ -288,6 +362,7 @@ function ClusterDetailPanel({
 export function KeywordClustersTab({ siteId }: { siteId: number }) {
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("importance");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedClusterId, setSelectedClusterId] = useState<number | null>(null);
   const deferredSearch = useDeferredValue(search);
 
@@ -310,15 +385,27 @@ export function KeywordClustersTab({ siteId }: { siteId: number }) {
     );
 
     return rows.sort((a, b) => {
+      const compareWithDirection = (value: number) =>
+        sortDirection === "asc" ? value : value * -1;
+
       if (sortMode === "title") {
+        return compareWithDirection(a.title.localeCompare(b.title));
+      }
+
+      if (sortMode === "pageCount") {
+        const pageDifference = a.pageCount - b.pageCount;
+        if (pageDifference !== 0) return compareWithDirection(pageDifference);
+
+        const rankDifference = importanceRank(a.mattersForKfd) - importanceRank(b.mattersForKfd);
+        if (rankDifference !== 0) return rankDifference;
         return a.title.localeCompare(b.title);
       }
 
       const rankDifference = importanceRank(a.mattersForKfd) - importanceRank(b.mattersForKfd);
-      if (rankDifference !== 0) return rankDifference;
-      return a.title.localeCompare(b.title);
+      if (rankDifference !== 0) return compareWithDirection(rankDifference);
+      return compareWithDirection(a.title.localeCompare(b.title));
     });
-  }, [data?.rows, deferredSearch, sortMode]);
+  }, [data?.rows, deferredSearch, sortDirection, sortMode]);
 
   const activeCluster = filteredClusters.find((cluster) => cluster.id === selectedClusterId) ?? null;
 
@@ -333,7 +420,18 @@ export function KeywordClustersTab({ siteId }: { siteId: number }) {
     setSelectedClusterId(null);
     setSearch("");
     setSortMode("importance");
+    setSortDirection("asc");
   }, [siteId]);
+
+  const handleSortChange = (nextMode: SortMode) => {
+    if (sortMode === nextMode) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setSortMode(nextMode);
+    setSortDirection(nextMode === "title" ? "asc" : "asc");
+  };
 
   const summary = useMemo(() => {
     const rows = data?.rows ?? [];
@@ -404,12 +502,20 @@ export function KeywordClustersTab({ siteId }: { siteId: number }) {
                 <SortButton
                   active={sortMode === "importance"}
                   label="Importance"
-                  onClick={() => setSortMode("importance")}
+                  direction={sortDirection}
+                  onClick={() => handleSortChange("importance")}
                 />
                 <SortButton
                   active={sortMode === "title"}
                   label="Title"
-                  onClick={() => setSortMode("title")}
+                  direction={sortDirection}
+                  onClick={() => handleSortChange("title")}
+                />
+                <SortButton
+                  active={sortMode === "pageCount"}
+                  label="Pages"
+                  direction={sortDirection}
+                  onClick={() => handleSortChange("pageCount")}
                 />
               </div>
             </div>

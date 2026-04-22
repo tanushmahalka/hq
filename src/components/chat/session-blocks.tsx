@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   Terminal,
   ChevronRight,
@@ -244,17 +244,17 @@ function ImageGrid({
   );
 }
 
-export function SessionMessageRow({
+export const SessionMessageRow = memo(function SessionMessageRow({
   msg,
 }: {
   msg: RawMessage;
   agentEmoji?: string;
 }) {
   const { isAdminView } = useAdminView();
+  const text = collectText(msg.blocks);
+  const images = collectImages(msg.blocks);
 
   if (msg.role === "user") {
-    const text = collectText(msg.blocks);
-    const images = collectImages(msg.blocks);
     if (!text && images.length === 0) return null;
 
     if (!isAdminView) {
@@ -313,11 +313,11 @@ export function SessionMessageRow({
 
   // Non-admin: render assistant messages as a minimal timeline
   if (!isAdminView) {
-    if (collectImages(msg.blocks).length > 0) {
+    if (images.length > 0) {
       return (
         <AssistantMessage
-          text={collectText(msg.blocks)}
-          images={collectImages(msg.blocks)}
+          text={text}
+          images={images}
           timestamp={msg.timestamp}
           isFirst
         />
@@ -385,10 +385,10 @@ export function SessionMessageRow({
       })}
     </div>
   );
-}
+});
 
 /* ── User message (left-aligned, comment-thread style) ── */
-function UserMessage({
+const UserMessage = memo(function UserMessage({
   text,
   images,
   timestamp,
@@ -436,10 +436,10 @@ function UserMessage({
       </div>
     </div>
   );
-}
+});
 
 /* ── Assistant message (left-aligned) ── */
-function AssistantMessage({
+const AssistantMessage = memo(function AssistantMessage({
   text,
   images = [],
   timestamp,
@@ -484,7 +484,7 @@ function AssistantMessage({
       </div>
     </div>
   );
-}
+});
 
 /* ── Memory context info button (beside the date) ── */
 function ContextInfoButton({ contexts }: { contexts: string[] }) {
@@ -719,7 +719,7 @@ function AssistantTimeline({
   blocks: ContentBlock[];
   timestamp: number;
 }) {
-  const entries = buildTimeline(blocks);
+  const entries = useMemo(() => buildTimeline(blocks), [blocks]);
   if (!entries.length) return null;
 
   const textEntries = entries.filter((e) => e.kind === "text");
@@ -919,8 +919,13 @@ function buildUXBlocks(messages: RawMessage[]): UXBlock[] {
   return blocks;
 }
 
-export function UXMessageList({ messages }: { messages: RawMessage[] }) {
+export const UXMessageList = memo(function UXMessageList({
+  messages,
+}: {
+  messages: RawMessage[];
+}) {
   const { isAdminView } = useAdminView();
+  const uxBlocks = useMemo(() => buildUXBlocks(messages), [messages]);
 
   // Admin mode: render each message individually
   if (isAdminView) {
@@ -932,8 +937,6 @@ export function UXMessageList({ messages }: { messages: RawMessage[] }) {
       </>
     );
   }
-
-  const uxBlocks = buildUXBlocks(messages);
 
   return (
     <>
@@ -965,7 +968,7 @@ export function UXMessageList({ messages }: { messages: RawMessage[] }) {
       })}
     </>
   );
-}
+});
 
 /* ═══════════════════════════════════════════════════════════════
    Spawned sub-session — inline indicator + read-only dialog
@@ -1095,7 +1098,7 @@ function SubSessionDialog({
 /** Loads and renders messages for a sub-session (read-only, no input) */
 function SubSessionContent({ sessionKey }: { sessionKey: string }) {
   console.log("[SubSessionContent] sessionKey:", sessionKey);
-  const { rawMessages, stream, isBusy, loading, error } =
+  const { rawMessages, isBusy, loading, error } =
     useSessionChat(sessionKey);
   console.log(
     "[SubSessionContent] loading:",

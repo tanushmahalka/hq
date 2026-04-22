@@ -25,20 +25,21 @@ export const sites = pgTable(
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "sites_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "sites_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
   },
   (table) => [
-    uniqueIndex("sites_domain_unique").using("btree", table.domain.asc().nullsLast().op("text_ops")),
-  ],
+    uniqueIndex("sites_domain_unique").using(
+      "btree",
+      table.domain.asc().nullsLast().op("text_ops")
+    ),
+  ]
 );
 
 export const crawlRuns = pgTable(
@@ -49,16 +50,14 @@ export const crawlRuns = pgTable(
     finishedAt: timestamp("finished_at", { mode: "string" }),
     status: text().notNull(),
     notes: text(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "crawl_runs_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "crawl_runs_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
@@ -67,7 +66,7 @@ export const crawlRuns = pgTable(
       foreignColumns: [sites.id],
       name: "crawl_runs_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const pages = pgTable(
@@ -91,32 +90,36 @@ export const pages = pgTable(
     contentStatus: text("content_status").notNull(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "pages_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "pages_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
-    index("idx_pages_canonical_url").using("btree", table.canonicalUrl.asc().nullsLast().op("text_ops")),
-    index("idx_pages_site_id").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_pages_canonical_url").using(
+      "btree",
+      table.canonicalUrl.asc().nullsLast().op("text_ops")
+    ),
+    index("idx_pages_site_id").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
     uniqueIndex("pages_site_url_unique").using(
       "btree",
       table.siteId.asc().nullsLast().op("int4_ops"),
-      table.url.asc().nullsLast().op("int4_ops"),
+      table.url.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "pages_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const siteCompetitors = pgTable(
@@ -129,32 +132,36 @@ export const siteCompetitors = pgTable(
     notes: text(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "site_competitors_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "site_competitors_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
-    index("idx_site_competitors_site_id").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
-    index("idx_site_competitors_type").using("btree", table.competitorType.asc().nullsLast().op("text_ops")),
+    index("idx_site_competitors_site_id").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
+    index("idx_site_competitors_type").using(
+      "btree",
+      table.competitorType.asc().nullsLast().op("text_ops")
+    ),
     uniqueIndex("site_competitors_site_domain_unique").using(
       "btree",
       table.siteId.asc().nullsLast().op("int4_ops"),
-      table.competitorDomain.asc().nullsLast().op("int4_ops"),
+      table.competitorDomain.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "site_competitors_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const queryClusters = pgTable(
@@ -167,16 +174,14 @@ export const queryClusters = pgTable(
     notes: text(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "query_clusters_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "query_clusters_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
@@ -185,7 +190,7 @@ export const queryClusters = pgTable(
       foreignColumns: [sites.id],
       name: "query_clusters_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const keywordClusters = pgTable(
@@ -205,35 +210,39 @@ export const keywordClusters = pgTable(
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
     reviewedAt: timestamp("reviewed_at", { mode: "string" }),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "keyword_clusters_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "keyword_clusters_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
-    index("idx_keyword_clusters_site_id").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_keyword_clusters_site_id").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
     index("idx_keyword_clusters_source_cluster_key").using(
       "btree",
-      table.sourceClusterKey.asc().nullsLast().op("text_ops"),
+      table.sourceClusterKey.asc().nullsLast().op("text_ops")
     ),
     index("idx_keyword_clusters_matters_for_kfd").using(
       "btree",
-      table.mattersForKfd.asc().nullsLast().op("text_ops"),
+      table.mattersForKfd.asc().nullsLast().op("text_ops")
     ),
-    index("idx_keyword_clusters_is_noise").using("btree", table.isNoise.asc().nullsLast().op("bool_ops")),
+    index("idx_keyword_clusters_is_noise").using(
+      "btree",
+      table.isNoise.asc().nullsLast().op("bool_ops")
+    ),
     foreignKey({
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "keyword_clusters_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const siteKeywords = pgTable(
@@ -245,7 +254,10 @@ export const siteKeywords = pgTable(
     isRelevant: boolean("is_relevant"),
     searchVolume: integer("search_volume"),
     bestRank: integer("best_rank"),
-    keywordDifficulty: numeric("keyword_difficulty", { precision: 5, scale: 2 }),
+    keywordDifficulty: numeric("keyword_difficulty", {
+      precision: 5,
+      scale: 2,
+    }),
     searchIntent: text("search_intent"),
     sourceCount: integer("source_count").default(1).notNull(),
     embedding: vector("embedding", { dimensions: 1536 }),
@@ -253,36 +265,43 @@ export const siteKeywords = pgTable(
     embeddedAt: timestamp("embedded_at", { mode: "string" }),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "site_keywords_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "site_keywords_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
     clusterId: integer("cluster_id"),
     keywordClusterId: integer("keyword_cluster_id"),
   },
   (table) => [
-    index("idx_site_keywords_site_id").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
-    index("idx_site_keywords_cluster_id").using("btree", table.clusterId.asc().nullsLast().op("int4_ops")),
+    index("idx_site_keywords_site_id").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
+    index("idx_site_keywords_cluster_id").using(
+      "btree",
+      table.clusterId.asc().nullsLast().op("int4_ops")
+    ),
     index("idx_site_keywords_keyword_cluster_id").using(
       "btree",
-      table.keywordClusterId.asc().nullsLast().op("int4_ops"),
+      table.keywordClusterId.asc().nullsLast().op("int4_ops")
     ),
-    index("idx_site_keywords_relevance").using("btree", table.isRelevant.asc().nullsLast().op("bool_ops")),
+    index("idx_site_keywords_relevance").using(
+      "btree",
+      table.isRelevant.asc().nullsLast().op("bool_ops")
+    ),
     index("idx_site_keywords_embedded_at").using(
       "btree",
-      table.embeddedAt.asc().nullsLast().op("timestamp_ops"),
+      table.embeddedAt.asc().nullsLast().op("timestamp_ops")
     ),
     uniqueIndex("site_keywords_site_normalized_keyword_unique").using(
       "btree",
       table.siteId.asc().nullsLast().op("int4_ops"),
-      table.normalizedKeyword.asc().nullsLast().op("text_ops"),
+      table.normalizedKeyword.asc().nullsLast().op("text_ops")
     ),
     foreignKey({
       columns: [table.siteId],
@@ -299,7 +318,7 @@ export const siteKeywords = pgTable(
       foreignColumns: [keywordClusters.id],
       name: "site_keywords_keyword_cluster_id_keyword_clusters_id_fk",
     }),
-  ],
+  ]
 );
 
 export const queries = pgTable(
@@ -310,30 +329,28 @@ export const queries = pgTable(
     searchEngine: text("search_engine").default("google"),
     isPrimary: boolean("is_primary").default(false).notNull(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "queries_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "queries_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     clusterId: integer("cluster_id").notNull(),
   },
   (table) => [
     uniqueIndex("queries_cluster_query_unique").using(
       "btree",
       table.clusterId.asc().nullsLast().op("int4_ops"),
-      table.query.asc().nullsLast().op("int4_ops"),
+      table.query.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.clusterId],
       foreignColumns: [queryClusters.id],
       name: "queries_cluster_id_query_clusters_id_fk",
     }),
-  ],
+  ]
 );
 
 export const analyticsDaily = pgTable(
@@ -347,18 +364,19 @@ export const analyticsDaily = pgTable(
     engagedSessions: integer("engaged_sessions"),
     conversions: integer(),
     revenue: numeric({ precision: 14, scale: 2 }),
-    avgEngagementSeconds: numeric("avg_engagement_seconds", { precision: 12, scale: 2 }),
+    avgEngagementSeconds: numeric("avg_engagement_seconds", {
+      precision: 12,
+      scale: 2,
+    }),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "analytics_daily_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "analytics_daily_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     pageId: integer("page_id"),
     siteId: integer("site_id").notNull(),
   },
@@ -369,17 +387,17 @@ export const analyticsDaily = pgTable(
       table.pageId.asc().nullsLast().op("int4_ops"),
       table.eventDate.asc().nullsLast().op("text_ops"),
       table.channel.asc().nullsLast().op("text_ops"),
-      table.device.asc().nullsLast().op("int4_ops"),
+      table.device.asc().nullsLast().op("int4_ops")
     ),
     index("idx_analytics_page_date").using(
       "btree",
       table.pageId.asc().nullsLast().op("date_ops"),
-      table.eventDate.asc().nullsLast().op("date_ops"),
+      table.eventDate.asc().nullsLast().op("date_ops")
     ),
     index("idx_analytics_site_date").using(
       "btree",
       table.siteId.asc().nullsLast().op("int4_ops"),
-      table.eventDate.asc().nullsLast().op("int4_ops"),
+      table.eventDate.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.pageId],
@@ -391,7 +409,7 @@ export const analyticsDaily = pgTable(
       foreignColumns: [sites.id],
       name: "analytics_daily_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const assets = pgTable(
@@ -403,16 +421,14 @@ export const assets = pgTable(
     refreshDate: date("refresh_date"),
     promotionStatus: text("promotion_status").notNull(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "assets_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "assets_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     pageId: integer("page_id"),
     siteId: integer("site_id").notNull(),
   },
@@ -427,7 +443,7 @@ export const assets = pgTable(
       foreignColumns: [sites.id],
       name: "assets_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const backlinkSources = pgTable(
@@ -463,16 +479,14 @@ export const backlinkSources = pgTable(
     lastSeenAt: timestamp("last_seen_at", { mode: "string" }),
     verifiedAt: timestamp("verified_at", { mode: "string" }),
     status: text().notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "backlink_sources_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "backlink_sources_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
     targetPageId: integer("target_page_id"),
   },
@@ -482,15 +496,15 @@ export const backlinkSources = pgTable(
       table.siteId.asc().nullsLast().op("int4_ops"),
       table.sourceUrl.asc().nullsLast().op("int4_ops"),
       table.targetUrl.asc().nullsLast().op("int4_ops"),
-      table.anchorText.asc().nullsLast().op("int4_ops"),
+      table.anchorText.asc().nullsLast().op("int4_ops")
     ),
     index("idx_backlink_sources_source_domain").using(
       "btree",
-      table.sourceDomain.asc().nullsLast().op("text_ops"),
+      table.sourceDomain.asc().nullsLast().op("text_ops")
     ),
     index("idx_backlink_sources_target_page").using(
       "btree",
-      table.targetPageId.asc().nullsLast().op("int4_ops"),
+      table.targetPageId.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.siteId],
@@ -502,7 +516,7 @@ export const backlinkSources = pgTable(
       foreignColumns: [pages.id],
       name: "backlink_sources_target_page_id_pages_id_fk",
     }),
-  ],
+  ]
 );
 
 export const competitorBacklinkSources = pgTable(
@@ -539,16 +553,14 @@ export const competitorBacklinkSources = pgTable(
     status: text().notNull(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "competitor_backlink_sources_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "competitor_backlink_sources_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteCompetitorId: integer("site_competitor_id").notNull(),
   },
   (table) => [
@@ -557,22 +569,22 @@ export const competitorBacklinkSources = pgTable(
       table.siteCompetitorId.asc().nullsLast().op("int4_ops"),
       table.sourceUrl.asc().nullsLast().op("text_ops"),
       table.targetUrl.asc().nullsLast().op("text_ops"),
-      table.anchorText.asc().nullsLast().op("text_ops"),
+      table.anchorText.asc().nullsLast().op("text_ops")
     ),
     index("idx_competitor_backlink_sources_domain").using(
       "btree",
-      table.sourceDomain.asc().nullsLast().op("text_ops"),
+      table.sourceDomain.asc().nullsLast().op("text_ops")
     ),
     index("idx_competitor_backlink_sources_competitor").using(
       "btree",
-      table.siteCompetitorId.asc().nullsLast().op("int4_ops"),
+      table.siteCompetitorId.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.siteCompetitorId],
       foreignColumns: [siteCompetitors.id],
       name: "competitor_backlink_sources_site_competitor_id_site_competito",
     }),
-  ],
+  ]
 );
 
 export const brandMentions = pgTable(
@@ -587,16 +599,14 @@ export const brandMentions = pgTable(
     sentiment: text(),
     discoveredAt: timestamp("discovered_at", { mode: "string" }).notNull(),
     status: text().notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "brand_mentions_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "brand_mentions_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
@@ -604,15 +614,18 @@ export const brandMentions = pgTable(
       "btree",
       table.siteId.asc().nullsLast().op("text_ops"),
       table.sourceUrl.asc().nullsLast().op("int4_ops"),
-      table.mentionedEntity.asc().nullsLast().op("text_ops"),
+      table.mentionedEntity.asc().nullsLast().op("text_ops")
     ),
-    index("idx_brand_mentions_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+    index("idx_brand_mentions_status").using(
+      "btree",
+      table.status.asc().nullsLast().op("text_ops")
+    ),
     foreignKey({
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "brand_mentions_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const businessProfiles = pgTable(
@@ -633,16 +646,14 @@ export const businessProfiles = pgTable(
     avgRating: numeric("avg_rating", { precision: 3, scale: 2 }),
     reviewCount: integer("review_count"),
     lastSyncedAt: timestamp("last_synced_at", { mode: "string" }),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "business_profiles_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "business_profiles_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
@@ -650,14 +661,14 @@ export const businessProfiles = pgTable(
       "btree",
       table.siteId.asc().nullsLast().op("text_ops"),
       table.platform.asc().nullsLast().op("text_ops"),
-      table.profileUrl.asc().nullsLast().op("text_ops"),
+      table.profileUrl.asc().nullsLast().op("text_ops")
     ),
     foreignKey({
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "business_profiles_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const competitorDomainFootprints = pgTable(
@@ -673,38 +684,36 @@ export const competitorDomainFootprints = pgTable(
     top100KeywordsCount: integer("top_100_keywords_count"),
     visibilityScore: numeric("visibility_score", { precision: 10, scale: 2 }),
     capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "competitor_domain_footprints_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "competitor_domain_footprints_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteCompetitorId: integer("site_competitor_id").notNull(),
   },
   (table) => [
     index("idx_competitor_domain_footprints_captured_at").using(
       "btree",
-      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+      table.capturedAt.asc().nullsLast().op("timestamp_ops")
     ),
     index("idx_competitor_domain_footprints_competitor").using(
       "btree",
-      table.siteCompetitorId.asc().nullsLast().op("int4_ops"),
+      table.siteCompetitorId.asc().nullsLast().op("int4_ops")
     ),
     index("idx_competitor_domain_footprints_location_language").using(
       "btree",
       table.location.asc().nullsLast().op("text_ops"),
-      table.languageCode.asc().nullsLast().op("text_ops"),
+      table.languageCode.asc().nullsLast().op("text_ops")
     ),
     foreignKey({
       columns: [table.siteCompetitorId],
       foreignColumns: [siteCompetitors.id],
       name: "competitor_domain_footprints_site_competitor_id_site_competitor",
     }),
-  ],
+  ]
 );
 
 export const competitorRankedKeywords = pgTable(
@@ -715,45 +724,49 @@ export const competitorRankedKeywords = pgTable(
     languageCode: text("language_code").notNull(),
     rank: integer().notNull(),
     searchVolume: integer("search_volume").notNull(),
-    keywordDifficulty: numeric("keyword_difficulty", { precision: 5, scale: 2 }),
+    keywordDifficulty: numeric("keyword_difficulty", {
+      precision: 5,
+      scale: 2,
+    }),
     searchIntent: text("search_intent"),
     isRelevant: boolean("is_relevant"),
     rankingUrl: text("ranking_url").notNull(),
     serpItemType: text("serp_item_type"),
     estimatedTraffic: numeric("estimated_traffic", { precision: 12, scale: 2 }),
     capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "competitor_ranked_keywords_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "competitor_ranked_keywords_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteCompetitorId: integer("site_competitor_id").notNull(),
   },
   (table) => [
     index("idx_competitor_ranked_keywords_captured_at").using(
       "btree",
-      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+      table.capturedAt.asc().nullsLast().op("timestamp_ops")
     ),
     index("idx_competitor_ranked_keywords_competitor").using(
       "btree",
-      table.siteCompetitorId.asc().nullsLast().op("int4_ops"),
+      table.siteCompetitorId.asc().nullsLast().op("int4_ops")
     ),
     index("idx_competitor_ranked_keywords_keyword").using(
       "btree",
-      table.keyword.asc().nullsLast().op("text_ops"),
+      table.keyword.asc().nullsLast().op("text_ops")
     ),
-    index("idx_competitor_ranked_keywords_rank").using("btree", table.rank.asc().nullsLast().op("int4_ops")),
+    index("idx_competitor_ranked_keywords_rank").using(
+      "btree",
+      table.rank.asc().nullsLast().op("int4_ops")
+    ),
     foreignKey({
       columns: [table.siteCompetitorId],
       foreignColumns: [siteCompetitors.id],
       name: "competitor_ranked_keywords_site_competitor_id_site_competitors_",
     }),
-  ],
+  ]
 );
 
 export const crawlPageFacts = pgTable(
@@ -777,21 +790,22 @@ export const crawlPageFacts = pgTable(
     coreWebVitalsStatus: text("core_web_vitals_status"),
     lastModifiedHeader: timestamp("last_modified_header", { mode: "string" }),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "crawl_page_facts_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "crawl_page_facts_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     crawlRunId: integer("crawl_run_id").notNull(),
     pageId: integer("page_id"),
   },
   (table) => [
-    index("idx_crawl_page_facts_url").using("btree", table.url.asc().nullsLast().op("text_ops")),
+    index("idx_crawl_page_facts_url").using(
+      "btree",
+      table.url.asc().nullsLast().op("text_ops")
+    ),
     foreignKey({
       columns: [table.crawlRunId],
       foreignColumns: [crawlRuns.id],
@@ -802,7 +816,7 @@ export const crawlPageFacts = pgTable(
       foreignColumns: [pages.id],
       name: "crawl_page_facts_page_id_pages_id_fk",
     }),
-  ],
+  ]
 );
 
 export const internalLinks = pgTable(
@@ -813,30 +827,34 @@ export const internalLinks = pgTable(
     isNofollow: boolean("is_nofollow").default(false).notNull(),
     firstSeenAt: timestamp("first_seen_at", { mode: "string" }).notNull(),
     lastSeenAt: timestamp("last_seen_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "internal_links_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "internal_links_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
     sourcePageId: integer("source_page_id").notNull(),
     targetPageId: integer("target_page_id").notNull(),
   },
   (table) => [
-    index("idx_internal_links_source").using("btree", table.sourcePageId.asc().nullsLast().op("int4_ops")),
-    index("idx_internal_links_target").using("btree", table.targetPageId.asc().nullsLast().op("int4_ops")),
+    index("idx_internal_links_source").using(
+      "btree",
+      table.sourcePageId.asc().nullsLast().op("int4_ops")
+    ),
+    index("idx_internal_links_target").using(
+      "btree",
+      table.targetPageId.asc().nullsLast().op("int4_ops")
+    ),
     uniqueIndex("internal_links_unique").using(
       "btree",
       table.siteId.asc().nullsLast().op("text_ops"),
       table.sourcePageId.asc().nullsLast().op("int4_ops"),
       table.targetPageId.asc().nullsLast().op("int4_ops"),
       table.anchorText.asc().nullsLast().op("text_ops"),
-      table.linkLocation.asc().nullsLast().op("text_ops"),
+      table.linkLocation.asc().nullsLast().op("text_ops")
     ),
     foreignKey({
       columns: [table.siteId],
@@ -853,7 +871,7 @@ export const internalLinks = pgTable(
       foreignColumns: [pages.id],
       name: "internal_links_target_page_id_pages_id_fk",
     }),
-  ],
+  ]
 );
 
 export const outreachProspects = pgTable(
@@ -871,16 +889,14 @@ export const outreachProspects = pgTable(
     notes: text(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "outreach_prospects_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "outreach_prospects_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
@@ -889,7 +905,7 @@ export const outreachProspects = pgTable(
       foreignColumns: [sites.id],
       name: "outreach_prospects_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const linkOpportunities = pgTable(
@@ -911,16 +927,14 @@ export const linkOpportunities = pgTable(
     lastReviewedAt: timestamp("last_reviewed_at", { mode: "string" }),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "link_opportunities_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "link_opportunities_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
     targetPageId: integer("target_page_id").notNull(),
     prospectId: integer("prospect_id"),
@@ -933,16 +947,19 @@ export const linkOpportunities = pgTable(
       table.siteId.asc().nullsLast().op("int4_ops"),
       table.sourceUrl.asc().nullsLast().op("text_ops"),
       table.targetPageId.asc().nullsLast().op("int4_ops"),
-      table.opportunityType.asc().nullsLast().op("text_ops"),
+      table.opportunityType.asc().nullsLast().op("text_ops")
     ),
-    index("idx_link_opportunities_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+    index("idx_link_opportunities_status").using(
+      "btree",
+      table.status.asc().nullsLast().op("text_ops")
+    ),
     index("idx_link_opportunities_target_page").using(
       "btree",
-      table.targetPageId.asc().nullsLast().op("int4_ops"),
+      table.targetPageId.asc().nullsLast().op("int4_ops")
     ),
     index("idx_link_opportunities_prospect").using(
       "btree",
-      table.prospectId.asc().nullsLast().op("int4_ops"),
+      table.prospectId.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.siteId],
@@ -969,7 +986,7 @@ export const linkOpportunities = pgTable(
       foreignColumns: [brandMentions.id],
       name: "link_opportunities_brand_mention_id_brand_mentions_id_fk",
     }),
-  ],
+  ]
 );
 
 export const outreachContacts = pgTable(
@@ -984,31 +1001,32 @@ export const outreachContacts = pgTable(
     lastValidatedAt: timestamp("last_validated_at", { mode: "string" }),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "outreach_contacts_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "outreach_contacts_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     prospectId: integer("prospect_id").notNull(),
   },
   (table) => [
     uniqueIndex("outreach_contacts_prospect_email_unique").using(
       "btree",
       table.prospectId.asc().nullsLast().op("int4_ops"),
-      table.email.asc().nullsLast().op("text_ops"),
+      table.email.asc().nullsLast().op("text_ops")
     ),
-    index("idx_outreach_contacts_prospect").using("btree", table.prospectId.asc().nullsLast().op("int4_ops")),
+    index("idx_outreach_contacts_prospect").using(
+      "btree",
+      table.prospectId.asc().nullsLast().op("int4_ops")
+    ),
     foreignKey({
       columns: [table.prospectId],
       foreignColumns: [outreachProspects.id],
       name: "outreach_contacts_prospect_id_outreach_prospects_id_fk",
     }),
-  ],
+  ]
 );
 
 export const outreachThreads = pgTable(
@@ -1026,16 +1044,14 @@ export const outreachThreads = pgTable(
     outcome: text(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "outreach_threads_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "outreach_threads_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
     opportunityId: integer("opportunity_id").notNull(),
     prospectId: integer("prospect_id").notNull(),
@@ -1043,15 +1059,21 @@ export const outreachThreads = pgTable(
     wonBacklinkSourceId: integer("won_backlink_source_id"),
   },
   (table) => [
-    index("idx_outreach_threads_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_outreach_threads_site").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
     index("idx_outreach_threads_opportunity").using(
       "btree",
-      table.opportunityId.asc().nullsLast().op("int4_ops"),
+      table.opportunityId.asc().nullsLast().op("int4_ops")
     ),
-    index("idx_outreach_threads_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+    index("idx_outreach_threads_status").using(
+      "btree",
+      table.status.asc().nullsLast().op("text_ops")
+    ),
     index("idx_outreach_threads_follow_up_due_at").using(
       "btree",
-      table.followUpDueAt.asc().nullsLast().op("timestamp_ops"),
+      table.followUpDueAt.asc().nullsLast().op("timestamp_ops")
     ),
     foreignKey({
       columns: [table.siteId],
@@ -1078,7 +1100,7 @@ export const outreachThreads = pgTable(
       foreignColumns: [backlinkSources.id],
       name: "outreach_threads_won_backlink_source_id_backlink_sources_id_fk",
     }),
-  ],
+  ]
 );
 
 export const outreachMessages = pgTable(
@@ -1101,28 +1123,32 @@ export const outreachMessages = pgTable(
     createdByAgent: text("created_by_agent"),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "outreach_messages_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "outreach_messages_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     threadId: integer("thread_id").notNull(),
   },
   (table) => [
-    index("idx_outreach_messages_thread").using("btree", table.threadId.asc().nullsLast().op("int4_ops")),
+    index("idx_outreach_messages_thread").using(
+      "btree",
+      table.threadId.asc().nullsLast().op("int4_ops")
+    ),
     index("idx_outreach_messages_provider_message").using(
       "btree",
-      table.providerMessageId.asc().nullsLast().op("text_ops"),
+      table.providerMessageId.asc().nullsLast().op("text_ops")
     ),
-    index("idx_outreach_messages_sent_at").using("btree", table.sentAt.asc().nullsLast().op("timestamp_ops")),
+    index("idx_outreach_messages_sent_at").using(
+      "btree",
+      table.sentAt.asc().nullsLast().op("timestamp_ops")
+    ),
     index("idx_outreach_messages_received_at").using(
       "btree",
-      table.receivedAt.asc().nullsLast().op("timestamp_ops"),
+      table.receivedAt.asc().nullsLast().op("timestamp_ops")
     ),
     foreignKey({
       columns: [table.threadId],
@@ -1134,7 +1160,7 @@ export const outreachMessages = pgTable(
       foreignColumns: [table.id],
       name: "outreach_messages_in_reply_to_message_id_outreach_messages_id_fk",
     }),
-  ],
+  ]
 );
 
 export const pageClusterTargets = pgTable(
@@ -1143,16 +1169,14 @@ export const pageClusterTargets = pgTable(
     targetRole: text("target_role").notNull(),
     confidenceScore: numeric("confidence_score", { precision: 5, scale: 2 }),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "page_cluster_targets_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "page_cluster_targets_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     clusterId: integer("cluster_id").notNull(),
     pageId: integer("page_id").notNull(),
   },
@@ -1160,7 +1184,7 @@ export const pageClusterTargets = pgTable(
     uniqueIndex("page_cluster_target_unique").using(
       "btree",
       table.pageId.asc().nullsLast().op("int4_ops"),
-      table.clusterId.asc().nullsLast().op("int4_ops"),
+      table.clusterId.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.clusterId],
@@ -1172,23 +1196,21 @@ export const pageClusterTargets = pgTable(
       foreignColumns: [pages.id],
       name: "page_cluster_targets_page_id_pages_id_fk",
     }),
-  ],
+  ]
 );
 
 export const pageKeywordClusters = pgTable(
   "page_keyword_clusters",
   {
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "page_keyword_clusters_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "page_keyword_clusters_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     pageId: integer("page_id").notNull(),
     keywordClusterId: integer("keyword_cluster_id").notNull(),
   },
@@ -1196,15 +1218,15 @@ export const pageKeywordClusters = pgTable(
     uniqueIndex("page_keyword_clusters_page_keyword_cluster_unique").using(
       "btree",
       table.pageId.asc().nullsLast().op("int4_ops"),
-      table.keywordClusterId.asc().nullsLast().op("int4_ops"),
+      table.keywordClusterId.asc().nullsLast().op("int4_ops")
     ),
     index("idx_page_keyword_clusters_page_id").using(
       "btree",
-      table.pageId.asc().nullsLast().op("int4_ops"),
+      table.pageId.asc().nullsLast().op("int4_ops")
     ),
     index("idx_page_keyword_clusters_keyword_cluster_id").using(
       "btree",
-      table.keywordClusterId.asc().nullsLast().op("int4_ops"),
+      table.keywordClusterId.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.pageId],
@@ -1216,7 +1238,8 @@ export const pageKeywordClusters = pgTable(
       foreignColumns: [keywordClusters.id],
       name: "page_keyword_clusters_keyword_cluster_id_keyword_clusters_id_fk",
     }),
-  ],
+    ej,
+  ]
 );
 
 export const reviews = pgTable(
@@ -1232,36 +1255,34 @@ export const reviews = pgTable(
     responseStatus: text("response_status").notNull(),
     responseDate: timestamp("response_date", { mode: "string" }),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "reviews_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "reviews_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
     index("idx_reviews_platform_date").using(
       "btree",
       table.platform.asc().nullsLast().op("timestamp_ops"),
-      table.reviewDate.asc().nullsLast().op("text_ops"),
+      table.reviewDate.asc().nullsLast().op("text_ops")
     ),
     uniqueIndex("reviews_site_platform_external_unique").using(
       "btree",
       table.siteId.asc().nullsLast().op("text_ops"),
       table.platform.asc().nullsLast().op("int4_ops"),
-      table.externalReviewId.asc().nullsLast().op("text_ops"),
+      table.externalReviewId.asc().nullsLast().op("text_ops")
     ),
     foreignKey({
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "reviews_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const searchConsoleDaily = pgTable(
@@ -1275,16 +1296,14 @@ export const searchConsoleDaily = pgTable(
     ctr: numeric({ precision: 8, scale: 6 }).notNull(),
     avgPosition: numeric("avg_position", { precision: 8, scale: 3 }),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "search_console_daily_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "search_console_daily_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     pageId: integer("page_id"),
     queryId: integer("query_id"),
     siteId: integer("site_id").notNull(),
@@ -1293,17 +1312,17 @@ export const searchConsoleDaily = pgTable(
     index("idx_scd_page_date").using(
       "btree",
       table.pageId.asc().nullsLast().op("int4_ops"),
-      table.eventDate.asc().nullsLast().op("int4_ops"),
+      table.eventDate.asc().nullsLast().op("int4_ops")
     ),
     index("idx_scd_query_date").using(
       "btree",
       table.queryId.asc().nullsLast().op("int4_ops"),
-      table.eventDate.asc().nullsLast().op("int4_ops"),
+      table.eventDate.asc().nullsLast().op("int4_ops")
     ),
     index("idx_scd_site_date").using(
       "btree",
       table.siteId.asc().nullsLast().op("date_ops"),
-      table.eventDate.asc().nullsLast().op("date_ops"),
+      table.eventDate.asc().nullsLast().op("date_ops")
     ),
     uniqueIndex("scd_grain_unique").using(
       "btree",
@@ -1312,7 +1331,7 @@ export const searchConsoleDaily = pgTable(
       table.queryId.asc().nullsLast().op("int4_ops"),
       table.eventDate.asc().nullsLast().op("int4_ops"),
       table.device.asc().nullsLast().op("text_ops"),
-      table.countryCode.asc().nullsLast().op("text_ops"),
+      table.countryCode.asc().nullsLast().op("text_ops")
     ),
     foreignKey({
       columns: [table.pageId],
@@ -1329,7 +1348,7 @@ export const searchConsoleDaily = pgTable(
       foreignColumns: [sites.id],
       name: "search_console_daily_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const siteDomainFootprints = pgTable(
@@ -1345,35 +1364,36 @@ export const siteDomainFootprints = pgTable(
     top100KeywordsCount: integer("top_100_keywords_count"),
     visibilityScore: numeric("visibility_score", { precision: 10, scale: 2 }),
     capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "site_domain_footprints_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "site_domain_footprints_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
     index("idx_site_domain_footprints_captured_at").using(
       "btree",
-      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+      table.capturedAt.asc().nullsLast().op("timestamp_ops")
     ),
     index("idx_site_domain_footprints_location_language").using(
       "btree",
       table.location.asc().nullsLast().op("text_ops"),
-      table.languageCode.asc().nullsLast().op("text_ops"),
+      table.languageCode.asc().nullsLast().op("text_ops")
     ),
-    index("idx_site_domain_footprints_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_site_domain_footprints_site").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
     foreignKey({
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "site_domain_footprints_site_id_fkey",
     }),
-  ],
+  ]
 );
 
 export const siteBacklinkFootprints = pgTable(
@@ -1389,33 +1409,31 @@ export const siteBacklinkFootprints = pgTable(
     brokenBacklinksCount: integer("broken_backlinks_count"),
     rank: integer("rank"),
     capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "site_backlink_footprints_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "site_backlink_footprints_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
   },
   (table) => [
     index("idx_site_backlink_footprints_captured_at").using(
       "btree",
-      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+      table.capturedAt.asc().nullsLast().op("timestamp_ops")
     ),
     index("idx_site_backlink_footprints_site").using(
       "btree",
-      table.siteId.asc().nullsLast().op("int4_ops"),
+      table.siteId.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "site_backlink_footprints_site_id_sites_id_fk",
     }),
-  ],
+  ]
 );
 
 export const competitorBacklinkFootprints = pgTable(
@@ -1431,33 +1449,31 @@ export const competitorBacklinkFootprints = pgTable(
     brokenBacklinksCount: integer("broken_backlinks_count"),
     rank: integer("rank"),
     capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "competitor_backlink_footprints_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "competitor_backlink_footprints_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteCompetitorId: integer("site_competitor_id").notNull(),
   },
   (table) => [
     index("idx_competitor_backlink_footprints_captured_at").using(
       "btree",
-      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+      table.capturedAt.asc().nullsLast().op("timestamp_ops")
     ),
     index("idx_competitor_backlink_footprints_competitor").using(
       "btree",
-      table.siteCompetitorId.asc().nullsLast().op("int4_ops"),
+      table.siteCompetitorId.asc().nullsLast().op("int4_ops")
     ),
     foreignKey({
       columns: [table.siteCompetitorId],
       foreignColumns: [siteCompetitors.id],
       name: "competitor_backlink_footprints_site_competitor_id_site_compet",
     }),
-  ],
+  ]
 );
 
 export const geoPrompts = pgTable(
@@ -1474,30 +1490,31 @@ export const geoPrompts = pgTable(
     status: text().notNull(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "geo_prompts_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "geo_prompts_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
     queryClusterId: integer("query_cluster_id").notNull(),
     mappedPageId: integer("mapped_page_id"),
   },
   (table) => [
-    index("idx_geo_prompts_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_geo_prompts_site").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
     index("idx_geo_prompts_cluster").using(
       "btree",
-      table.queryClusterId.asc().nullsLast().op("int4_ops"),
+      table.queryClusterId.asc().nullsLast().op("int4_ops")
     ),
     uniqueIndex("geo_prompts_cluster_prompt_unique").using(
       "btree",
       table.queryClusterId.asc().nullsLast().op("int4_ops"),
-      table.normalizedPrompt.asc().nullsLast().op("text_ops"),
+      table.normalizedPrompt.asc().nullsLast().op("text_ops")
     ),
     foreignKey({
       columns: [table.siteId],
@@ -1514,7 +1531,7 @@ export const geoPrompts = pgTable(
       foreignColumns: [pages.id],
       name: "geo_prompts_mapped_page_id_pages_id_fk",
     }),
-  ],
+  ]
 );
 
 export const geoRuns = pgTable(
@@ -1531,25 +1548,29 @@ export const geoRuns = pgTable(
     costMetadataJson: jsonb("cost_metadata_json"),
     errorMessage: text("error_message"),
     status: text().notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "geo_runs_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "geo_runs_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
     promptId: integer("prompt_id").notNull(),
   },
   (table) => [
-    index("idx_geo_runs_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
-    index("idx_geo_runs_prompt").using("btree", table.promptId.asc().nullsLast().op("int4_ops")),
+    index("idx_geo_runs_site").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
+    index("idx_geo_runs_prompt").using(
+      "btree",
+      table.promptId.asc().nullsLast().op("int4_ops")
+    ),
     index("idx_geo_runs_captured_at").using(
       "btree",
-      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+      table.capturedAt.asc().nullsLast().op("timestamp_ops")
     ),
     foreignKey({
       columns: [table.siteId],
@@ -1561,7 +1582,7 @@ export const geoRuns = pgTable(
       foreignColumns: [geoPrompts.id],
       name: "geo_runs_prompt_id_geo_prompts_id_fk",
     }),
-  ],
+  ]
 );
 
 export const geoPromptResults = pgTable(
@@ -1575,29 +1596,30 @@ export const geoPromptResults = pgTable(
     monthlySearchesJson: jsonb("monthly_searches_json"),
     aiSummaryType: text("ai_summary_type"),
     capturedAt: timestamp("captured_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "geo_prompt_results_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "geo_prompt_results_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     runId: integer("run_id").notNull(),
     siteId: integer("site_id").notNull(),
     promptId: integer("prompt_id").notNull(),
   },
   (table) => [
-    index("idx_geo_prompt_results_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
+    index("idx_geo_prompt_results_site").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
     index("idx_geo_prompt_results_prompt").using(
       "btree",
-      table.promptId.asc().nullsLast().op("int4_ops"),
+      table.promptId.asc().nullsLast().op("int4_ops")
     ),
     index("idx_geo_prompt_results_captured_at").using(
       "btree",
-      table.capturedAt.asc().nullsLast().op("timestamp_ops"),
+      table.capturedAt.asc().nullsLast().op("timestamp_ops")
     ),
     foreignKey({
       columns: [table.runId],
@@ -1614,7 +1636,7 @@ export const geoPromptResults = pgTable(
       foreignColumns: [geoPrompts.id],
       name: "geo_prompt_results_prompt_id_geo_prompts_id_fk",
     }),
-  ],
+  ]
 );
 
 export const geoCitations = pgTable(
@@ -1628,24 +1650,31 @@ export const geoCitations = pgTable(
     isCompetitor: boolean("is_competitor").default(false).notNull(),
     position: integer(),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "geo_citations_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "geo_citations_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     resultId: integer("result_id").notNull(),
     siteId: integer("site_id").notNull(),
     siteCompetitorId: integer("site_competitor_id"),
   },
   (table) => [
-    index("idx_geo_citations_result").using("btree", table.resultId.asc().nullsLast().op("int4_ops")),
-    index("idx_geo_citations_site").using("btree", table.siteId.asc().nullsLast().op("int4_ops")),
-    index("idx_geo_citations_domain").using("btree", table.domain.asc().nullsLast().op("text_ops")),
+    index("idx_geo_citations_result").using(
+      "btree",
+      table.resultId.asc().nullsLast().op("int4_ops")
+    ),
+    index("idx_geo_citations_site").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
+    index("idx_geo_citations_domain").using(
+      "btree",
+      table.domain.asc().nullsLast().op("text_ops")
+    ),
     foreignKey({
       columns: [table.resultId],
       foreignColumns: [geoPromptResults.id],
@@ -1661,7 +1690,7 @@ export const geoCitations = pgTable(
       foreignColumns: [siteCompetitors.id],
       name: "geo_citations_site_competitor_id_site_competitors_id_fk",
     }),
-  ],
+  ]
 );
 
 export const geoRecommendations = pgTable(
@@ -1676,16 +1705,14 @@ export const geoRecommendations = pgTable(
     ownerAgent: text("owner_agent"),
     createdAt: timestamp("created_at", { mode: "string" }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
-    id: integer()
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: "geo_recommendations_id_seq",
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 2147483647,
-        cache: 1,
-      }),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "geo_recommendations_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
     siteId: integer("site_id").notNull(),
     promptId: integer("prompt_id"),
     pageId: integer("page_id"),
@@ -1694,11 +1721,11 @@ export const geoRecommendations = pgTable(
   (table) => [
     index("idx_geo_recommendations_site").using(
       "btree",
-      table.siteId.asc().nullsLast().op("int4_ops"),
+      table.siteId.asc().nullsLast().op("int4_ops")
     ),
     index("idx_geo_recommendations_status").using(
       "btree",
-      table.status.asc().nullsLast().op("text_ops"),
+      table.status.asc().nullsLast().op("text_ops")
     ),
     foreignKey({
       columns: [table.siteId],
@@ -1720,5 +1747,5 @@ export const geoRecommendations = pgTable(
       foreignColumns: [siteCompetitors.id],
       name: "geo_recommendations_site_competitor_id_site_competitors_id_fk",
     }),
-  ],
+  ]
 );

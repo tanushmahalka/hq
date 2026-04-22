@@ -11,6 +11,9 @@ function createDb(results: unknown[]) {
             orderBy() {
               return Promise.resolve(result);
             },
+            then(resolve: (value: unknown) => unknown) {
+              return Promise.resolve(result).then(resolve);
+            },
           };
         },
         orderBy() {
@@ -160,9 +163,13 @@ describe("getSeoOverview", () => {
           representativeKeyword: "china influencers",
           keywords: ["china influencers", "kol marketing china"],
           keywordCount: 2,
+          pageCount: 0,
+          pages: [],
           reviewedAt: "2026-04-21T12:00:00.000Z",
         },
       ],
+      [],
+      [],
     ]) as never;
 
     const result = await getSeoKeywordClusters(db, 1);
@@ -178,6 +185,8 @@ describe("getSeoOverview", () => {
       representativeKeyword: "china influencers",
       keywords: ["china influencers", "kol marketing china"],
       keywordCount: 2,
+      pageCount: 0,
+      pages: [],
     });
     expect(result.rows[0]?.reviewedAt).toBeInstanceOf(Date);
   });

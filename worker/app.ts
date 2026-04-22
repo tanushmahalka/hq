@@ -17,6 +17,7 @@ import {
 import {
   createHermesUiMessageStreamResponse,
   getHermesChatConfig,
+  requestHermesChatCompletion,
   uiMessagesToHermesMessages,
 } from "./lib/hermes-chat.ts";
 
@@ -169,22 +170,10 @@ export function createApp({ env, waitUntil }: AppOptions) {
       return c.json({ message: "Chat request did not include any messages." }, 400);
     }
 
-    const upstream = await fetch(`${hermes.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        ...(hermes.apiKey
-          ? { authorization: `Bearer ${hermes.apiKey}` }
-          : {}),
-        ...(sessionKey
-          ? { "X-Hermes-Session-Id": sessionKey }
-          : {}),
-      },
-      body: JSON.stringify({
-        model: hermes.model,
-        stream: true,
-        messages,
-      }),
+    const upstream = await requestHermesChatCompletion({
+      hermes,
+      messages,
+      sessionKey: sessionKey || undefined,
       signal: c.req.raw.signal,
     });
 

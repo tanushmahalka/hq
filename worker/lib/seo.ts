@@ -9,6 +9,7 @@ import {
   keywordClusters,
   linkOpportunities,
   outreachProspects,
+  pageKeywordClusters,
   pageClusterTargets,
   pages,
   queryClusters,
@@ -161,6 +162,12 @@ export type SeoKeywordClustersData = {
     representativeKeyword: string | null;
     keywords: string[];
     keywordCount: number;
+    pageCount: number;
+    pages: Array<{
+      id: number;
+      url: string;
+      displayTitle: string;
+    }>;
     reviewedAt: Date | null;
   }>;
 };
@@ -682,27 +689,65 @@ export async function getSeoKeywordClusters(
   db: Database,
   siteId: number,
 ): Promise<SeoKeywordClustersData> {
-  const rows = await db
-    .select({
-      id: keywordClusters.id,
-      siteId: keywordClusters.siteId,
-      title: keywordClusters.title,
-      mattersForKfd: keywordClusters.mattersForKfd,
-      whyThisMatters: keywordClusters.whyThisMatters,
-      howThisCanHelp: keywordClusters.howThisCanHelp,
-      representativeKeyword: keywordClusters.representativeKeyword,
-      keywords: keywordClusters.keywords,
-      keywordCount: keywordClusters.keywordCount,
-      reviewedAt: keywordClusters.reviewedAt,
-    })
-    .from(keywordClusters)
-    .where(
-      and(
-        eq(keywordClusters.siteId, siteId),
-        eq(keywordClusters.isNoise, false),
-      ),
-    )
-    .orderBy(asc(keywordClusters.title));
+  const [rows, pageTagRows, sitePageRows] = await Promise.all([
+    db
+      .select({
+        id: keywordClusters.id,
+        siteId: keywordClusters.siteId,
+        title: keywordClusters.title,
+        mattersForKfd: keywordClusters.mattersForKfd,
+        whyThisMatters: keywordClusters.whyThisMatters,
+        howThisCanHelp: keywordClusters.howThisCanHelp,
+        representativeKeyword: keywordClusters.representativeKeyword,
+        keywords: keywordClusters.keywords,
+        keywordCount: keywordClusters.keywordCount,
+        reviewedAt: keywordClusters.reviewedAt,
+      })
+      .from(keywordClusters)
+      .where(
+        and(
+          eq(keywordClusters.siteId, siteId),
+          eq(keywordClusters.isNoise, false),
+        ),
+      )
+      .orderBy(asc(keywordClusters.title)),
+    db
+      .select({
+        pageId: pageKeywordClusters.pageId,
+        keywordClusterId: pageKeywordClusters.keywordClusterId,
+      })
+      .from(pageKeywordClusters),
+    db
+      .select({
+        id: pages.id,
+        siteId: pages.siteId,
+        url: pages.url,
+        titleTag: pages.titleTag,
+      })
+      .from(pages)
+      .where(eq(pages.siteId, siteId)),
+  ]);
+
+  const pageById = new Map(
+    sitePageRows.map((page) => [
+      page.id,
+      {
+        id: page.id,
+        url: page.url,
+        displayTitle: page.titleTag?.trim() || page.url,
+      },
+    ]),
+  );
+
+  const pagesByClusterId = new Map<number, Array<{ id: number; url: string; displayTitle: string }>>();
+  for (const row of pageTagRows) {
+    const page = pageById.get(row.pageId);
+    if (!page) continue;
+
+    const existing = pagesByClusterId.get(row.keywordClusterId) ?? [];
+    existing.push(page);
+    pagesByClusterId.set(row.keywordClusterId, existing);
+  }
 
   return {
     rows: rows.map((row) => ({
@@ -712,6 +757,10 @@ export async function getSeoKeywordClusters(
       howThisCanHelp: row.howThisCanHelp ?? null,
       representativeKeyword: row.representativeKeyword ?? null,
       keywords: row.keywords ?? [],
+      pageCount: pagesByClusterId.get(row.id)?.length ?? 0,
+      pages: (pagesByClusterId.get(row.id) ?? []).sort((a, b) =>
+        a.displayTitle.localeCompare(b.displayTitle),
+      ),
       reviewedAt: parseOptionalDate(row.reviewedAt, "keyword cluster reviewedAt"),
     })),
   };

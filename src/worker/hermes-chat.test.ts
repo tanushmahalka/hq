@@ -1,8 +1,11 @@
+import { once } from "node:events";
+import http from "node:http";
 import { describe, expect, it } from "vitest";
 import {
   createHermesUiMessageStreamResponse,
   extractHermesDeltaText,
   getHermesChatConfig,
+  requestHermesChatCompletion,
   uiMessagesToHermesMessages,
 } from "../../worker/lib/hermes-chat.ts";
 
@@ -103,5 +106,74 @@ describe("hermes chat helpers", () => {
     expect(body).toContain('"task":"write tests"');
     expect(body).toContain('"type":"text-delta"');
     expect(body).toContain('"delta":"Done."');
+  });
+
+  it("streams Hermes chat completions over raw http without using fetch body timeouts", async () => {
+    const requests: Array<{
+      authorization?: string;
+      sessionId?: string;
+      body: string;
+    }> = [];
+
+    const server = http.createServer((req, res) => {
+      let body = "";
+      req.setEncoding("utf8");
+      req.on("data", (chunk) => {
+        body += chunk;
+      });
+      req.on("end", () => {
+        requests.push({
+          authorization: req.headers.authorization,
+          sessionId:
+            typeof req.headers["x-hermes-session-id"] === "string"
+              ? req.headers["x-hermes-session-id"]
+              : undefined,
+          body,
+        });
+
+        res.writeHead(200, {
+          "content-type": "text/event-stream",
+        });
+        res.write('data: {"choices":[{"delta":{"content":"Hello from Hermes"}}]}\n\n');
+        res.end("data: [DONE]\n\n");
+      });
+    });
+
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        throw new Error("Expected test server to bind to a TCP port.");
+      }
+
+      const upstream = await requestHermesChatCompletion({
+        hermes: {
+          baseUrl: `http://127.0.0.1:${address.port}/v1`,
+          apiKey: "test-key",
+          model: "hermes-agent",
+        },
+        sessionKey: "agent:test:hq:webchat:user:tanush-mahalka",
+        messages: [{ role: "user", content: "Hello" }],
+      });
+
+      expect(upstream.status).toBe(200);
+      await expect(upstream.text()).resolves.toContain("Hello from Hermes");
+      expect(requests).toEqual([
+        {
+          authorization: "Bearer test-key",
+          sessionId: "agent:test:hq:webchat:user:tanush-mahalka",
+          body: JSON.stringify({
+            model: "hermes-agent",
+            stream: true,
+            messages: [{ role: "user", content: "Hello" }],
+          }),
+        },
+      ]);
+    } finally {
+      server.close();
+      await once(server, "close");
+    }
   });
 });

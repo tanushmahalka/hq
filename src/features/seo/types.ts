@@ -549,6 +549,12 @@ export type SeoKeywordCluster = {
   representativeKeyword: string | null;
   keywords: string[];
   keywordCount: number;
+  pageCount: number;
+  pages: Array<{
+    id: number;
+    url: string;
+    displayTitle: string;
+  }>;
   reviewedAt: Date | null;
 };
 

@@ -1,3 +1,6 @@
+import { Readable } from "node:stream";
+import http from "node:http";
+import https from "node:https";
 import {
   createUIMessageStreamResponse,
   type UIMessageChunk,
@@ -8,6 +11,13 @@ export type HermesChatConfig = {
   baseUrl: string;
   apiKey?: string;
   model: string;
+};
+
+type HermesChatCompletionRequest = {
+  hermes: HermesChatConfig;
+  messages: HermesMessage[];
+  sessionKey?: string;
+  signal?: AbortSignal;
 };
 
 type HermesTextPart = {
@@ -114,6 +124,97 @@ export function getHermesChatConfig(env: Env): HermesChatConfig | null {
     apiKey: env.HERMES_API_KEY?.trim() || undefined,
     model: env.HERMES_MODEL?.trim() || "hermes-agent",
   };
+}
+
+export async function requestHermesChatCompletion({
+  hermes,
+  messages,
+  sessionKey,
+  signal,
+}: HermesChatCompletionRequest): Promise<Response> {
+  const url = new URL("/chat/completions", `${hermes.baseUrl}/`);
+  const transport = url.protocol === "https:" ? https : http;
+  const body = JSON.stringify({
+    model: hermes.model,
+    stream: true,
+    messages,
+  });
+
+  return await new Promise<Response>((resolve, reject) => {
+    let settled = false;
+
+    const fail = (error: unknown) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      reject(error);
+    };
+
+    const succeed = (response: Response) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      resolve(response);
+    };
+
+    const request = transport.request(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(body).toString(),
+        ...(hermes.apiKey ? { authorization: `Bearer ${hermes.apiKey}` } : {}),
+        ...(sessionKey ? { "X-Hermes-Session-Id": sessionKey } : {}),
+      },
+    });
+
+    const abort = () => {
+      request.destroy(new DOMException("The operation was aborted.", "AbortError"));
+    };
+
+    if (signal) {
+      if (signal.aborted) {
+        abort();
+      } else {
+        signal.addEventListener("abort", abort, { once: true });
+      }
+    }
+
+    request.on("response", (upstream) => {
+      if (signal) {
+        signal.removeEventListener("abort", abort);
+      }
+
+      const headers = new Headers();
+      for (const [key, value] of Object.entries(upstream.headers)) {
+        if (Array.isArray(value)) {
+          for (const entry of value) {
+            headers.append(key, entry);
+          }
+          continue;
+        }
+
+        if (typeof value === "string") {
+          headers.set(key, value);
+        }
+      }
+
+      const stream = Readable.toWeb(upstream) as ReadableStream<Uint8Array>;
+      succeed(
+        new Response(stream, {
+          status: upstream.statusCode ?? 502,
+          statusText: upstream.statusMessage ?? undefined,
+          headers,
+        }),
+      );
+    });
+
+    request.on("error", fail);
+    request.end(body);
+  });
 }
 
 export function uiMessagesToHermesMessages(messages: unknown): HermesMessage[] {
