@@ -325,7 +325,7 @@ export function SessionInput({
       });
     } catch (error) {
       onUpdateAttachment(attachmentId, {
-        status: "failed",
+        status: "error",
         error:
           error instanceof Error ? error.message : "Image upload failed.",
       });
@@ -358,21 +358,32 @@ export function SessionInput({
 
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
+    const messageText = draft;
+    const messageAttachments = attachments;
+
     if (
-      attachments.some(
+      messageAttachments.some(
         (attachment) =>
-          attachment.status === "uploading" || attachment.status === "failed"
+          attachment.status === "uploading" || attachment.status === "error"
       )
     ) {
       return;
     }
-    const outcome = await onSend(draft, attachments);
-    if (outcome === "sent" || outcome === "queued") {
-      onDraftChange("");
-      onClearAttachments();
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+
+    if (messageText.trim().length === 0 && messageAttachments.length === 0) {
+      return;
+    }
+
+    onDraftChange("");
+    onClearAttachments();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    const outcome = await onSend(messageText, messageAttachments).catch(() => "error" as const);
+    if (outcome === "error" || outcome === "ignored") {
+      onDraftChange(messageText);
+      onAddAttachments(messageAttachments);
     }
   };
 
@@ -390,7 +401,7 @@ export function SessionInput({
     (attachment) => attachment.status === "uploading"
   );
   const hasFailedAttachments = attachments.some(
-    (attachment) => attachment.status === "failed"
+    (attachment) => attachment.status === "error"
   );
   const sendDisabled =
     !chatReady || !hasDraft || hasUploadingAttachments || hasFailedAttachments;
@@ -427,7 +438,7 @@ export function SessionInput({
                 key={attachment.id}
                 className={cn(
                   "relative overflow-hidden rounded-md border bg-muted/20",
-                  attachment.status === "failed"
+                  attachment.status === "error"
                     ? "border-destructive/30"
                     : "border-border/40"
                 )}
@@ -445,7 +456,7 @@ export function SessionInput({
                     </span>
                   </div>
                 )}
-                {attachment.status === "failed" && (
+                {attachment.status === "error" && (
                   <div className="absolute inset-0 flex items-center justify-center bg-destructive/12 px-2 text-center">
                     <span className="text-[10px] leading-tight text-destructive">
                       Upload failed

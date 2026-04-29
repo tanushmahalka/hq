@@ -203,6 +203,7 @@ export async function requestHermesChatCompletion({
       }
 
       const stream = Readable.toWeb(upstream) as ReadableStream<Uint8Array>;
+      headers.set("x-hq-hermes-upstream-url", url.toString());
       succeed(
         new Response(stream, {
           status: upstream.statusCode ?? 502,

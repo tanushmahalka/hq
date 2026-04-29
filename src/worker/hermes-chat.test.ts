@@ -160,6 +160,9 @@ describe("hermes chat helpers", () => {
       });
 
       expect(upstream.status).toBe(200);
+      expect(upstream.headers.get("x-hq-hermes-upstream-url")).toBe(
+        `http://127.0.0.1:${address.port}/v1/chat/completions`
+      );
       await expect(upstream.text()).resolves.toContain("Hello from Hermes");
       expect(requests).toEqual([
         {

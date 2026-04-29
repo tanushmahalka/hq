@@ -374,9 +374,11 @@ export function createApp({ env, waitUntil }: AppOptions) {
 
     if (!upstream.ok) {
       const detail = await upstream.text().catch(() => "");
+      const upstreamUrl = upstream.headers.get("x-hq-hermes-upstream-url");
       return new Response(
         JSON.stringify({
           message: detail || `Hermes request failed with status ${upstream.status}.`,
+          upstreamUrl,
         }),
         {
           status: upstream.status,
