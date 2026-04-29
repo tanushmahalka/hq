@@ -1,5 +1,5 @@
 export type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
-export type SeoViewTab = "overview" | "competitors" | "keywords" | "keyword-clusters" | "geo" | "analytics" | "backlinks";
+export type SeoViewTab = "overview" | "competitors" | "keywords" | "keyword-clusters" | "article-ideas" | "geo" | "analytics" | "backlinks";
 
 export type SeoSite = {
   id: number;
@@ -560,6 +560,25 @@ export type SeoKeywordCluster = {
 
 export type SeoKeywordClustersData = {
   rows: SeoKeywordCluster[];
+};
+
+export type DraftBlogStatus = "draft" | "approved" | "published" | "disqualified";
+
+export type SeoArticleIdea = {
+  id: number;
+  siteId: number;
+  title: string;
+  description: string | null;
+  content: string | null;
+  status: DraftBlogStatus;
+  keywordClusterId: number | null;
+  keywordClusterTitle: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type SeoArticleIdeasData = {
+  rows: SeoArticleIdea[];
 };
 
 export type SeoOverviewData = {

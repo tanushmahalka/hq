@@ -132,7 +132,7 @@ export async function requestHermesChatCompletion({
   sessionKey,
   signal,
 }: HermesChatCompletionRequest): Promise<Response> {
-  const url = new URL("/chat/completions", `${hermes.baseUrl}/`);
+  const url = new URL(`${hermes.baseUrl}/chat/completions`);
   const transport = url.protocol === "https:" ? https : http;
   const body = JSON.stringify({
     model: hermes.model,

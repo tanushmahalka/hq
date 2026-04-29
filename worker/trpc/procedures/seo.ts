@@ -2,8 +2,10 @@ import { z } from "zod";
 import { router, orgProcedure } from "../init.ts";
 import {
   captureBacklinkFootprints,
+  disqualifySeoArticleIdea,
   getAnalyticsSummary,
   getBacklinksData,
+  getSeoArticleIdeas,
   getSeoKeywordClusters,
   getBacklinksByDomain,
   getKeywordsData,
@@ -71,6 +73,25 @@ export const seoRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return getSeoKeywordClusters(ctx.db, input.siteId);
+    }),
+  articleIdeas: orgProcedure
+    .input(
+      z.object({
+        siteId: z.number(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return getSeoArticleIdeas(ctx.db, input.siteId);
+    }),
+  disqualifyArticleIdea: orgProcedure
+    .input(
+      z.object({
+        siteId: z.number(),
+        articleIdeaId: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return disqualifySeoArticleIdea(ctx.db, input.siteId, input.articleIdeaId);
     }),
   geoOverview: orgProcedure
     .input(

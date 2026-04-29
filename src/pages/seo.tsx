@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useState } from "react";
 import {
   FileText,
   Globe,
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnalyticsTab } from "@/features/seo/analytics-tab";
+import { ArticleIdeasTab } from "@/features/seo/article-ideas-tab";
 import { BacklinksTab } from "@/features/seo/backlinks-tab";
 import { CompetitorsTab } from "@/features/seo/competitors-tab";
 import { GeoTab } from "@/features/seo/geo-tab";
@@ -142,9 +143,9 @@ export default function Seo() {
     0,
   );
 
-  const totalIssueCount = useMemo(
-    () => sitePages.reduce((sum, page) => sum + getPageAuditSummary(page).issueCount, 0),
-    [sitePages],
+  const totalIssueCount = sitePages.reduce(
+    (sum, page) => sum + getPageAuditSummary(page).issueCount,
+    0,
   );
 
   return (
@@ -205,6 +206,12 @@ export default function Seo() {
             onClick={() => setActiveTab("keyword-clusters")}
           />
           <SeoTabButton
+            active={activeTab === "article-ideas"}
+            label="Article Ideas"
+            description=""
+            onClick={() => setActiveTab("article-ideas")}
+          />
+          <SeoTabButton
             active={activeTab === "geo"}
             label="GEO"
             description=""
@@ -224,7 +231,7 @@ export default function Seo() {
           />
         </div>
 
-        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && activeTab !== "backlinks" && activeTab !== "keywords" && activeTab !== "keyword-clusters" && activeTab !== "geo" && (
+        {selectedSite && !overviewQuery.isLoading && activeTab !== "analytics" && activeTab !== "backlinks" && activeTab !== "keywords" && activeTab !== "keyword-clusters" && activeTab !== "article-ideas" && activeTab !== "geo" && (
           <div className="flex items-center gap-8 pb-2.5">
             {activeTab === "overview" ? (
               <>
@@ -265,6 +272,10 @@ export default function Seo() {
       ) : activeTab === "keyword-clusters" ? (
         effectiveSelectedSiteId ? (
           <KeywordClustersTab siteId={effectiveSelectedSiteId} />
+        ) : null
+      ) : activeTab === "article-ideas" ? (
+        effectiveSelectedSiteId ? (
+          <ArticleIdeasTab siteId={effectiveSelectedSiteId} />
         ) : null
       ) : activeTab === "geo" ? (
         effectiveSelectedSiteId ? (

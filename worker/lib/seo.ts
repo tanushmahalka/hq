@@ -1,4 +1,4 @@
-import { and, asc, between, desc, eq, ilike, isNotNull, or, sql, sum } from "drizzle-orm";
+import { and, asc, between, desc, eq, ilike, isNotNull, ne, or, sql, sum } from "drizzle-orm";
 import type { Database } from "../db/client.ts";
 import {
   analyticsDaily,
@@ -6,6 +6,7 @@ import {
   competitorBacklinkSources,
   competitorBacklinkFootprints,
   competitorDomainFootprints,
+  draftBlogs,
   keywordClusters,
   linkOpportunities,
   outreachProspects,
@@ -18,6 +19,7 @@ import {
   siteDomainFootprints,
   siteCompetitors,
   sites,
+  type DraftBlogStatus,
 } from "../../drizzle/schema/seo.ts";
 
 function parseRequiredDate(value: Date | string, fieldName: string): Date {
@@ -169,6 +171,21 @@ export type SeoKeywordClustersData = {
       displayTitle: string;
     }>;
     reviewedAt: Date | null;
+  }>;
+};
+
+export type SeoArticleIdeasData = {
+  rows: Array<{
+    id: number;
+    siteId: number;
+    title: string;
+    description: string | null;
+    content: string | null;
+    status: DraftBlogStatus;
+    keywordClusterId: number | null;
+    keywordClusterTitle: string | null;
+    createdAt: Date;
+    updatedAt: Date;
   }>;
 };
 
@@ -764,6 +781,72 @@ export async function getSeoKeywordClusters(
       reviewedAt: parseOptionalDate(row.reviewedAt, "keyword cluster reviewedAt"),
     })),
   };
+}
+
+export async function getSeoArticleIdeas(
+  db: Database,
+  siteId: number,
+): Promise<SeoArticleIdeasData> {
+  const rows = await db
+    .select({
+      id: draftBlogs.id,
+      siteId: draftBlogs.siteId,
+      title: draftBlogs.title,
+      description: draftBlogs.description,
+      content: draftBlogs.content,
+      status: draftBlogs.status,
+      keywordClusterId: draftBlogs.keywordClusterId,
+      keywordClusterTitle: keywordClusters.title,
+      createdAt: draftBlogs.createdAt,
+      updatedAt: draftBlogs.updatedAt,
+    })
+    .from(draftBlogs)
+    .leftJoin(keywordClusters, eq(draftBlogs.keywordClusterId, keywordClusters.id))
+    .where(
+      and(
+        eq(draftBlogs.siteId, siteId),
+        ne(draftBlogs.status, "disqualified"),
+      ),
+    )
+    .orderBy(desc(draftBlogs.updatedAt), asc(draftBlogs.title));
+
+  return {
+    rows: rows.map((row) => ({
+      ...row,
+      description: row.description ?? null,
+      content: row.content ?? null,
+      keywordClusterId: row.keywordClusterId ?? null,
+      keywordClusterTitle: row.keywordClusterTitle ?? null,
+      createdAt: parseRequiredDate(row.createdAt, "draft blog createdAt"),
+      updatedAt: parseRequiredDate(row.updatedAt, "draft blog updatedAt"),
+    })),
+  };
+}
+
+export async function disqualifySeoArticleIdea(
+  db: Database,
+  siteId: number,
+  articleIdeaId: number,
+) {
+  const [row] = await db
+    .update(draftBlogs)
+    .set({
+      status: "disqualified",
+      updatedAt: sql`now()`,
+    })
+    .where(
+      and(
+        eq(draftBlogs.id, articleIdeaId),
+        eq(draftBlogs.siteId, siteId),
+      ),
+    )
+    .returning({ id: draftBlogs.id });
+
+  if (!row) {
+    throw new Error("Article idea not found.");
+  }
+
+  return row;
 }
 
 export type AnalyticsSummary = {

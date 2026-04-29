@@ -31,6 +31,7 @@ import { useAdminView } from "@/hooks/use-admin-view";
 import { useMessengerPanel } from "@/hooks/use-messenger-panel";
 import { useAnyAgentActive } from "@/hooks/use-any-agent-active";
 import { useActiveMemberRole } from "@/hooks/use-organization";
+import { canManageTeam } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import customPages from "@/pages/custom/registry";
 
@@ -87,7 +88,10 @@ export function TopNav() {
   const { toggleChat } = useMessengerPanel();
   const anyAgentActive = useAnyAgentActive();
   const activeMemberRole = useActiveMemberRole(Boolean(session?.session.activeOrganizationId));
-  const canManageSettings = activeMemberRole.data?.role === "admin";
+  const canManageSettings = canManageTeam({
+    organizationRole: activeMemberRole.data?.role,
+    userRole: session?.user.role,
+  });
 
   function getInitials(name: string) {
     return name

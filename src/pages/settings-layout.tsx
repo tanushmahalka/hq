@@ -3,6 +3,7 @@ import { ChevronRight, Settings, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSession } from "@/lib/auth-client";
 import { useActiveMemberRole } from "@/hooks/use-organization";
+import { canManageTeam } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const settingsNavItems = [
@@ -18,10 +19,13 @@ const settingsNavItems = [
 export default function SettingsLayout() {
   const { data: session } = useSession();
   const activeMemberRole = useActiveMemberRole(Boolean(session?.session.activeOrganizationId));
-  const isOrgAdmin = activeMemberRole.data?.role === "admin";
+  const canManageMembers = canManageTeam({
+    organizationRole: activeMemberRole.data?.role,
+    userRole: session?.user.role,
+  });
 
   const visibleItems = settingsNavItems.filter((item) =>
-    item.requiresOrgAdmin ? isOrgAdmin : true
+    item.requiresOrgAdmin ? canManageMembers : true
   );
 
   return (

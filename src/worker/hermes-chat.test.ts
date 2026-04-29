@@ -123,6 +123,7 @@ describe("hermes chat helpers", () => {
       });
       req.on("end", () => {
         requests.push({
+          path: req.url,
           authorization: req.headers.authorization,
           sessionId:
             typeof req.headers["x-hermes-session-id"] === "string"
@@ -162,6 +163,7 @@ describe("hermes chat helpers", () => {
       await expect(upstream.text()).resolves.toContain("Hello from Hermes");
       expect(requests).toEqual([
         {
+          path: "/v1/chat/completions",
           authorization: "Bearer test-key",
           sessionId: "agent:test:hq:webchat:user:tanush-mahalka",
           body: JSON.stringify({

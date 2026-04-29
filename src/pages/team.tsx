@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useActiveMemberRole, useOrganizationInvitations, useOrganizationMembers } from "@/hooks/use-organization";
 import { cancelInvitation, inviteMember } from "@/lib/auth-api";
 import { useSession } from "@/lib/auth-client";
+import { canManageTeam } from "@/lib/permissions";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString();
@@ -25,8 +26,12 @@ export default function TeamPage() {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const roleQuery = useActiveMemberRole(Boolean(session));
-  const membersQuery = useOrganizationMembers(roleQuery.data?.role === "admin");
-  const invitationsQuery = useOrganizationInvitations(roleQuery.data?.role === "admin");
+  const canManageMembers = canManageTeam({
+    organizationRole: roleQuery.data?.role,
+    userRole: session?.user.role,
+  });
+  const membersQuery = useOrganizationMembers(canManageMembers);
+  const invitationsQuery = useOrganizationInvitations(canManageMembers);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
   const [submitting, setSubmitting] = useState(false);
@@ -95,14 +100,14 @@ export default function TeamPage() {
     );
   }
 
-  if (roleQuery.data?.role !== "admin") {
+  if (!canManageMembers) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-6">
         <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Team management is restricted</CardTitle>
             <CardDescription>
-              Only organization admins can invite or manage members.
+              Only organization admins and super admins can invite or manage members.
             </CardDescription>
           </CardHeader>
         </Card>

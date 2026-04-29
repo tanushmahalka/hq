@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, competitorBacklinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachProspects, linkOpportunities, outreachContacts, outreachThreads, outreachMessages, queryClusters, keywordClusters, pageClusterTargets, pageKeywordClusters, queries, reviews, searchConsoleDaily, siteDomainFootprints, siteBacklinkFootprints, competitorBacklinkFootprints, siteKeywords } from "./schema";
+import { user, account, apikey, organization, member, session, invitation, tasks, taskComments, accounts, accountEnrichments, accountEvents, contacts, teamMembers, pages, analyticsDaily, sites, assets, backlinkSources, competitorBacklinkSources, brandMentions, businessProfiles, callTasks, callLogs, objectives, campaigns, siteCompetitors, competitorDomainFootprints, competitorRankedKeywords, crawlRuns, crawlPageFacts, internalLinks, jobs, scrapeRuns, missions, outreachProspects, linkOpportunities, outreachContacts, outreachThreads, outreachMessages, queryClusters, keywordClusters, draftBlogs, pageClusterTargets, pageKeywordClusters, queries, reviews, searchConsoleDaily, siteDomainFootprints, siteBacklinkFootprints, competitorBacklinkFootprints, siteKeywords } from "./schema";
 
 export const accountRelations = relations(account, ({one}) => ({
 	user: one(user, {
@@ -159,6 +159,7 @@ export const sitesRelations = relations(sites, ({many}) => ({
 	pages: many(pages),
 	queryClusters: many(queryClusters),
 	keywordClusters: many(keywordClusters),
+	draftBlogs: many(draftBlogs),
 	reviews: many(reviews),
 	searchConsoleDailies: many(searchConsoleDaily),
 	siteBacklinkFootprints: many(siteBacklinkFootprints),
@@ -440,8 +441,20 @@ export const keywordClustersRelations = relations(keywordClusters, ({one, many})
 		fields: [keywordClusters.siteId],
 		references: [sites.id]
 	}),
+	draftBlogs: many(draftBlogs),
 	pageKeywordClusters: many(pageKeywordClusters),
 	siteKeywords: many(siteKeywords),
+}));
+
+export const draftBlogsRelations = relations(draftBlogs, ({one}) => ({
+	site: one(sites, {
+		fields: [draftBlogs.siteId],
+		references: [sites.id]
+	}),
+	keywordCluster: one(keywordClusters, {
+		fields: [draftBlogs.keywordClusterId],
+		references: [keywordClusters.id]
+	}),
 }));
 
 export const pageKeywordClustersRelations = relations(pageKeywordClusters, ({one}) => ({

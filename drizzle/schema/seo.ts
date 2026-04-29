@@ -6,12 +6,27 @@ import {
   integer,
   jsonb,
   numeric,
+  pgEnum,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
   vector,
 } from "drizzle-orm/pg-core";
+
+export const DRAFT_BLOG_STATUSES = [
+  "draft",
+  "approved",
+  "published",
+  "disqualified",
+] as const;
+
+export type DraftBlogStatus = (typeof DRAFT_BLOG_STATUSES)[number];
+
+export const draftBlogStatusEnum = pgEnum(
+  "draft_blog_status",
+  DRAFT_BLOG_STATUSES
+);
 
 export const sites = pgTable(
   "sites",
@@ -241,6 +256,52 @@ export const keywordClusters = pgTable(
       columns: [table.siteId],
       foreignColumns: [sites.id],
       name: "keyword_clusters_site_id_sites_id_fk",
+    }),
+  ]
+);
+
+export const draftBlogs = pgTable(
+  "draft_blogs",
+  {
+    title: text().notNull(),
+    description: text(),
+    content: text(),
+    status: draftBlogStatusEnum("status").notNull(),
+    createdAt: timestamp("created_at", { mode: "string" }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "string" }).notNull(),
+    id: integer().primaryKey().generatedByDefaultAsIdentity({
+      name: "draft_blogs_id_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 2147483647,
+      cache: 1,
+    }),
+    siteId: integer("site_id").notNull(),
+    keywordClusterId: integer("keyword_cluster_id"),
+  },
+  (table) => [
+    index("idx_draft_blogs_site_id").using(
+      "btree",
+      table.siteId.asc().nullsLast().op("int4_ops")
+    ),
+    index("idx_draft_blogs_keyword_cluster_id").using(
+      "btree",
+      table.keywordClusterId.asc().nullsLast().op("int4_ops")
+    ),
+    index("idx_draft_blogs_status").using(
+      "btree",
+      table.status.asc().nullsLast().op("text_ops")
+    ),
+    foreignKey({
+      columns: [table.siteId],
+      foreignColumns: [sites.id],
+      name: "draft_blogs_site_id_sites_id_fk",
+    }),
+    foreignKey({
+      columns: [table.keywordClusterId],
+      foreignColumns: [keywordClusters.id],
+      name: "draft_blogs_keyword_cluster_id_keyword_clusters_id_fk",
     }),
   ]
 );
@@ -1238,7 +1299,6 @@ export const pageKeywordClusters = pgTable(
       foreignColumns: [keywordClusters.id],
       name: "page_keyword_clusters_keyword_cluster_id_keyword_clusters_id_fk",
     }),
-    ej,
   ]
 );
 

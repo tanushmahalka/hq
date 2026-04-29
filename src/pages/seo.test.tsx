@@ -4,6 +4,7 @@ import Seo from "./seo";
 
 const overviewUseQueryMock = vi.fn();
 const keywordClustersUseQueryMock = vi.fn();
+const articleIdeasUseQueryMock = vi.fn();
 
 vi.mock("@/lib/trpc", () => ({
   trpc: {
@@ -13,6 +14,9 @@ vi.mock("@/lib/trpc", () => ({
       },
       keywordClusters: {
         useQuery: (...args: unknown[]) => keywordClustersUseQueryMock(...args),
+      },
+      articleIdeas: {
+        useQuery: (...args: unknown[]) => articleIdeasUseQueryMock(...args),
       },
     },
   },
@@ -30,6 +34,10 @@ vi.mock("@/features/seo/keywords-tab", () => ({
 
 vi.mock("@/features/seo/keyword-clusters-tab", () => ({
   KeywordClustersTab: () => <div>Keyword Clusters content</div>,
+}));
+
+vi.mock("@/features/seo/article-ideas-tab", () => ({
+  ArticleIdeasTab: () => <div>Article Ideas content</div>,
 }));
 
 vi.mock("@/features/seo/competitors-tab", () => ({
@@ -77,6 +85,12 @@ describe("SEO page", () => {
       isError: false,
       error: null,
     });
+    articleIdeasUseQueryMock.mockReturnValue({
+      data: { rows: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
 
     render(<Seo />);
 
@@ -86,6 +100,51 @@ describe("SEO page", () => {
 
     expect(screen.getByText("Keyword Clusters content")).toBeInTheDocument();
     expect(screen.queryByText("Keywords content")).not.toBeInTheDocument();
+    expect(screen.queryByText("Overview content")).not.toBeInTheDocument();
+  });
+
+  it("shows the article ideas tab and switches into the draft viewer", () => {
+    overviewUseQueryMock.mockReturnValue({
+      data: {
+        sites: [
+          {
+            id: 1,
+            name: "KFD",
+            domain: "kfd.com",
+            pageCount: 10,
+            clusterCount: 4,
+            keywordCount: 100,
+          },
+        ],
+        pages: [],
+        clusters: [],
+        competitors: [],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    keywordClustersUseQueryMock.mockReturnValue({
+      data: { rows: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    articleIdeasUseQueryMock.mockReturnValue({
+      data: { rows: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<Seo />);
+
+    expect(screen.getByRole("button", { name: /article ideas/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /article ideas/i }));
+
+    expect(screen.getByText("Article Ideas content")).toBeInTheDocument();
     expect(screen.queryByText("Overview content")).not.toBeInTheDocument();
   });
 });
