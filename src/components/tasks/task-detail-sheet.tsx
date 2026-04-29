@@ -446,7 +446,7 @@ function CommentsPanel({
   const { agents } = useGateway();
 
   const addComment = trpc.task.comment.add.useMutation({
-    onSuccess: (_result, variables) => {
+    onSuccess: () => {
       utils.task.list.invalidate();
       utils.task.get.invalidate({ id: taskId });
       setContent("");
@@ -455,14 +455,7 @@ function CommentsPanel({
         notifyTask(
           assignee,
           taskId,
-          formatTaskNotification(
-            "commented",
-            { id: taskId, title: taskTitle },
-            {
-              author: variables.author,
-              comment: variables.content,
-            },
-          ),
+          formatTaskNotification("commented", { title: taskTitle }),
         );
       }
     },

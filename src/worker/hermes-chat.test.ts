@@ -110,6 +110,7 @@ describe("hermes chat helpers", () => {
 
   it("streams Hermes chat completions over raw http without using fetch body timeouts", async () => {
     const requests: Array<{
+      path?: string;
       authorization?: string;
       sessionId?: string;
       body: string;
