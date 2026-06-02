@@ -68,6 +68,8 @@ function getAppEnv(): Env {
     AGENT_API_TOKEN: process.env.AGENT_API_TOKEN,
     ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
     LEAD_AGENT_ID: process.env.LEAD_AGENT_ID,
+    PARALLEL_API_KEY: process.env.PARALLEL_API_KEY,
+    PARALLEL_API_BASE_URL: process.env.PARALLEL_API_BASE_URL,
   };
 }
 

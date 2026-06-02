@@ -215,6 +215,8 @@ The backend app lives in `worker/app.ts`, and the Node runtime entry lives in `s
 | `DATABASE_URL` | Database connection string (backend) | — |
 | `OPENCLAW_HOOKS_URL` | OpenClaw gateway base URL for hooks (backend) | — |
 | `OPENCLAW_HOOKS_TOKEN` | Bearer token for hook endpoint auth (backend) | — |
+| `PARALLEL_API_KEY` | Parallel.ai API key for the AI List Builder (FindAll) | — |
+| `PARALLEL_API_BASE_URL` | Parallel.ai base URL override | `https://api.parallel.ai` |
 
 **Important**: When connecting through Tailscale, use port 443 (omit port from URL) since Tailscale proxies HTTPS on 443 to the gateway's actual port 18789.
 

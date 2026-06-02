@@ -16,6 +16,7 @@ export type HermesChatConfig = {
 type HermesChatCompletionRequest = {
   hermes: HermesChatConfig;
   messages: HermesMessage[];
+  sessionId?: string;
   sessionKey?: string;
   signal?: AbortSignal;
 };
@@ -126,9 +127,76 @@ export function getHermesChatConfig(env: Env): HermesChatConfig | null {
   };
 }
 
+/**
+ * One-shot, non-streaming completion that expects a JSON object back.
+ * Returns the parsed object, or null on any failure (network, non-2xx, or
+ * unparseable content) so callers can degrade gracefully. Used by the List
+ * Builder to suggest enrichment columns.
+ */
+export async function requestHermesJson(
+  hermes: HermesChatConfig,
+  params: { system: string; user: string; signal?: AbortSignal },
+): Promise<unknown | null> {
+  let response: Response;
+  try {
+    response = await fetch(`${hermes.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(hermes.apiKey ? { authorization: `Bearer ${hermes.apiKey}` } : {}),
+      },
+      body: JSON.stringify({
+        model: hermes.model,
+        stream: false,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: params.system },
+          { role: "user", content: params.user },
+        ],
+      }),
+      signal: params.signal,
+    });
+  } catch {
+    return null;
+  }
+
+  if (!response.ok) {
+    return null;
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    return null;
+  }
+
+  const choices =
+    isRecord(payload) && Array.isArray(payload.choices) ? payload.choices : [];
+  const firstChoice = choices[0];
+  const message = isRecord(firstChoice) ? firstChoice.message : undefined;
+  const content = isRecord(message)
+    ? extractLegacyContentText(message.content)
+    : "";
+  if (!content.trim()) {
+    return null;
+  }
+
+  const cleaned = content
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    return null;
+  }
+}
+
 export async function requestHermesChatCompletion({
   hermes,
   messages,
+  sessionId,
   sessionKey,
   signal,
 }: HermesChatCompletionRequest): Promise<Response> {
@@ -167,7 +235,8 @@ export async function requestHermesChatCompletion({
         "content-type": "application/json",
         "content-length": Buffer.byteLength(body).toString(),
         ...(hermes.apiKey ? { authorization: `Bearer ${hermes.apiKey}` } : {}),
-        ...(sessionKey ? { "X-Hermes-Session-Id": sessionKey } : {}),
+        ...(sessionId ? { "X-Hermes-Session-Id": sessionId } : {}),
+        ...(sessionKey ? { "X-Hermes-Session-Key": sessionKey } : {}),
       },
     });
 

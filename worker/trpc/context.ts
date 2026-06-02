@@ -1,6 +1,8 @@
 import { createDb, type Database } from "../db/client.ts";
 import { createAuth, type Auth } from "../lib/auth.ts";
 import { agentDatabases as agentDatabasesTable } from "../../drizzle/schema/core.ts";
+import { getParallelConfig } from "../lib/parallel-findall.ts";
+import { getHermesChatConfig, type HermesChatConfig } from "../lib/hermes-chat.ts";
 
 export interface Env {
   DATABASE_URL: string;
@@ -23,6 +25,8 @@ export interface Env {
   AGENT_API_TOKEN?: string;
   ALLOWED_ORIGINS?: string;
   LEAD_AGENT_ID?: string;
+  PARALLEL_API_KEY?: string;
+  PARALLEL_API_BASE_URL?: string;
 }
 
 export interface Context {
@@ -33,6 +37,8 @@ export interface Context {
   agentDatabases: Map<string, string>;
   localPgAdminUrl?: string;
   leadAgentId: string;
+  parallel: { apiKey: string; baseUrl: string } | null;
+  hermes: HermesChatConfig | null;
   user: {
     id: string;
     email: string;
@@ -122,6 +128,8 @@ export async function createContext(
     agentDatabases,
     localPgAdminUrl: env.LOCAL_PG_ADMIN_URL,
     leadAgentId: env.LEAD_AGENT_ID ?? "Unknown",
+    parallel: getParallelConfig(env),
+    hermes: getHermesChatConfig(env),
     user,
     session,
     organizationId,

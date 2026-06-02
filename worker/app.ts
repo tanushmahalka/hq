@@ -21,6 +21,11 @@ import {
   requestHermesChatCompletion,
   uiMessagesToHermesMessages,
 } from "./lib/hermes-chat.ts";
+import { agentListRows, findallRuns } from "../drizzle/schema/custom.ts";
+import {
+  ensureFindallRunWorker,
+  subscribeFindall,
+} from "./lib/findall-stream.ts";
 
 interface AppOptions {
   env: Env;
@@ -368,6 +373,9 @@ export function createApp({ env, waitUntil }: AppOptions) {
     const upstream = await requestHermesChatCompletion({
       hermes,
       messages,
+      // Hermes treats X-Hermes-Session-Id as a raw persisted transcript id and
+      // reloads server-side history for it. HQ webchat keys are stable memory
+      // scopes, so send them as X-Hermes-Session-Key instead.
       sessionKey: sessionKey || undefined,
       signal: c.req.raw.signal,
     });
@@ -390,6 +398,106 @@ export function createApp({ env, waitUntil }: AppOptions) {
     }
 
     return createHermesUiMessageStreamResponse(upstream);
+  });
+
+  app.get("/api/findall/runs/:id/stream", async (c) => {
+    const requestContext = await getRequestContext(c.req.raw);
+    if (!requestContext.user && !requestContext.isAgent) {
+      return unauthorizedResponse(c);
+    }
+
+    const runId = Number(c.req.param("id"));
+    if (!Number.isInteger(runId) || runId <= 0) {
+      return c.json({ message: "Invalid run id." }, 400);
+    }
+
+    const run = await requestContext.db.query.findallRuns.findFirst({
+      where: eq(findallRuns.id, runId),
+    });
+    if (!run) {
+      return c.json({ message: "Run not found." }, 404);
+    }
+    if (
+      !requestContext.isAgent &&
+      requestContext.organizationId &&
+      run.organizationId &&
+      run.organizationId !== requestContext.organizationId
+    ) {
+      return c.json({ message: "Forbidden." }, 403);
+    }
+    if (!requestContext.parallel) {
+      return c.json(
+        { message: "Parallel FindAll is not configured on the HQ server." },
+        503,
+      );
+    }
+
+    // Ensure the authoritative worker is running (resumes after a restart).
+    if (run.status === "running") {
+      ensureFindallRunWorker({
+        db: requestContext.db,
+        parallel: requestContext.parallel,
+        findallId: run.findallId,
+      });
+    }
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (event: string, data: unknown) => {
+          controller.enqueue(
+            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+          );
+        };
+
+        const rows = await requestContext.db.query.agentListRows.findMany({
+          where: eq(agentListRows.listId, run.listId),
+          orderBy: (r, { asc }) => [asc(r.sortOrder)],
+        });
+        send("snapshot", { run, rows });
+
+        const unsubscribe = subscribeFindall(run.findallId, (ev) => {
+          try {
+            controller.enqueue(encoder.encode(ev.raw));
+          } catch {
+            // controller already closed
+          }
+        });
+
+        const heartbeat = setInterval(() => {
+          try {
+            controller.enqueue(encoder.encode(`: ping\n\n`));
+          } catch {
+            // controller already closed
+          }
+        }, 15000);
+
+        const close = () => {
+          clearInterval(heartbeat);
+          unsubscribe();
+          try {
+            controller.close();
+          } catch {
+            // already closed
+          }
+        };
+
+        if (c.req.raw.signal.aborted) {
+          close();
+          return;
+        }
+        c.req.raw.signal.addEventListener("abort", close, { once: true });
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-cache, no-transform",
+        connection: "keep-alive",
+        "x-accel-buffering": "no",
+      },
+    });
   });
 
   app.all("/api/trpc/*", async (c) => {

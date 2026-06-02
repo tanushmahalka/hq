@@ -1,5 +1,6 @@
 import {
   index,
+  uniqueIndex,
   pgTable,
   text,
   integer,
@@ -7,7 +8,7 @@ import {
   jsonb,
   pgEnum,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 export const MISSION_STATUSES = [
   "active",
@@ -146,6 +147,92 @@ export const agentListsRelations = relations(agentLists, ({ many }) => ({
 export const agentListRowsRelations = relations(agentListRows, ({ one }) => ({
   list: one(agentLists, {
     fields: [agentListRows.listId],
+    references: [agentLists.id],
+  }),
+}));
+
+// --- FindAll runs (AI List Builder) ---
+// A FindAll run wraps a Parallel.ai FindAll search. Each run owns one
+// agent_lists record; matched candidates are persisted as agent_list_rows so
+// the result is an ordinary list. This table tracks the run lifecycle so a
+// stream can be resumed and reconciled after the browser disconnects.
+
+export const FINDALL_STATUSES = [
+  "running",
+  "completed",
+  "cancelled",
+  "failed",
+] as const;
+export type FindallStatus = (typeof FINDALL_STATUSES)[number];
+export const findallStatusEnum = pgEnum("findall_status", FINDALL_STATUSES);
+
+export const FINDALL_GENERATORS = ["preview", "base", "core", "pro"] as const;
+export type FindallGenerator = (typeof FINDALL_GENERATORS)[number];
+
+/** One {name, description} entry — a Parallel match_condition or an enrichment column. */
+export type FindallMatchCondition = { name: string; description: string };
+export type FindallEnrichment = {
+  name: string;
+  description: string;
+  type?: "string" | "number" | "boolean";
+  format?: "uri";
+};
+/** Mirrors Parallel run status.metrics. */
+export type FindallMetrics = {
+  generated_candidates_count?: number;
+  matched_candidates_count?: number;
+  termination_reason?: string;
+};
+
+export const findallRuns = pgTable(
+  "findall_runs",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    findallId: text("findall_id").notNull(),
+    listId: integer("list_id")
+      .notNull()
+      .references(() => agentLists.id, { onDelete: "cascade" }),
+    objective: text("objective").notNull(),
+    entityType: text("entity_type"),
+    matchConditions: jsonb("match_conditions")
+      .$type<FindallMatchCondition[]>()
+      .notNull(),
+    enrichments: jsonb("enrichments")
+      .$type<FindallEnrichment[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    generator: text("generator")
+      .$type<FindallGenerator>()
+      .notNull()
+      .default("core"),
+    matchLimit: integer("match_limit").notNull().default(25),
+    status: findallStatusEnum("status").notNull().default("running"),
+    metrics: jsonb("metrics").$type<FindallMetrics>(),
+    lastEventId: text("last_event_id"),
+    agentId: text("agent_id"),
+    organizationId: text("organization_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    findallRunsFindallIdx: uniqueIndex("findall_runs_findall_id_idx").on(
+      table.findallId,
+    ),
+    findallRunsListIdx: index("findall_runs_list_idx").on(table.listId),
+    findallRunsOrganizationIdx: index("findall_runs_organization_idx").on(
+      table.organizationId,
+    ),
+  }),
+);
+
+export const findallRunsRelations = relations(findallRuns, ({ one }) => ({
+  list: one(agentLists, {
+    fields: [findallRuns.listId],
     references: [agentLists.id],
   }),
 }));
