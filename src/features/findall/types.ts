@@ -74,13 +74,41 @@ export interface DepthOption {
   label: string;
   generator: FindallGenerator;
   hint: string;
+  /** Flat cost charged per run, in USD. */
+  fixedCost: number;
+  /** Cost per matched result, in USD. */
+  perMatch: number;
 }
 
 export const DEPTH_OPTIONS: DepthOption[] = [
-  { label: "Test", generator: "preview", hint: "Free & fast · about 10 results" },
-  { label: "Quick", generator: "base", hint: "Broad, common searches" },
-  { label: "Standard", generator: "core", hint: "Best for most lists" },
-  { label: "Deep", generator: "pro", hint: "Rare, hard-to-find matches" },
+  {
+    label: "Test",
+    generator: "preview",
+    hint: "Fast · about 10 results",
+    fixedCost: 0.1,
+    perMatch: 0,
+  },
+  {
+    label: "Quick",
+    generator: "base",
+    hint: "Broad, common searches",
+    fixedCost: 0.25,
+    perMatch: 0.03,
+  },
+  {
+    label: "Standard",
+    generator: "core",
+    hint: "Best for most lists",
+    fixedCost: 2,
+    perMatch: 0.15,
+  },
+  {
+    label: "Deep",
+    generator: "pro",
+    hint: "Rare, hard-to-find matches",
+    fixedCost: 10,
+    perMatch: 1,
+  },
 ];
 
 export const RESULT_COUNT_PRESETS = [10, 25, 50, 100];

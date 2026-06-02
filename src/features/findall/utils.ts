@@ -1,10 +1,29 @@
 import type {
   BasisEntry,
+  DepthOption,
   FindallColumn,
   LiveRow,
   ParallelCandidateLite,
   RunSnapshot,
 } from "./types";
+
+function formatUsd(amount: number): string {
+  return `$${amount.toFixed(2)}`;
+}
+
+/** A short price label for a depth option, e.g. "$2.00 + $0.15/result". */
+export function formatDepthPrice(option: DepthOption): string {
+  if (option.perMatch === 0) return `${formatUsd(option.fixedCost)} flat`;
+  return `${formatUsd(option.fixedCost)} + ${formatUsd(option.perMatch)}/result`;
+}
+
+/** Max cost for a depth at a given result count (you only pay for matches found). */
+export function estimateDepthCost(
+  option: DepthOption,
+  matchLimit: number,
+): string {
+  return formatUsd(option.fixedCost + option.perMatch * matchLimit);
+}
 
 /** Snake_case a free-text name into a stable column key (mirrors the backend). */
 export function toColumnKey(name: string): string {

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { FindallResults } from "./results";
-import { makeId } from "./utils";
+import { makeId, formatDepthPrice, estimateDepthCost } from "./utils";
 import {
   DEPTH_OPTIONS,
   RESULT_COUNT_PRESETS,
@@ -42,6 +42,10 @@ export function ListBuilder({ onBack, onOpenList }: ListBuilderProps) {
   const ingest = trpc.custom.findall.ingest.useMutation();
   const suggest = trpc.custom.findall.suggestEnrichments.useMutation();
   const create = trpc.custom.findall.create.useMutation();
+
+  const selectedDepth =
+    DEPTH_OPTIONS.find((option) => option.generator === generator) ??
+    DEPTH_OPTIONS[2];
 
   const handleContinue = async () => {
     const trimmed = objective.trim();
@@ -232,9 +236,20 @@ export function ListBuilder({ onBack, onOpenList }: ListBuilderProps) {
                   <span className="mt-0.5 block text-xs text-muted-foreground/60">
                     {option.hint}
                   </span>
+                  <span className="mt-1.5 block text-[11px] text-muted-foreground/50">
+                    {formatDepthPrice(option)}
+                  </span>
                 </button>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground/60">
+              Up to{" "}
+              <span className="text-foreground/80">
+                {estimateDepthCost(selectedDepth, matchLimit)}
+              </span>{" "}
+              for {matchLimit} results — you&rsquo;re only charged for matches
+              found.
+            </p>
           </Field>
 
           <div className="flex items-center justify-end gap-2 pt-2">
