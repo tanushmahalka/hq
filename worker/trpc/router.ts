@@ -8,6 +8,7 @@ import { exampleRouter } from "./procedures/custom/example.ts";
 import { missionRouter } from "./procedures/custom/mission.ts";
 import { objectiveRouter } from "./procedures/custom/objective.ts";
 import { campaignRouter } from "./procedures/custom/campaign.ts";
+import { agentListRouter } from "./procedures/custom/agent-list.ts";
 
 export const appRouter = router({
   approval: approvalRouter,
@@ -24,6 +25,7 @@ export const appRouter = router({
     mission: missionRouter,
     objective: objectiveRouter,
     campaign: campaignRouter,
+    agentList: agentListRouter,
   }),
 });
 

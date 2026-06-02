@@ -21,6 +21,7 @@ import "./index.css";
 import Layout from "./layout";
 import Tasks from "./pages/tasks";
 import Missions from "./pages/missions";
+import Lists from "./pages/lists";
 import Files from "./pages/files";
 import Db from "./pages/db";
 import Seo from "./pages/seo";
@@ -118,6 +119,7 @@ createRoot(document.getElementById("root")!).render(
               <Route index element={<Navigate to="tasks" replace />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="missions" element={<Missions />} />
+              <Route path="lists" element={<Lists />} />
               <Route path="seo" element={<Seo />} />
               <Route path="files" element={<Files />} />
               <Route path="settings" element={<SettingsLayout />}>
